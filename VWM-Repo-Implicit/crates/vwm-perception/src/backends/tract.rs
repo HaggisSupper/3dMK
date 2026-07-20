@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use tract_onnx::prelude::*;
@@ -12,7 +13,7 @@ use crate::{
     ObjectFeatures, PerceptionError, Result, SegmentProposal,
 };
 
-type TractPlan = TypedRunnableModel<TypedModel>;
+type TractPlan = Arc<TypedRunnableModel>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImageTensorSpec {
@@ -544,7 +545,7 @@ fn output_f32(outputs: &TVec<TValue>, index: usize) -> Result<FlatTensor> {
     let value = outputs.get(index).ok_or_else(|| {
         PerceptionError::ModelInference(format!("model output index {index} does not exist"))
     })?;
-    let view = value.to_array_view::<f32>().map_err(model_error)?;
+    let view = value.to_plain_array_view::<f32>().map_err(model_error)?;
     Ok(FlatTensor {
         shape: view.shape().to_vec(),
         values: view.iter().copied().collect(),

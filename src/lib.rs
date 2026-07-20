@@ -4,6 +4,7 @@ pub mod cad_engine;
 pub mod image_refinement;
 pub mod jobs;
 pub mod packages;
+pub mod perception;
 pub mod point_cloud;
 pub mod projects;
 pub mod scene;

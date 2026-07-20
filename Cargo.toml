@@ -28,7 +28,7 @@ vwm-core = { path = "VWM-Repo-Implicit/crates/vwm-core" }
 vwm-io = { path = "VWM-Repo-Implicit/crates/vwm-io" }
 vwm-geometry = { path = "VWM-Repo-Implicit/crates/vwm-geometry" }
 vwm-implicit = { path = "VWM-Repo-Implicit/crates/vwm-implicit" }
-vwm-perception = { path = "VWM-Repo-Implicit/crates/vwm-perception", default-features = false }
+vwm-perception = { path = "VWM-Repo-Implicit/crates/vwm-perception", features = ["ml-tract"] }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

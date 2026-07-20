@@ -25,6 +25,7 @@ use crate::{
     ai_vision, cad_engine, image_refinement,
     jobs::{JobError, JobRegistry},
     packages::{self, ArchiveInventory, ArchiveLimits, PackageError},
+    perception,
     point_cloud,
     projects::{
         Asset, AssetRole, AttributeContract, JobRecord, PackageAssetImport, PackageSceneImport,
@@ -94,6 +95,7 @@ pub fn create_router(
             "/api/point-cloud-analyze",
             post(handle_point_cloud_analysis),
         )
+        .route("/api/vwm-perception", post(handle_vwm_perception))
         .route(
             "/api/flat-surface-correct",
             post(handle_flat_surface_correction),
@@ -1176,6 +1178,7 @@ async fn handle_health() -> Json<serde_json::Value> {
             "vwm_implicit_poisson": true,
             "vwm_surface_nets": true,
             "vwm_perception_contracts": true,
+            "vwm_perception_pipeline": true,
             "flat_surface_correction": true,
             "mesh_smoothing": true,
             "image_assisted_refinement": false,
@@ -1347,6 +1350,18 @@ fn build_capabilities(vision: bool, pdal: bool) -> Vec<CapabilityDescriptor> {
             }],
             supported_scene_kinds: &["point_cloud", "mesh"],
             requires: &["rgba_depth_id_views", "packaged_onnx_model"],
+        },
+        CapabilityDescriptor {
+            id: "vwm_perception_pipeline",
+            status: experimental,
+            reason: "The canonical Rust VWM perception pipeline is connected with deterministic region and shape fallbacks; packaged ONNX inference remains optional.",
+            engine_version: Some("vwm-perception:0.1.0"),
+            dependencies: vec![CapabilityDependency {
+                id: "canonical_vwm_perception",
+                status: available,
+            }],
+            supported_scene_kinds: &["mesh", "point_cloud"],
+            requires: &["rgba_image"],
         },
         CapabilityDescriptor {
             id: "project_revisions",
@@ -1526,6 +1541,55 @@ async fn handle_pdf_to_3d(
             "layout": layout,
         })),
     )
+}
+
+async fn handle_vwm_perception(mut multipart: Multipart) -> impl IntoResponse {
+    let mut image_data: Option<(String, Vec<u8>)> = None;
+    while let Some(field) = match multipart.next_field().await {
+        Ok(field) => field,
+        Err(error) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": format!("Multipart error: {error}")})),
+            );
+        }
+    } {
+        if field.name().unwrap_or_default() == "image" {
+            let filename = field.file_name().unwrap_or("scene.png").to_string();
+            match field.bytes().await {
+                Ok(data) => image_data = Some((filename, data.to_vec())),
+                Err(error) => {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({"error": format!("Failed to read image: {error}")})),
+                    );
+                }
+            }
+        }
+    }
+    let (filename, bytes) = match image_data {
+        Some(value) => value,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "Missing 'image' field"})),
+            );
+        }
+    };
+    match perception::recognize_image(&filename, &bytes) {
+        Ok(batch) => (
+            StatusCode::OK,
+            Json(json!({
+                "backend": "vwm-perception",
+                "mode": "deterministic-color-regions",
+                "batch": batch,
+            })),
+        ),
+        Err(error) => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(json!({"error": error.to_string()})),
+        ),
+    }
 }
 
 async fn handle_point_cloud_analysis(
