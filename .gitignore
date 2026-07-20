@@ -1,0 +1,35 @@
+# Rust/Tauri build output
+/target/
+/src-tauri/target/
+**/*.rs.bk
+
+# Local runtime/build data
+/output/
+/tmp/
+/magi-run-*/
+/__pycache__/
+/.opencode/
+/.playwright-mcp/
+/.swarm/
+
+# Local scan fixtures and archives are too large for normal Git history
+/Model Sample files/
+/*.zip
+/Archive Alternate versions/
+/Archive Single File HTML prototypes/
+/VWM-Repo-Perception/
+/vwm-workspace/
+
+# Local secrets and editor files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.log
+*.code-workspace
+
+# OS/editor noise
+Thumbs.db
+desktop.ini
+.DS_Store

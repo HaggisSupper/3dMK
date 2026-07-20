@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>3DMk — Living Room A</title>
+  <style>
+    :root {
+      --bg:      oklch(98% 0.005 250);
+      --surface: oklch(100% 0 0);
+      --fg:      oklch(22% 0.02 240);
+      --muted:   oklch(50% 0.018 240);
+      --border:  oklch(90% 0.008 240);
+      --accent:  oklch(58% 0.16 145);
+      --font-display: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+      --font-body:    -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+      --font-mono:    'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+      --shell: oklch(20% 0.014 245);
+      --shell-raised: oklch(25% 0.016 245);
+      --shell-line: oklch(35% 0.014 245);
+      --shell-text: oklch(91% 0.008 245);
+      --shell-muted: oklch(67% 0.016 245);
+      --canvas: oklch(96.5% 0.008 88);
+      --canvas-line: oklch(78% 0.013 88);
+      --canvas-ink: oklch(31% 0.022 240);
+      --canvas-fill: oklch(88% 0.015 88);
+      --selection: oklch(62% 0.14 145);
+      --warn: oklch(69% 0.15 77);
+      --danger: oklch(58% 0.17 28);
+      --radius: 3px;
+      --shadow: 0 6px 18px oklch(15% 0.02 245 / .16);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; min-width: 320px; background: var(--shell); color: var(--fg); font-family: var(--font-body); font-size: 14px; overflow: hidden; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+    .icon { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+    .icon-sm { width: 14px; height: 14px; }
+    [data-tip] { position: relative; }
+    [data-tip]::after { content: attr(data-tip); position: absolute; z-index: 20; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); padding: 5px 7px; background: var(--shell); color: var(--shell-text); border: 1px solid var(--shell-line); border-radius: 2px; font: 11px/1.1 var(--font-body); letter-spacing: .01em; white-space: nowrap; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .12s ease; }
+    [data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 1; visibility: visible; }
+
+    .app-shell { height: 100vh; display: grid; grid-template-rows: 52px minmax(0, 1fr) 38px; background: var(--shell); }
+    .app-bar { display: flex; align-items: center; min-width: 0; gap: 14px; padding: 0 14px; color: var(--shell-text); border-bottom: 1px solid var(--shell-line); }
+    .brand { display: flex; align-items: center; gap: 9px; min-width: max-content; font-weight: 600; letter-spacing: -.01em; }
+    .brand-mark { display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid var(--accent); color: var(--accent); }
+    .brand-mark .icon { width: 18px; height: 18px; }
+    .crumb { display: flex; min-width: 0; align-items: center; gap: 7px; color: var(--shell-muted); font-size: 12px; }
+    .crumb strong { color: var(--shell-text); font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bar-spacer { flex: 1; }
+    .project-state { display: flex; align-items: center; gap: 7px; color: var(--shell-muted); font: 11px var(--font-mono); white-space: nowrap; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px oklch(58% .16 145 / .12); }
+    .bar-button, .tool-button, .icon-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--shell-line); color: var(--shell-text); background: transparent; border-radius: var(--radius); transition: background .12s ease, color .12s ease, border-color .12s ease; }
+    .bar-button { min-height: 36px; padding: 0 11px; font-size: 12px; }
+    .bar-button:hover, .tool-button:hover, .icon-button:hover { background: var(--shell-raised); border-color: var(--shell-muted); }
+    .bar-button.primary { min-height: 44px; border-color: var(--accent); color: oklch(91% .05 145); background: oklch(35% .075 145); }
+    .bar-button.primary:hover { background: oklch(39% .09 145); }
+
+    .workbench { min-height: 0; display: grid; grid-template-columns: 156px minmax(0, 1fr) 300px; }
+    .mode-nav { min-height: 0; padding: 10px 8px; border-right: 1px solid var(--shell-line); color: var(--shell-muted); }
+    .nav-label { margin: 0 7px 8px; font: 10px/1 var(--font-mono); color: var(--shell-muted); letter-spacing: .09em; text-transform: uppercase; }
+    .mode-list { display: grid; gap: 3px; }
+    .mode-button { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 40px; border: 1px solid transparent; padding: 0 9px; text-align: left; color: var(--shell-muted); background: transparent; border-radius: var(--radius); font-size: 12px; letter-spacing: .01em; }
+    .mode-button:hover { color: var(--shell-text); background: oklch(100% 0 0 / .05); }
+    .mode-button[aria-selected="true"] { color: var(--shell-text); background: var(--shell-raised); border-color: var(--shell-line); }
+    .mode-button[aria-selected="true"] .icon { color: var(--accent); }
+    .nav-foot { position: absolute; bottom: 51px; left: 8px; right: calc(100% - 148px); }
+    .nav-foot .mode-button { color: var(--shell-text); border-color: var(--shell-line); }
+
+    .workspace { min-width: 0; min-height: 0; background: var(--canvas); display: grid; grid-template-rows: 43px minmax(0, 1fr); }
+    .viewport-toolbar { display: flex; align-items: center; gap: 5px; padding: 5px 9px; border-bottom: 1px solid var(--canvas-line); color: var(--canvas-ink); background: oklch(98% .006 88); }
+    .mode-heading { margin: 0 8px 0 2px; font-size: 12px; font-weight: 600; letter-spacing: .02em; }
+    .toolbar-spacer { flex: 1; }
+    .tool-button { min-height: 30px; padding: 0 8px; color: var(--canvas-ink); background: var(--surface); border-color: var(--canvas-line); font-size: 11px; }
+    .tool-button.is-active { color: oklch(32% .07 145); border-color: var(--accent); background: oklch(90% .05 145); }
+    .tool-button.icon-only { width: 30px; padding: 0; }
+    .viewport { position: relative; min-height: 0; overflow: hidden; }
+    .view-panel { display: none; height: 100%; min-height: 0; }
+    .view-panel.is-active { display: block; }
+    .grid-ground { background-color: var(--canvas); background-image: linear-gradient(var(--canvas-line) 1px, transparent 1px), linear-gradient(90deg, var(--canvas-line) 1px, transparent 1px); background-size: 24px 24px; }
+    .viewport-status { position: absolute; z-index: 3; left: 12px; bottom: 11px; display: flex; gap: 5px; align-items: center; color: var(--canvas-ink); font: 10px var(--font-mono); }
+    .viewport-status span { padding: 5px 6px; border: 1px solid var(--canvas-line); background: oklch(98% .006 88 / .9); }
+
+    .model-view { position: relative; height: 100%; }
+    .model-svg, .plan-svg, .slice-svg { width: 100%; height: 100%; display: block; }
+    .model-svg { min-height: 460px; }
+    .scan-points circle { fill: oklch(35% .025 240 / .42); }
+    .mesh { fill: oklch(89% .018 88 / .84); stroke: oklch(34% .028 240); stroke-width: 1.2; }
+    .mesh-shade { fill: oklch(78% .02 88 / .45); stroke: oklch(34% .028 240); stroke-width: 1.2; }
+    .room-line { fill: none; stroke: oklch(32% .025 240); stroke-width: 1.5; }
+    .mesh-line { stroke: oklch(42% .018 240 / .55); stroke-width: .7; }
+    .measure { stroke: oklch(35% .035 240); stroke-width: 1; stroke-dasharray: 4 3; }
+    .measure-text, .svg-label { fill: oklch(31% .024 240); font: 11px var(--font-mono); }
+    .svg-label { font-size: 10px; letter-spacing: .03em; }
+    .object-shape { fill: oklch(66% .025 88); stroke: oklch(30% .03 240); stroke-width: 1.4; cursor: pointer; }
+    .object-shape:hover, [data-object].is-selected .object-shape, .object-shape.is-selected { fill: oklch(73% .08 145); stroke: oklch(33% .10 145); stroke-width: 2.2; }
+    .selection-ring { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 3; opacity: 0; }
+    .object-group.is-selected .selection-ring { opacity: 1; }
+    .camera-widget { position: absolute; top: 14px; right: 14px; display: grid; gap: 1px; padding: 6px; border: 1px solid var(--canvas-line); background: oklch(98% .006 88 / .94); box-shadow: var(--shadow); }
+    .camera-widget button { width: 31px; height: 27px; border: 0; color: var(--canvas-ink); background: transparent; border-radius: 2px; }
+    .camera-widget button:hover { background: var(--canvas-fill); }
+    .camera-widget .view-cube { display: grid; place-items: center; width: 31px; height: 31px; border: 1px solid var(--canvas-ink); color: var(--canvas-ink); font: 9px var(--font-mono); }
+
+    .plan-view { height: 100%; position: relative; }
+    .plan-svg { min-height: 460px; }
+    .plan-wall { fill: oklch(93% .01 88); stroke: oklch(28% .024 240); stroke-width: 11; stroke-linejoin: miter; }
+    .plan-inner { fill: var(--canvas); stroke: oklch(28% .024 240); stroke-width: 1.4; }
+    .plan-raw { fill: none; stroke: oklch(42% .018 240 / .45); stroke-width: 1.3; stroke-dasharray: 1 5; opacity: .75; }
+    .plan-object { fill: oklch(74% .025 88); stroke: oklch(30% .026 240); stroke-width: 1.3; cursor: pointer; }
+    .plan-object:hover, .plan-object.is-selected { fill: oklch(75% .08 145); stroke: oklch(33% .10 145); stroke-width: 2.2; }
+    .handle { fill: var(--canvas); stroke: oklch(25% .025 240); stroke-width: 1.5; cursor: move; }
+    .handle:hover { fill: var(--accent); }
+    .door-swing { fill: none; stroke: oklch(33% .026 240); stroke-width: 1; }
+    .window-mark { stroke: oklch(35% .065 220); stroke-width: 4; }
+    .dimension { stroke: oklch(35% .03 240); stroke-width: 1; marker-start: url(#arrow); marker-end: url(#arrow); }
+    .plan-key { position: absolute; top: 12px; left: 12px; display: grid; gap: 4px; padding: 8px; background: oklch(98% .006 88 / .9); border: 1px solid var(--canvas-line); font: 10px var(--font-mono); }
+    .plan-key span { display: flex; align-items: center; gap: 6px; }
+    .key-line { width: 17px; height: 0; border-top: 2px solid var(--canvas-ink); }
+    .key-line.raw { border-top-style: dotted; opacity: .65; }
+
+    .slice-view { height: 100%; position: relative; }
+    .slice-svg { min-height: 460px; }
+    .slice-room { fill: oklch(90% .017 88); stroke: oklch(29% .026 240); stroke-width: 1.3; }
+    .slice-back { fill: oklch(84% .02 88 / .55); stroke: oklch(35% .022 240); stroke-width: 1.1; }
+    .slice-plane { fill: oklch(58% .16 145 / .20); stroke: oklch(40% .12 145); stroke-width: 1.8; }
+    .slice-result { fill: oklch(65% .055 145 / .6); stroke: oklch(36% .11 145); stroke-width: 1.6; }
+    .slice-axis { stroke: oklch(33% .025 240); stroke-width: 1; stroke-dasharray: 4 4; }
+    .plane-note { position: absolute; right: 14px; bottom: 13px; max-width: 228px; padding: 8px 9px; border: 1px solid oklch(49% .105 145); color: oklch(32% .075 145); background: oklch(95% .03 145 / .92); font: 10px/1.4 var(--font-mono); }
+
+    .layers-view { height: 100%; display: grid; grid-template-columns: minmax(290px, 43%) minmax(0, 1fr); background: var(--surface); }
+    .layers-main { min-width: 0; padding: 18px; overflow: auto; border-right: 1px solid var(--border); }
+    .layers-main h2, .review-main h2 { margin: 0 0 5px; font: 600 18px/1.15 var(--font-display); letter-spacing: -.02em; }
+    .layers-main p, .review-main > p { max-width: 58ch; margin: 0 0 16px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .search-row { display: flex; gap: 7px; margin-bottom: 11px; }
+    .field { width: 100%; min-height: 35px; padding: 0 9px; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
+    .field::placeholder { color: var(--muted); }
+    .tree { border-top: 1px solid var(--border); }
+    .tree-row { display: grid; grid-template-columns: 25px minmax(0, 1fr) 29px 29px; align-items: center; min-height: 39px; border-bottom: 1px solid var(--border); }
+    .tree-row[data-level="1"] .tree-name { padding-left: 15px; }
+    .tree-row[data-level="2"] .tree-name { padding-left: 31px; }
+    .tree-name { display: flex; min-width: 0; gap: 7px; align-items: center; padding-right: 6px; border: 0; color: var(--fg); background: transparent; text-align: left; font-size: 12px; }
+    .tree-name:hover { color: oklch(36% .10 145); }
+    .tree-row.is-selected .tree-name { color: oklch(33% .09 145); font-weight: 600; }
+    .tree-toggle, .tree-control { display: grid; place-items: center; border: 0; color: var(--muted); background: transparent; }
+    .tree-toggle { width: 25px; height: 39px; }
+    .tree-control { width: 29px; height: 39px; }
+    .tree-control:hover { color: var(--fg); background: var(--bg); }
+    .tree-control[aria-pressed="false"] { color: var(--border); }
+    .layer-preview { min-width: 0; position: relative; display: grid; place-items: center; background: var(--canvas); overflow: hidden; }
+    .layer-preview .mini-model { width: min(83%, 510px); height: auto; }
+    .preview-note { position: absolute; left: 14px; bottom: 13px; color: var(--canvas-ink); font: 10px var(--font-mono); }
+
+    .review-view { height: 100%; background: var(--surface); overflow: auto; }
+    .review-main { min-width: 0; padding: 18px; }
+    .review-layout { display: grid; grid-template-columns: minmax(0, 1fr) 282px; gap: 18px; align-items: start; }
+    .review-table { width: 100%; border-collapse: collapse; border-top: 1px solid var(--border); font-size: 12px; }
+    .review-table th, .review-table td { padding: 10px 8px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+    .review-table th { color: var(--muted); font: 10px var(--font-mono); letter-spacing: .07em; text-transform: uppercase; }
+    .review-table td:last-child { text-align: right; }
+    .confidence { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+    .confidence.uncertain { color: oklch(47% .10 77); }
+    .provenance { color: var(--muted); font: 10px var(--font-mono); }
+    .row-actions { display: inline-flex; gap: 4px; }
+    .row-actions button { min-height: 29px; border: 1px solid var(--border); color: var(--fg); background: var(--surface); border-radius: 2px; font-size: 11px; }
+    .row-actions button:hover { background: var(--bg); }
+    .row-actions .accept { border-color: var(--accent); color: oklch(33% .09 145); }
+    .reviewed { color: var(--muted); font: 11px var(--font-mono); }
+    .review-aside { border: 1px solid var(--border); }
+    .review-aside h3 { margin: 0; padding: 10px 12px; border-bottom: 1px solid var(--border); font: 11px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+    .review-aside dl { display: grid; grid-template-columns: 1fr auto; gap: 9px 14px; margin: 0; padding: 12px; font-size: 12px; }
+    .review-aside dt { color: var(--muted); }
+    .review-aside dd { margin: 0; font-family: var(--font-mono); }
+
+    .inspector { min-height: 0; overflow: auto; color: var(--shell-text); border-left: 1px solid var(--shell-line); background: var(--shell); }
+    .inspector-head { display: flex; align-items: center; justify-content: space-between; min-height: 43px; padding: 0 12px; border-bottom: 1px solid var(--shell-line); }
+    .inspector-head h2 { margin: 0; font: 10px var(--font-mono); color: var(--shell-muted); letter-spacing: .1em; text-transform: uppercase; }
+    .inspector-section { padding: 13px 12px; border-bottom: 1px solid var(--shell-line); }
+    .inspect-kicker { margin: 0 0 5px; color: var(--shell-muted); font: 10px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+    .inspect-title { margin: 0; color: var(--shell-text); font: 600 16px/1.14 var(--font-display); letter-spacing: -.015em; }
+    .inline-status { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; padding: 4px 6px; border: 1px solid var(--shell-line); color: var(--shell-muted); font: 10px var(--font-mono); }
+    .inline-status .dot { width: 5px; height: 5px; box-shadow: none; }
+    .properties { margin: 0; display: grid; gap: 0; }
+    .properties div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 8px 0; border-top: 1px solid oklch(100% 0 0 / .09); }
+    .properties div:first-child { border-top: 0; }
+    .properties dt { color: var(--shell-muted); font-size: 11px; }
+    .properties dd { margin: 0; color: var(--shell-text); text-align: right; font: 11px var(--font-mono); font-variant-numeric: tabular-nums; }
+    .form-grid { display: grid; gap: 10px; }
+    .form-grid label { display: grid; gap: 5px; color: var(--shell-muted); font: 10px var(--font-mono); letter-spacing: .05em; text-transform: uppercase; }
+    .form-grid .field { color: var(--shell-text); background: var(--shell-raised); border-color: var(--shell-line); }
+    .form-grid select.field { appearance: auto; }
+    .range-wrap { display: grid; grid-template-columns: minmax(0,1fr) 58px; gap: 8px; align-items: center; }
+    input[type="range"] { accent-color: var(--accent); width: 100%; }
+    .check-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--shell-text); font-size: 12px; }
+    .check-line input { width: 17px; height: 17px; accent-color: var(--accent); }
+    .wide-action { width: 100%; min-height: 44px; justify-content: center; margin-top: 10px; }
+
+    .job-strip { display: flex; align-items: center; min-width: 0; gap: 10px; padding: 0 13px; border-top: 1px solid var(--shell-line); color: var(--shell-text); font-size: 11px; }
+    .job-type { color: var(--accent); font-family: var(--font-mono); }
+    .job-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .job-progress { width: min(180px, 18vw); height: 4px; background: var(--shell-line); }
+    .job-progress i { display: block; width: 68%; height: 100%; background: var(--accent); }
+    .job-meta { color: var(--shell-muted); font: 10px var(--font-mono); white-space: nowrap; }
+
+    dialog { width: min(720px, calc(100vw - 28px)); padding: 0; color: var(--fg); background: var(--surface); border: 1px solid var(--shell-line); border-radius: 4px; box-shadow: 0 24px 80px oklch(15% .02 245 / .45); }
+    dialog::backdrop { background: oklch(15% .02 245 / .52); }
+    .dialog-head { display: flex; align-items: center; gap: 10px; padding: 14px; color: var(--shell-text); background: var(--shell); border-bottom: 1px solid var(--shell-line); }
+    .dialog-head h2 { margin: 0; font-size: 15px; letter-spacing: -.01em; }
+    .dialog-head p { margin: 3px 0 0; color: var(--shell-muted); font: 10px var(--font-mono); }
+    .dialog-body { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+    .dialog-section { padding: 15px; border-right: 1px solid var(--border); }
+    .dialog-section:last-child { border-right: 0; }
+    .dialog-section h3 { margin: 0 0 9px; font: 10px var(--font-mono); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+    .choice-list { display: grid; gap: 5px; }
+    .choice { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 8px; border: 1px solid var(--border); background: var(--bg); border-radius: 2px; font-size: 12px; }
+    .choice:has(input:checked) { border-color: var(--accent); background: oklch(93% .04 145); }
+    .choice input { accent-color: var(--accent); }
+    .choice small { margin-left: auto; color: var(--muted); font: 10px var(--font-mono); }
+    .dialog-note { min-height: 71px; margin-top: 12px; padding: 9px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); font: 11px/1.4 var(--font-mono); }
+    .dialog-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--border); }
+    .dialog-foot .bar-button { color: var(--fg); border-color: var(--border); }
+    .dialog-foot .bar-button.primary { color: oklch(96% .015 145); background: oklch(37% .085 145); border-color: var(--accent); }
+
+    @media (max-width: 1000px) {
+      body { overflow: auto; }
+      .app-shell { min-height: 760px; height: auto; grid-template-rows: 52px auto 38px; }
+      .workbench { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(520px, 1fr) auto; }
+      .mode-nav { display: flex; align-items: center; padding: 7px 8px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--shell-line); }
+      .nav-label { display: none; }
+      .mode-list { display: flex; gap: 4px; width: 100%; }
+      .mode-button { flex: 1 0 104px; justify-content: center; padding: 0 7px; }
+      .nav-foot { position: static; margin-left: 4px; }
+      .nav-foot .mode-button { width: 38px; padding: 0; justify-content: center; }
+      .nav-foot .mode-button span { display: none; }
+      .inspector { max-height: none; border-top: 1px solid var(--shell-line); border-left: 0; }
+      .layers-view { grid-template-columns: 1fr; }
+      .layer-preview { min-height: 300px; border-top: 1px solid var(--border); }
+      .review-layout { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      .crumb { display: none; }
+      .project-state { display: none; }
+      .app-bar { gap: 8px; }
+      .bar-button:not(.primary) span { display: none; }
+      .bar-button { width: 36px; padding: 0; }
+      .mode-button { min-width: 92px; }
+      .mode-button span { font-size: 11px; }
+      .viewport-toolbar { overflow-x: auto; }
+      .toolbar-spacer { display: none; }
+      .layers-main, .review-main { padding: 13px; }
+      .review-table th:nth-child(4), .review-table td:nth-child(4) { display: none; }
+      .dialog-body { grid-template-columns: 1fr; }
+      .dialog-section { border-right: 0; border-bottom: 1px solid var(--border); }
+      .dialog-section:last-child { border-bottom: 0; }
+    }
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden">
+    <defs>
+      <symbol id="i-cube" viewBox="0 0 24 24"><path d="m12 2 8 4.5v9L12 20l-8-4.5v-9L12 2Z"/><path d="m4 6.5 8 4.5 8-4.5M12 11v9"/></symbol>
+      <symbol id="i-plan" viewBox="0 0 24 24"><path d="M4 3h16v18H4zM8 3v7h12M4 14h8v7"/><path d="M14 10v4M12 12h4"/></symbol>
+      <symbol id="i-slice" viewBox="0 0 24 24"><path d="M5 4h14v16H5zM3 12h18M12 3v18"/><path d="m7 9 5 3 5-3"/></symbol>
+      <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 8 4-8 4-8-4 8-4Z"/><path d="m4 12 8 4 8-4M4 17l8 4 8-4"/></symbol>
+      <symbol id="i-review" viewBox="0 0 24 24"><path d="M5 3h14v18H5z"/><path d="m8 12 2.5 2.5L16 9M8 6h8M8 18h8"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6h7l2 2h9v10H3z"/><path d="M12 11v6m-3-3h6"/></symbol>
+      <symbol id="i-export" viewBox="0 0 24 24"><path d="M12 3v11m-4-4 4 4 4-4M5 15v5h14v-5"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M3 12s3-5 9-5 9 5 9 5-3 5-9 5-9-5-9-5Z"/><circle cx="12" cy="12" r="2.5"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="1"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></symbol>
+      <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></symbol>
+      <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0 1 4"/><path d="M20 4v7h-7"/></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></symbol>
+    </defs>
+  </svg>
+
+  <main class="app-shell" aria-label="3DMk local inspection workspace">
+    <header class="app-bar" data-od-id="application-chrome">
+      <div class="brand" aria-label="3DMk"><span class="brand-mark"><svg class="icon"><use href="#i-cube"/></svg></span><span>3DMk</span></div>
+      <div class="crumb" aria-label="Current project"><span>Projects</span><span>/</span><strong>Living Room A.scan</strong></div>
+      <div class="bar-spacer"></div>
+      <div class="project-state"><span class="dot"></span><span>LOCAL PROTOTYPE DATA</span></div>
+      <button class="bar-button" type="button" data-open-dialog data-tip="Open import / export (Ctrl+O)" data-od-id="file-rail-trigger"><svg class="icon"><use href="#i-folder"/></svg><span>Files</span></button>
+      <button class="bar-button primary" type="button" data-open-dialog data-od-id="import-primary"><svg class="icon"><use href="#i-folder"/></svg><span>Import</span></button>
+    </header>
+
+    <section class="workbench" aria-label="Inspection workbench">
+      <nav class="mode-nav" aria-label="Workspace modes" data-od-id="mode-navigation">
+        <p class="nav-label">Workspace</p>
+        <div class="mode-list" role="tablist" aria-orientation="vertical">
+          <button class="mode-button" role="tab" aria-selected="true" aria-controls="model-panel" id="mode-model" data-mode="model" data-od-id="mode-model"><svg class="icon"><use href="#i-cube"/></svg><span>Model</span></button>
+          <button class="mode-button" role="tab" aria-selected="false" aria-controls="plan-panel" id="mode-plan" data-mode="plan" data-od-id="mode-plan"><svg class="icon"><use href="#i-plan"/></svg><span>Plan</span></button>
+          <button class="mode-button" role="tab" aria-selected="false" aria-controls="slice-panel" id="mode-slice" data-mode="slice" data-od-id="mode-slice"><svg class="icon"><use href="#i-slice"/></svg><span>Slice</span></button>
+          <button class="mode-button" role="tab" aria-selected="false" aria-controls="layers-panel" id="mode-layers" data-mode="layers" data-od-id="mode-layers"><svg class="icon"><use href="#i-layers"/></svg><span>Layers</span></button>
+          <button class="mode-button" role="tab" aria-selected="false" aria-controls="review-panel" id="mode-review" data-mode="review" data-od-id="mode-review"><svg class="icon"><use href="#i-review"/></svg><span>Review</span></button>
+        </div>
+        <div class="nav-foot"><button class="mode-button" type="button" data-open-dialog data-tip="Import / export files" data-od-id="file-rail"><svg class="icon"><use href="#i-export"/></svg><span>Files</span></button></div>
+      </nav>
+
+      <section class="workspace" aria-label="Active workspace" data-od-id="central-workspace">
+        <header class="viewport-toolbar" data-od-id="context-toolbar">
+          <h1 class="mode-heading" id="workspace-title" data-od-id="mode-heading">Model / Perspective</h1>
+          <button class="tool-button" type="button" data-open-dialog data-od-id="toolbar-import"><svg class="icon icon-sm"><use href="#i-folder"/></svg>Import</button>
+          <button class="tool-button icon-only" type="button" data-tip="Fit model" data-od-id="toolbar-fit"><svg class="icon icon-sm"><use href="#i-grid"/></svg><span class="sr-only">Fit model</span></button>
+          <button class="tool-button icon-only" type="button" data-tip="Orbit view" data-od-id="toolbar-orbit"><svg class="icon icon-sm"><use href="#i-rotate"/></svg><span class="sr-only">Orbit view</span></button>
+          <div class="toolbar-spacer"></div>
+          <button class="tool-button" type="button" id="scan-toggle" aria-pressed="false" data-tip="Show raw scan overlay" data-od-id="scan-overlay-toggle"><svg class="icon icon-sm"><use href="#i-grid"/></svg><span>Raw scan</span></button>
+          <button class="tool-button" type="button" data-open-dialog data-od-id="toolbar-export"><svg class="icon icon-sm"><use href="#i-export"/></svg><span>Export</span></button>
+        </header>
+
+        <div class="viewport">
+          <section class="view-panel model-view is-active grid-ground" id="model-panel" role="tabpanel" aria-labelledby="mode-model" data-view="model" data-od-id="model-viewport">
+            <svg class="model-svg" viewBox="0 0 900 590" role="img" aria-label="Perspective mesh model of Living Room A">
+              <g class="scan-points" aria-hidden="true">
+                <circle cx="243" cy="340" r="1"/><circle cx="262" cy="314" r="1.2"/><circle cx="284" cy="380" r=".8"/><circle cx="313" cy="347" r="1.1"/><circle cx="330" cy="406" r="1"/><circle cx="375" cy="373" r=".8"/><circle cx="412" cy="431" r="1.1"/><circle cx="454" cy="391" r=".9"/><circle cx="503" cy="445" r="1.3"/><circle cx="540" cy="409" r=".8"/><circle cx="580" cy="457" r="1"/><circle cx="631" cy="416" r="1.2"/><circle cx="670" cy="445" r=".9"/><circle cx="351" cy="219" r="1"/><circle cx="413" cy="185" r=".9"/><circle cx="492" cy="164" r="1.1"/><circle cx="571" cy="191" r=".8"/><circle cx="638" cy="228" r="1"/>
+              <circle cx="225" cy="365" r=".8"/><circle cx="244" cy="392" r="1"/><circle cx="277" cy="426" r=".8"/><circle cx="721" cy="322" r="1"/><circle cx="750" cy="359" r=".8"/><circle cx="694" cy="399" r="1.2"/>
+            </g>
+            <path class="mesh" d="M190 395 423 489 736 364 535 290 190 395Z"/>
+            <path class="mesh-shade" d="M190 395 190 208 423 308 423 489Z"/>
+            <path class="mesh-shade" d="M423 489 423 308 736 192 736 364Z"/>
+            <path class="mesh" d="M190 208 489 101 736 192 423 308Z"/>
+            <g class="mesh-line" aria-hidden="true"><path d="m250 370 253 88M283 355l254 88M318 341l253 89M352 329l254 88M420 307v181M489 282v181M560 256v180M630 231v178M271 180v177M350 151v177M427 125v183M504 106v181M578 134v178M653 161v178"/></g>
+            <path class="room-line" d="M190 395 423 489 736 364 535 290 190 395M190 208 423 308 736 192M423 308v181M736 192v172"/>
+            <g class="object-group is-selected" data-object="table" data-od-id="model-dining-table" tabindex="0" role="button" aria-label="Select dining table">
+              <ellipse class="selection-ring" cx="502" cy="363" rx="88" ry="30"/>
+              <ellipse class="object-shape" cx="502" cy="363" rx="65" ry="21"/>
+              <path class="room-line" d="M459 376v33m77-21v33m-9-35v34"/>
+              <text class="svg-label" x="478" y="354">TABLE 01</text>
+            </g>
+            <g class="object-group" data-object="chair" data-od-id="model-chair" tabindex="0" role="button" aria-label="Select chair">
+              <ellipse class="selection-ring" cx="417" cy="360" rx="34" ry="23"/><path class="object-shape" d="M403 353q13-15 28 0v20q-14 11-28 0Z"/><path class="room-line" d="M406 374v17m21-17v16"/><text class="svg-label" x="387" y="340">CHAIR</text>
+            </g>
+            <path class="measure" d="M190 516h546M190 509v14m546-14v14"/><text class="measure-text" x="432" y="535">5.84 m</text>
+            <path class="measure" d="M755 193v171m-7-171h14m-14 171h14"/><text class="measure-text" x="767" y="284" transform="rotate(90 767 284)">4.12 m</text>
+            <text class="svg-label" x="264" y="230">LIVING ROOM A · MESH 01</text>
+            <text class="svg-label" x="578" y="178">CEILING 2.64 m</text>
+          </svg>
+          <div class="camera-widget" aria-label="Camera controls" data-od-id="model-camera-controls">
+            <button type="button" data-camera="top" data-tip="Top"><svg class="icon icon-sm"><use href="#i-plan"/></svg><span class="sr-only">Top</span></button>
+            <div class="view-cube" id="camera-label">PERS</div>
+            <button type="button" data-camera="front" data-tip="Front"><svg class="icon icon-sm"><use href="#i-cube"/></svg><span class="sr-only">Front</span></button>
+          </div>
+          <div class="viewport-status"><span class="mono">18,426 pts</span><span class="mono">42,318 faces</span><span id="model-selection-status">TABLE 01</span></div>
+          </section>
+
+          <section class="view-panel plan-view grid-ground" id="plan-panel" role="tabpanel" aria-labelledby="mode-plan" data-view="plan" data-od-id="plan-viewport">
+            <div class="plan-key" data-od-id="plan-legend"><span><i class="key-line"></i> derived geometry</span><span><i class="key-line raw"></i> raw scan</span></div>
+            <svg class="plan-svg" viewBox="0 0 900 590" role="img" aria-label="Editable floor plan of Living Room A">
+              <defs><marker id="arrow" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M6 0 0 3l6 3" fill="none" stroke="currentColor"/></marker></defs>
+              <path class="plan-raw" id="raw-scan-path" d="M200 152 700 147 706 452 198 458Z M231 186 663 182 672 418 229 425Z"/>
+              <path class="plan-wall" d="M220 170H680V440H220Z"/>
+              <path class="plan-inner" d="M230 180H670V430H230Z"/>
+              <path class="window-mark" d="M360 170h74M495 170h70M680 270v64"/>
+              <path d="M220 380h53" stroke="var(--canvas)" stroke-width="14"/><path d="M220 380h53" stroke="var(--canvas-ink)" stroke-width="1.2"/><path class="door-swing" d="M273 380a53 53 0 0 0-53-53"/>
+              <g data-object="table" data-od-id="plan-dining-table" tabindex="0" role="button" aria-label="Select dining table"><rect class="plan-object is-selected" x="426" y="280" width="118" height="60" rx="1"/><circle class="selection-ring" cx="485" cy="310" r="55"/><text class="svg-label" x="447" y="315">TABLE 01</text></g>
+              <g data-object="chair" data-od-id="plan-chair" tabindex="0" role="button" aria-label="Select chair"><rect class="plan-object" x="445" y="245" width="26" height="23"/><rect class="plan-object" x="498" y="245" width="26" height="23"/><rect class="plan-object" x="445" y="353" width="26" height="23"/><rect class="plan-object" x="498" y="353" width="26" height="23"/><text class="svg-label" x="534" y="260">4 × CHAIR</text></g>
+              <g data-od-id="plan-wall-handles" aria-label="Room boundary handles"><rect class="handle" x="215" y="165" width="10" height="10"/><rect class="handle" x="675" y="165" width="10" height="10"/><rect class="handle" x="675" y="435" width="10" height="10"/><rect class="handle" x="215" y="435" width="10" height="10"/></g>
+              <path class="dimension" d="M220 485h460"/><path d="M220 440v55m460-55v55" class="measure"/><text class="measure-text" x="426" y="506">5.84 m</text>
+              <path class="dimension" d="M745 170v270"/><path d="M680 170h73m-73 270h73" class="measure"/><text class="measure-text" x="760" y="286" transform="rotate(90 760 286)">4.12 m</text>
+              <text class="svg-label" x="242" y="205">LIVING ROOM A · 24.1 m²</text>
+              <text class="svg-label" x="246" y="412">DOOR 01</text><text class="svg-label" x="375" y="152">WINDOW 01</text>
+            </svg>
+            <div class="viewport-status"><span class="mono">ROOM-0001</span><span>4 boundary handles</span><span id="plan-selection-status">TABLE 01</span></div>
+          </section>
+
+          <section class="view-panel slice-view grid-ground" id="slice-panel" role="tabpanel" aria-labelledby="mode-slice" data-view="slice" data-od-id="slice-viewport">
+            <svg class="slice-svg" viewBox="0 0 900 590" role="img" aria-label="Slice plane crossing a room model">
+              <path class="slice-back" d="M211 407V227l248-101 251 93v188l-250 88Z"/>
+              <path class="slice-room" d="M242 391V244l218-85 220 80v152l-220 73Z"/>
+              <path class="slice-axis" d="M185 438 752 438M460 112v390"/>
+              <g id="slice-plane-group"><path class="slice-plane" d="M202 321 463 222 724 316 460 417Z"/><path class="slice-result" d="M271 332 460 261 655 331 460 393Z"/><path d="M271 332 460 393 655 331" fill="none" stroke="oklch(31% .09 145)" stroke-width="1.4"/><text class="svg-label" x="472" y="276">CAP FILL</text></g>
+              <path class="room-line" d="M242 391V244l218-85 220 80v152l-220 73Z"/>
+              <text class="svg-label" x="235" y="470">MODEL</text><text class="svg-label" x="482" y="449">SECTION AXIS Z</text><text class="svg-label" x="617" y="300">PLANE</text>
+            </svg>
+            <div class="plane-note" id="plane-note">SECTION S-01<br><strong>+1.20 m</strong> / 0° / CAP ON</div>
+            <div class="viewport-status"><span class="mono">S-01</span><span id="slice-readout">Z +1.20 m</span><span>derived result</span></div>
+          </section>
+
+          <section class="view-panel layers-view" id="layers-panel" role="tabpanel" aria-labelledby="mode-layers" data-view="layers" data-od-id="layers-workspace">
+            <div class="layers-main">
+              <h2 data-od-id="layers-heading">Scene layers</h2><p>Living Room A · local scene representation</p>
+              <div class="search-row"><label class="sr-only" for="layer-search">Search layers</label><input id="layer-search" class="field" type="search" placeholder="Filter objects or layers" data-od-id="layer-search"><svg class="icon" style="margin:9px 0 0 -32px;color:var(--muted);pointer-events:none"><use href="#i-search"/></svg></div>
+              <div class="tree" role="tree" aria-label="Scene tree" data-od-id="scene-tree">
+                <div class="tree-row" data-level="0" data-layer="scene"><button class="tree-toggle" aria-label="Collapse scene">⌄</button><button class="tree-name" type="button"><svg class="icon icon-sm"><use href="#i-layers"/></svg>Living Room A</button><button class="tree-control" aria-label="Hide scene" aria-pressed="true"><svg class="icon icon-sm"><use href="#i-eye"/></svg></button><button class="tree-control" aria-label="Lock scene" aria-pressed="false"><svg class="icon icon-sm"><use href="#i-lock"/></svg></button></div>
+                <div class="tree-row" data-level="1" data-layer="scan"><button class="tree-toggle" aria-label="Expand scan">›</button><button class="tree-name" type="button"><svg class="icon icon-sm"><use href="#i-grid"/></svg>Raw scan <span class="mono" style="color:var(--muted)">18,426</span></button><button class="tree-control" aria-label="Hide raw scan" aria-pressed="true"><svg class="icon icon-sm"><use href="#i-eye"/></svg></button><button class="tree-control" aria-label="Lock raw scan" aria-pressed="false"><svg class="icon icon-sm"><use href="#i-lock"/></svg></button></div>
+                <div class="tree-row" data-level="1" data-layer="model"><button class="tree-toggle" aria-label="Collapse model">⌄</button><button class="tree-name" type="button"><svg class="icon icon-sm"><use href="#i-cube"/></svg>Derived model</button><button class="tree-control" aria-label="Hide derived model" aria-pressed="true"><svg class="icon icon-sm"><use href="#i-eye"/></svg></button><button class="tree-control" aria-label="Lock derived model" aria-pressed="false"><svg class="icon icon-sm"><use href="#i-lock"/></svg></button></div>
+                <div class="tree-row" data-level="2" data-layer="wall"><span></span><button class="tree-name" type="button" data-select-object="wall"><svg class="icon icon-sm"><use href="#i-plan"/></svg>Walls <span class="mono" style="color:var(--muted)">04</span></button><button class="tree-control" aria-label="Hide walls" aria-pressed="true"><svg class="icon icon-sm"><use href="#i-eye"/></svg></button><button class="tree-control" aria-label="Lock walls" aria-pressed="false"><svg class="icon icon-sm"><use href="#i-lock"/></svg></button></div>
+                <div class="tree-row" data-level="2" data-layer="door"><span></span><button class="tree-name" type="button" data-select-object="door"><svg class="icon icon-sm"><use href="#i-plan"/></svg>Door 01</button><button class="tree-control" aria-label="Hide door" aria-pressed="true"><svg class="icon icon-sm"><use href="#i-eye"/></svg></button><button class="tree-control" aria-label="Lock door" aria-pressed="false"><svg class="icon icon-sm"><use href="#i-lock"/></svg></button></div>
+                <div class="tree-row" data-level="2" data-layer="window"><span></span><button class="tree-name" type="button" data-select-object="window"><svg class="icon icon-sm"><use href="#i-plan"/></svg>Window 01</button><button class="tree-control" aria-label="Hide window" aria-pressed="true"><svg class="icon icon-sm"><use href="#i-eye"/></svg></button><button class="tree-control" aria-label="Lock window" aria-pressed="false"><svg class="icon icon-sm"><use href="#i-lock"/></svg></button></div>
+                <div class="tree-row" data-level="2" data-layer="table"><span></span><button class="tree-name" type="button" data-select-object="table"><svg class="icon icon-sm"><use href="#i-cube"/></svg>Dining table</button><button class="tree-control" aria-label="Hide dining table" aria-pressed="true"><svg class="icon icon-sm"><use href="#i-eye"/></svg></button><button class="tree-control" aria-label="Lock dining table" aria-pressed="false"><svg class="icon icon-sm"><use href="#i-lock"/></svg></button></div>
+                <div class="tree-row" data-level="2" data-layer="chair"><span></span><button class="tree-name" type="button" data-select-object="chair"><svg class="icon icon-sm"><use href="#i-cube"/></svg>Chairs <span class="mono" style="color:var(--muted)">04</span></button><button class="tree-control" aria-label="Hide chairs" aria-pressed="true"><svg class="icon icon-sm"><use href="#i-eye"/></svg></button><button class="tree-control" aria-label="Lock chairs" aria-pressed="false"><svg class="icon icon-sm"><use href="#i-lock"/></svg></button></div>
+                <div class="tree-row" data-level="1" data-layer="materials"><button class="tree-toggle" aria-label="Expand materials">›</button><button class="tree-name" type="button"><svg class="icon icon-sm"><use href="#i-layers"/></svg>Materials</button><button class="tree-control" aria-label="Hide materials" aria-pressed="true"><svg class="icon icon-sm"><use href="#i-eye"/></svg></button><button class="tree-control" aria-label="Lock materials" aria-pressed="false"><svg class="icon icon-sm"><use href="#i-lock"/></svg></button></div>
+              </div>
+            </div>
+            <div class="layer-preview grid-ground" data-od-id="layers-preview"><svg class="mini-model" viewBox="0 0 520 360" aria-hidden="true"><path class="mesh" d="m64 246 150 59 232-87-151-59Z"/><path class="mesh-shade" d="m64 246V126l150 60v119Z"/><path class="mesh-shade" d="m214 305V186l232-88v120Z"/><path class="mesh" d="m64 126 221-89 161 61-232 88Z"/><ellipse class="object-shape" cx="258" cy="216" rx="46" ry="16"/><path class="room-line" d="m64 246 150 59 232-87M64 126l150 60 232-88M214 186v119"/></svg><span class="preview-note">SELECTED: <strong id="layer-preview-label">DINING TABLE</strong></span></div>
+          </section>
+
+          <section class="view-panel review-view" id="review-panel" role="tabpanel" aria-labelledby="mode-review" data-view="review" data-od-id="review-workspace">
+            <div class="review-main"><h2 data-od-id="review-heading">Recognition review</h2><p>Only uncertain findings need a decision. Geometry stays local to this prototype.</p>
+              <div class="review-layout"><div><table class="review-table" data-od-id="recognition-table"><thead><tr><th>Object</th><th>Confidence</th><th>Source</th><th>Action</th></tr></thead><tbody>
+                <tr data-review="wall"><td><button class="tree-name" type="button" data-select-object="wall">Wall 03</button></td><td class="confidence">99.1%</td><td class="provenance">geometry</td><td><span class="reviewed">accepted</span></td></tr>
+                <tr data-review="door"><td><button class="tree-name" type="button" data-select-object="door">Door 01</button></td><td class="confidence">97.8%</td><td class="provenance">geometry</td><td><span class="reviewed">accepted</span></td></tr>
+                <tr data-review="window"><td><button class="tree-name" type="button" data-select-object="window">Window 01</button></td><td class="confidence uncertain">82.4%</td><td class="provenance">local model</td><td class="row-actions" data-od-id="review-window-actions"><button class="accept" type="button" data-review-action="accept">Accept</button><button type="button" data-review-action="relabel">Relabel</button><button type="button" data-review-action="ignore">Ignore</button></td></tr>
+                <tr data-review="chair"><td><button class="tree-name" type="button" data-select-object="chair">Chair cluster</button></td><td class="confidence uncertain">76.2%</td><td class="provenance">local model</td><td class="row-actions" data-od-id="review-chair-actions"><button class="accept" type="button" data-review-action="accept">Accept</button><button type="button" data-review-action="relabel">Relabel</button><button type="button" data-review-action="ignore">Ignore</button></td></tr>
+                <tr data-review="table"><td><button class="tree-name" type="button" data-select-object="table">Dining table</button></td><td class="confidence">94.6%</td><td class="provenance">local model</td><td><span class="reviewed">accepted</span></td></tr>
+              </tbody></table></div>
+              <aside class="review-aside" data-od-id="review-summary"><h3>Selection</h3><dl><dt>Object</dt><dd id="review-selected">Dining table</dd><dt>Review queue</dt><dd id="review-queue">02</dd><dt>Scope</dt><dd>local</dd><dt>Job</dt><dd>recognize.v2</dd></dl></aside>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <aside class="inspector" aria-label="Contextual inspector" data-od-id="contextual-inspector">
+        <div class="inspector-head"><h2 id="inspector-context" data-od-id="inspector-heading">Selection</h2><button class="icon-button" type="button" style="width:30px;height:30px" data-tip="Inspector actions" data-od-id="inspector-actions"><svg class="icon icon-sm"><use href="#i-more"/></svg><span class="sr-only">Inspector actions</span></button></div>
+        <div class="inspector-section"><p class="inspect-kicker" id="inspect-kind">Object · local result</p><h2 class="inspect-title" id="inspect-title" data-od-id="inspector-object-title">Dining table</h2><span class="inline-status"><span class="dot"></span><span id="inspect-status">selected</span></span></div>
+        <div class="inspector-section" data-od-id="inspector-properties"><dl class="properties" id="properties"><div><dt>Bounding box</dt><dd>1.60 × 0.90 × 0.76 m</dd></div><div><dt>Confidence</dt><dd>94.6%</dd></div><div><dt>Source</dt><dd>local model</dd></div><div><dt>Layer</dt><dd>Derived model</dd></div></dl></div>
+        <div class="inspector-section" id="slice-controls" hidden data-od-id="slice-controls"><p class="inspect-kicker">Section S-01</p><div class="form-grid"><label>Elevation <span class="range-wrap"><input type="range" id="slice-elevation" min="0" max="264" value="120"><input class="field mono" id="slice-elevation-number" type="number" min="0" max="264" value="120"></span></label><label>Orientation <select class="field" id="slice-orientation"><option value="0">0° / horizontal</option><option value="90">90° / vertical</option><option value="45">45° / oblique</option></select></label><label>Range <span class="range-wrap"><input type="range" id="slice-range" min="10" max="100" value="64"><output class="mono" id="slice-range-output">64 mm</output></span></label><label class="check-line">Cap fill <input id="cap-fill" type="checkbox" checked></label></div><button class="bar-button primary wide-action" type="button" data-open-dialog data-od-id="export-section-action"><svg class="icon"><use href="#i-export"/></svg>Export section</button></div>
+        <div class="inspector-section" id="mode-summary" data-od-id="mode-summary"><p class="inspect-kicker">Room</p><dl class="properties"><div><dt>Extent</dt><dd>5.84 × 4.12 m</dd></div><div><dt>Area</dt><dd>24.1 m²</dd></div><div><dt>Ceiling</dt><dd>2.64 m</dd></div><div><dt>Mesh</dt><dd>42,318 faces</dd></div></dl></div>
+      </aside>
+    </section>
+
+    <footer class="job-strip" aria-label="Local job progress" data-od-id="typed-job-progress"><span class="dot"></span><span class="job-type">mesh.repair</span><span class="job-name">Closing boundary gaps · local prototype data</span><span class="job-progress" aria-label="68 percent complete"><i></i></span><span class="job-meta">68% · JOB-032</span></footer>
+  </main>
+
+  <dialog id="file-dialog" aria-labelledby="file-dialog-title" data-od-id="import-export-dialog">
+    <header class="dialog-head"><svg class="icon"><use href="#i-folder"/></svg><div><h2 id="file-dialog-title">Import / export</h2><p>Local file controls · prototype states</p></div><span class="bar-spacer"></span><button class="icon-button" type="button" style="width:30px;height:30px" data-close-dialog data-tip="Close"><svg class="icon"><use href="#i-close"/></svg><span class="sr-only">Close dialog</span></button></header>
+    <div class="dialog-body"><section class="dialog-section" data-od-id="import-options"><h3>Import scan or model</h3><div class="choice-list"><label class="choice"><input type="radio" name="source-format" checked><span>.E57 / point cloud</span><small>recommended</small></label><label class="choice"><input type="radio" name="source-format"><span>.OBJ / .PLY mesh</span><small>mesh</small></label><label class="choice"><input type="radio" name="source-format"><span>.GLB / .GLTF</span><small>scene</small></label></div><div class="form-grid" style="margin-top:12px"><label>Units <select class="field"><option>Metres (m)</option><option>Millimetres (mm)</option><option>Feet (ft)</option></select></label><label>Scale <input class="field mono" value="1.000" inputmode="decimal"></label></div><p class="dialog-note" id="import-note">Preserves source coordinates and original mesh layers.</p></section><section class="dialog-section" data-od-id="export-presets"><h3>Export preset</h3><div class="choice-list"><label class="choice"><input type="radio" name="export-preset" checked><span>Floorplan SVG / DXF</span><small>plan</small></label><label class="choice"><input type="radio" name="export-preset"><span>Cleaned mesh</span><small>mesh</small></label><label class="choice"><input type="radio" name="export-preset"><span>Section image + data</span><small>slice</small></label></div><div class="form-grid" style="margin-top:12px"><label>Example state <select class="field" id="file-state"><option value="ready">Ready</option><option value="progress">Writing export</option><option value="error">Path unavailable</option><option value="empty">No compatible files</option></select></label></div><p class="dialog-note" id="export-note">Preset writes only derived local data; source scan remains unchanged.</p></section></div>
+    <footer class="dialog-foot"><button class="bar-button" type="button" data-close-dialog>Cancel</button><button class="bar-button primary" type="button" id="file-confirm"><svg class="icon"><use href="#i-export"/></svg><span>Queue export</span></button></footer>
+  </dialog>
+
+  <script>
+    const selections = {
+      table: { title: 'Dining table', kind: 'Object · local result', box: '1.60 × 0.90 × 0.76 m', confidence: '94.6%', source: 'local model', layer: 'Derived model' },
+      chair: { title: 'Chair cluster', kind: 'Object · local result', box: '0.48 × 0.52 × 0.88 m', confidence: '76.2%', source: 'local model', layer: 'Derived model' },
+      wall: { title: 'Wall 03', kind: 'Geometry · derived', box: '4.12 × 0.14 × 2.64 m', confidence: '99.1%', source: 'geometry', layer: 'Derived model' },
+      door: { title: 'Door 01', kind: 'Opening · derived', box: '0.91 × 0.12 × 2.03 m', confidence: '97.8%', source: 'geometry', layer: 'Derived model' },
+      window: { title: 'Window 01', kind: 'Opening · local result', box: '1.18 × 0.14 × 1.09 m', confidence: '82.4%', source: 'local model', layer: 'Derived model' }
+    };
+    const modeCopy = { model: 'Model / Perspective', plan: 'Plan / Derived geometry', slice: 'Slice / Section S-01', layers: 'Layers / Scene tree', review: 'Review / Recognition queue' };
+    const state = { mode: 'model', selected: 'table', rawScan: false, reviewQueue: 2 };
+    const dialog = document.getElementById('file-dialog');
+    const byId = id => document.getElementById(id);
+
+    function selectObject(key) {
+      const item = selections[key];
+      if (!item) return;
+      state.selected = key;
+      document.querySelectorAll('[data-object]').forEach(node => node.classList.toggle('is-selected', node.dataset.object === key));
+      document.querySelectorAll('[data-layer]').forEach(node => node.classList.toggle('is-selected', node.dataset.layer === key));
+      byId('inspect-kind').textContent = item.kind;
+      byId('inspect-title').textContent = item.title;
+      byId('properties').innerHTML = `<div><dt>Bounding box</dt><dd>${item.box}</dd></div><div><dt>Confidence</dt><dd>${item.confidence}</dd></div><div><dt>Source</dt><dd>${item.source}</dd></div><div><dt>Layer</dt><dd>${item.layer}</dd></div>`;
+      byId('model-selection-status').textContent = item.title.toUpperCase();
+      byId('plan-selection-status').textContent = item.title.toUpperCase();
+      byId('layer-preview-label').textContent = item.title.toUpperCase();
+      byId('review-selected').textContent = item.title;
+    }
+
+    function setMode(mode) {
+      state.mode = mode;
+      document.querySelectorAll('.mode-button[data-mode]').forEach(button => button.setAttribute('aria-selected', String(button.dataset.mode === mode)));
+      document.querySelectorAll('.view-panel').forEach(panel => panel.classList.toggle('is-active', panel.dataset.view === mode));
+      byId('workspace-title').textContent = modeCopy[mode];
+      byId('inspector-context').textContent = mode === 'slice' ? 'Section settings' : mode === 'layers' ? 'Selection' : mode === 'review' ? 'Review selection' : 'Selection';
+      byId('slice-controls').hidden = mode !== 'slice';
+      byId('mode-summary').hidden = mode === 'slice';
+    }
+
+    function openDialog() { if (!dialog.open) dialog.showModal(); }
+    function closeDialog() { if (dialog.open) dialog.close(); }
+
+    function updateSlice() {
+      const elevation = Number(byId('slice-elevation').value);
+      const angle = Number(byId('slice-orientation').value);
+      const range = byId('slice-range').value;
+      const cap = byId('cap-fill').checked;
+      byId('slice-elevation-number').value = elevation;
+      byId('slice-range-output').textContent = `${range} mm`;
+      byId('slice-readout').textContent = `Z +${(elevation / 100).toFixed(2)} m`;
+      byId('plane-note').innerHTML = `SECTION S-01<br><strong>+${(elevation / 100).toFixed(2)} m</strong> / ${angle}° / CAP ${cap ? 'ON' : 'OFF'}`;
+      byId('slice-plane-group').setAttribute('transform', `translate(0 ${Math.round((120 - elevation) * .52)}) rotate(${angle === 90 ? 5 : angle === 45 ? 3 : 0} 460 320)`);
+      document.querySelector('.slice-result').style.opacity = cap ? '1' : '.1';
+    }
+
+    document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => setMode(button.dataset.mode)));
+    document.querySelectorAll('[data-object]').forEach(node => {
+      node.addEventListener('click', () => selectObject(node.dataset.object));
+      node.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectObject(node.dataset.object); } });
+    });
+    document.querySelectorAll('[data-select-object]').forEach(button => button.addEventListener('click', () => selectObject(button.dataset.selectObject)));
+    document.querySelectorAll('[data-open-dialog]').forEach(button => button.addEventListener('click', openDialog));
+    document.querySelectorAll('[data-close-dialog]').forEach(button => button.addEventListener('click', closeDialog));
+    document.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'o') { event.preventDefault(); openDialog(); } if (event.key === 'Escape') closeDialog(); });
+
+    byId('scan-toggle').addEventListener('click', event => {
+      state.rawScan = !state.rawScan;
+      event.currentTarget.setAttribute('aria-pressed', String(state.rawScan));
+      event.currentTarget.classList.toggle('is-active', state.rawScan);
+      document.querySelector('.model-svg .scan-points').style.opacity = state.rawScan ? '1' : '.18';
+      byId('raw-scan-path').style.opacity = state.rawScan ? '.75' : '0';
+    });
+    document.querySelectorAll('[data-camera]').forEach(button => button.addEventListener('click', () => { byId('camera-label').textContent = button.dataset.camera.toUpperCase().slice(0,4); }));
+    document.querySelectorAll('.tree-control').forEach(button => button.addEventListener('click', event => { event.stopPropagation(); const next = button.getAttribute('aria-pressed') !== 'true'; button.setAttribute('aria-pressed', String(next)); button.firstElementChild.style.opacity = next ? '1' : '.35'; }));
+    byId('layer-search').addEventListener('input', event => { const query = event.target.value.trim().toLowerCase(); document.querySelectorAll('.tree-row').forEach(row => { row.hidden = Boolean(query) && !row.textContent.toLowerCase().includes(query); }); });
+    ['slice-elevation', 'slice-orientation', 'slice-range', 'cap-fill'].forEach(id => byId(id).addEventListener('input', updateSlice));
+    byId('slice-elevation-number').addEventListener('input', event => { const value = Math.max(0, Math.min(264, Number(event.target.value) || 0)); byId('slice-elevation').value = value; updateSlice(); });
+    document.querySelectorAll('[data-review-action]').forEach(button => button.addEventListener('click', () => { const row = button.closest('tr'); const action = button.dataset.reviewAction; if (action === 'relabel') { row.querySelector('td:first-child button').textContent = 'Furniture / needs label'; } row.querySelector('td:last-child').innerHTML = `<span class="reviewed">${action === 'ignore' ? 'ignored' : action === 'relabel' ? 'relabelled' : 'accepted'}</span>`; state.reviewQueue = Math.max(0, state.reviewQueue - 1); byId('review-queue').textContent = String(state.reviewQueue).padStart(2, '0'); }));
+    const notes = { ready: 'Preset writes only derived local data; source scan remains unchanged.', progress: 'Writing floorplan.svg · 68% · local prototype data.', error: 'Selected destination cannot be written. Choose another local folder.', empty: 'No compatible source files in the selected folder.' };
+    byId('file-state').addEventListener('change', event => { byId('export-note').textContent = notes[event.target.value]; });
+    byId('file-confirm').addEventListener('click', () => { byId('export-note').textContent = 'Queued locally · waiting for Tauri job binding.'; });
+    dialog.addEventListener('close', () => byId('file-dialog').returnValue = '');
+    updateSlice();
+    selectObject('table');
+  </script>
+</body>
+</html>

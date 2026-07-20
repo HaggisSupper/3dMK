@@ -1,0 +1,10 @@
+[package]
+name = "vwm-implicit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+vwm-implicit-core = { path = "../vwm-implicit-core" }
+vwm-implicit-poisson = { path = "../vwm-implicit-poisson" }
+vwm-implicit-surface-nets = { path = "../vwm-implicit-surface-nets" }

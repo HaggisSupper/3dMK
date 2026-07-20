@@ -1,0 +1,16 @@
+[package]
+name = "three-dmk-desktop"
+version = "0.1.0"
+description = "3DMk desktop point-cloud and mesh workspace"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+agentic-cad-backend = { path = ".." }
+anyhow = "1"
+axum = "0.7"
+tauri = { version = "2", features = [] }
+tokio = { version = "1", features = ["net"] }
+

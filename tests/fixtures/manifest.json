@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-18T19:36:20-05:00",
+  "canonical_units": "metres",
+  "fixtures": [
+    {
+      "id": "real-iphone-point-cloud",
+      "path": "Model Sample files/Untitled_Scan_2_11_17_57.ply",
+      "bytes": 12687583,
+      "sha256": "62715BD7A353152A992C02B15987B157C0158ADCE6593942047F5A01BBC2A03F",
+      "role": "real point-cloud preparation and reconstruction",
+      "expected": {
+        "points": 255330,
+        "quality_requires_visual_review": true
+      }
+    },
+    {
+      "id": "iphone-capture-archive",
+      "path": "Model Sample files/Untitled_Scan-2026-Jun-23-archive.zip",
+      "bytes": 104850005,
+      "sha256": "87729DC79E03921BC74650932104147441846A0570E9210A9B2D6681578E43F8",
+      "role": "capture package and calibrated-image adapter",
+      "expected": {
+        "entries": 161,
+        "image_records_expected": 84,
+        "image_pairs_observed": 74,
+        "missing_image_warning_count": 10
+      }
+    },
+    {
+      "id": "iphone-derived-glb",
+      "path": "Model Sample files/Untitled_Scan-2026-Jun-23.glb",
+      "bytes": 10398860,
+      "sha256": "7DCEA9BAEB84A4424224601BDCBD4A3592C2ECEFDA2BDBB3705DC192DBC59473",
+      "role": "real GLB import and render"
+    },
+    {
+      "id": "textured-obj-package",
+      "path": "Model Sample files/Untitled Scan.zip",
+      "bytes": 7319488,
+      "sha256": "10019247204CA82E37E1EB4F21EB46C4464F9704475220102BEE16A3872A361F",
+      "role": "OBJ, MTL, and five-texture package round-trip",
+      "expected": {
+        "entries": 7,
+        "texture_images": 5
+      }
+    },
+    {
+      "id": "known-bad-smooth-blob",
+      "path": "output/implicit-audit-stride512-depth4.obj",
+      "bytes": 1028896,
+      "sha256": "F8870D3F7803C393801BEA7DE220721E7FB9AF90AD2E38FEB1160C6D4B791FA0",
+      "role": "negative reconstruction-quality regression",
+      "expected": {
+        "quality_gate": "fail"
+      }
+    },
+    {
+      "id": "known-bad-rounded-masses",
+      "path": "output/implicit-audit-stride64-depth5.obj",
+      "bytes": 428316,
+      "sha256": "9CD92685F3100CF1F8C7A6FC7DDFA1461E57F2EBDA3753750F6E0AD341AFBDE4",
+      "role": "negative reconstruction component/coverage regression",
+      "expected": {
+        "quality_gate": "fail"
+      }
+    },
+    {
+      "id": "malformed-not-zip",
+      "path": "tests/fixtures/malformed/not-a-zip.zip",
+      "bytes": 40,
+      "sha256": "03991234DABB0353F5351906294410B392BDA4E91D5A130FA9722244DB5C86F3",
+      "role": "invalid archive rejection"
+    },
+    {
+      "id": "malformed-truncated-zip",
+      "path": "tests/fixtures/malformed/truncated.zip",
+      "bytes": 3,
+      "sha256": "09D1BDFD0C497F9FFDD545221F1EBB4ABBC3713CEAAFC76DA8F3F3226728B0B3",
+      "role": "truncated archive rejection"
+    }
+  ]
+}

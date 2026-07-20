@@ -1,0 +1,13 @@
+{
+  "model_id": "object-classifier-v1",
+  "model_file": "classifier.onnx",
+  "input": {
+    "width": 224,
+    "height": 224,
+    "mean": [0.485, 0.456, 0.406],
+    "std": [0.229, 0.224, 0.225]
+  },
+  "labels": ["battery", "cabinet", "rack", "valve", "unknown"],
+  "output_index": 0,
+  "output_activation": "softmax"
+}

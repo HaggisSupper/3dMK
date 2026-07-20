@@ -1,0 +1,10 @@
+[package]
+name = "vwm-implicit-surface-nets"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+fast-surface-nets = "0.2.1"
+vwm-implicit-core = { path = "../vwm-implicit-core" }

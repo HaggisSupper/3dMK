@@ -1,0 +1,17 @@
+[package]
+name = "vwm-io"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+thiserror.workspace = true
+log.workspace = true
+vwm-core = { path = "../vwm-core" }
+
+gltf = "1.4"
+tobj = "4.0"
+ply-rs = "0.1"
+stl_io = "0.8"
+las = "0.8"
