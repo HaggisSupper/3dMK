@@ -419,6 +419,7 @@
                                     <div id="analysisObjectList" class="analysis-object-list" aria-live="polite"></div>
                                     <button id="removeDetectedObjectsBtn" class="action-btn danger" disabled>Remove marked fragments</button>
                                     <div id="detectedLayerStatus" class="status-line" aria-live="polite">Detected fragments become a separate review layer.</div>
+                                    <div class="inline-note">Review the overlay and remove stray fragments here before exporting the cleaned scene.</div>
                                 </section>
                             </div>
                         </div>
@@ -551,23 +552,13 @@
                             <label class="export-chip"><input type="checkbox" data-bundle-format value="stl"><span>STL</span><small>3D</small></label>
                             <label class="export-chip"><input type="checkbox" data-bundle-format value="snapshot"><span>Viewport snapshot</span><small>PDF</small></label>
                         </div>
-                        <div class="export-select-row">
-                            <div class="control-group">
-                                <label for="bundleDensity">Export density</label>
-                                <select id="bundleDensity">
-                                    <option value="auto">Auto</option>
-                                    <option value="dense">Dense</option>
-                                    <option value="sparse">Sparse</option>
-                                </select>
-                            </div>
-                            <div class="control-group">
-                                <label for="bundleCleanup">Cleanup</label>
-                                <select id="bundleCleanup">
-                                    <option value="off">Off</option>
-                                    <option value="artifact-remove" selected>Remove stray artifacts</option>
-                                    <option value="artifact-remove-merge">Remove stray artifacts + merge</option>
-                                </select>
-                            </div>
+                        <div class="control-group">
+                            <label for="bundleDensity">Export density</label>
+                            <select id="bundleDensity">
+                                <option value="auto">Auto</option>
+                                <option value="dense">Dense</option>
+                                <option value="sparse">Sparse</option>
+                            </select>
                         </div>
                         <div class="export-bundle-actions">
                             <button id="exportBundleBtn" class="action-btn primary">Export selected</button>
@@ -1737,7 +1728,6 @@
             safeBind('exportPdfBtn', 'click', exportPDF);
             document.querySelectorAll('[data-bundle-format]').forEach(input => input.addEventListener('change', updateBundleExportSummary));
             safeBind('bundleDensity', 'change', updateBundleExportSummary);
-            safeBind('bundleCleanup', 'change', updateBundleExportSummary);
             safeBind('bundleSelectAllBtn', 'click', () => {
                 document.querySelectorAll('[data-bundle-format]').forEach(input => { input.checked = true; });
                 updateBundleExportSummary();
@@ -2551,8 +2541,7 @@
 
         function collectExportOptions() {
             return {
-                point_density: $('bundleDensity')?.value || 'auto',
-                artifact_cleanup: $('bundleCleanup')?.value || 'artifact-remove'
+                point_density: $('bundleDensity')?.value || 'auto'
             };
         }
 
