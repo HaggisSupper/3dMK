@@ -14,6 +14,7 @@ pub fn load_scene(path: &Path) -> Result<CanonicalScene> {
         SceneFormat::Ply => load_ply(path),
         SceneFormat::Stl => load_stl(path),
         SceneFormat::Las => load_las(path),
+        SceneFormat::Convertible |
         SceneFormat::Unknown => {
             let converted = convert_to_glb(path)?;
             load_gltf(&converted)

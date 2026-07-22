@@ -66,6 +66,90 @@
       }
     },
     {
+      "id": "example-obj-wuson",
+      "path": "models/WusonOBJ.obj",
+      "bytes": 258268,
+      "sha256": "092295203dc1ddb7be09aa0ebd7b2708d7553300698e44a48bc6ac65c6bd86cf",
+      "role": "OBJ text mesh import sample"
+    },
+    {
+      "id": "example-ply-wuson",
+      "path": "models/Wuson.ply",
+      "bytes": 915754,
+      "sha256": "c7911cc2f592eed7096cf3b6ff4fb6d7fb543a74b3d7e1f0d21a9ca507b3cee8",
+      "role": "PLY point-cloud/mesh sample"
+    },
+    {
+      "id": "example-stl-spider-binary",
+      "path": "models/Spider_binary.stl",
+      "bytes": 68484,
+      "sha256": "267fdc458d855d70b09f88d3b434ddddeaf3785ea57011ab0b49a5d8581c55bd",
+      "role": "binary STL mesh sample"
+    },
+    {
+      "id": "example-collada",
+      "path": "models/COLLADA.dae",
+      "bytes": 725385,
+      "sha256": "9697efc60119a491d417e520c0b945b3f424a15861025f352744d661fc2904f7",
+      "role": "Collada DAE sample"
+    },
+    {
+      "id": "example-fbx-box",
+      "path": "models/box.fbx",
+      "bytes": 17200,
+      "sha256": "ad2d79fe89d4d646bc7930dc952eb28e69976a321b387bf7851ecd3f37e667f8",
+      "role": "FBX mesh sample"
+    },
+    {
+      "id": "example-3ds-rotating-cube",
+      "path": "models/RotatingCube.3DS",
+      "bytes": 5009,
+      "sha256": "55d0c540a059029fee276fb5e849aa34ebcfad37b619d87d53b5fee3094ea242",
+      "role": "3DS mesh sample"
+    },
+    {
+      "id": "example-3mf-box",
+      "path": "models/box.3mf",
+      "bytes": 1416,
+      "sha256": "de20508dff06f8faf8ca992c00238d4affc916ba4b812e8ff9ec1571fec533a1",
+      "role": "3MF mesh sample"
+    },
+    {
+      "id": "example-off-wuson",
+      "path": "models/Wuson.off",
+      "bytes": 149571,
+      "sha256": "d373a4777bd0420b1ba5200256dd5b7dc77cba4ab378b4748080ef91c644c387",
+      "role": "OFF mesh sample"
+    },
+    {
+      "id": "example-x3d-hello-world",
+      "path": "models/HelloWorld.x3d",
+      "bytes": 3554,
+      "sha256": "12faa2a66b25d0d1c631c29b47b89a2490437494b23f8505d5a34f785f0715a5",
+      "role": "X3D text mesh sample"
+    },
+    {
+      "id": "example-glb-box",
+      "path": "models/BoxTextured.glb",
+      "bytes": 4696,
+      "sha256": "624621d7885bb418ac64e99c994b45634a32c87caeefae67b06c5c0531c57115",
+      "role": "glTF binary payload sample"
+    },
+    {
+      "id": "example-gltf-box",
+      "path": "models/BoxTextured.gltf",
+      "bytes": 8084,
+      "sha256": "03e315879df94ae7afdfbfec2ec0b6c8e28a04ee1345331a0f84974a9774a372",
+      "role": "gLTF embedded sample"
+    },
+    {
+      "id": "example-u3d-box",
+      "path": "models/box.u3d",
+      "bytes": 1276,
+      "sha256": "e226dd6c345a4ebe9c0f0e336d8a605bcf81efa86b33739b7007c1cc748d7bbe",
+      "role": "U3D sample requested format"
+    },
+    {
       "id": "malformed-not-zip",
       "path": "tests/fixtures/malformed/not-a-zip.zip",
       "bytes": 40,

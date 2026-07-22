@@ -7,6 +7,7 @@ pub enum SceneFormat {
     Ply,
     Stl,
     Las,
+    Convertible,
     Unknown,
 }
 
@@ -21,6 +22,14 @@ pub fn detect_format(path: &Path) -> SceneFormat {
         Some(ext) if ext == "ply" => SceneFormat::Ply,
         Some(ext) if ext == "stl" => SceneFormat::Stl,
         Some(ext) if ext == "las" || ext == "laz" => SceneFormat::Las,
+        Some(ext)
+            if matches!(
+                ext.as_str(),
+                "fbx" | "dae" | "3ds" | "3mf" | "off" | "u3d" | "x3d",
+            ) =>
+        {
+            SceneFormat::Convertible
+        }
         _ => SceneFormat::Unknown,
     }
 }

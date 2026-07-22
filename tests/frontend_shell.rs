@@ -11,7 +11,7 @@ fn frontend_has_a_usable_entry_point() {
     assert!(html.contains("function ensurePlanarUvs"));
     assert!(html.contains("new ResizeObserver(onWindowResize).observe(viewport)"));
     assert!(html.contains("JSZip.loadAsync(file)"));
-    assert!(html.contains("accept=\".glb,.gltf,.obj,.ply,.stl,.zip\""));
+    assert!(html.contains("accept=\".3ds,.3mf,.dae,.fbx,.glb,.gltf,.off,.obj,.ply,.stl,.u3d,.x3d,.zip\""));
     assert!(html.contains("manager.setURLModifier"));
     assert!(html.contains("new MTLLoader(manager)"));
     assert!(html.contains("currentTexture || geom.userData.texture"));
