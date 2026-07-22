@@ -301,11 +301,15 @@ async fn handle_import_project(
                     .and_then(|value| value.to_str())
                     .map(str::to_ascii_lowercase)
                     .unwrap_or_default();
-                if !matches!(extension.as_str(), "glb" | "ply" | "obj") {
+                if !matches!(
+                    extension.as_str(),
+                    "3ds" | "3mf" | "dae" | "fbx" | "glb" | "gltf" | "off" | "obj" | "ply"
+                        | "stl" | "u3d" | "x3d"
+                ) {
                     return Err(ApiErrorResponse::new(
                         StatusCode::UNSUPPORTED_MEDIA_TYPE,
                         "unsupported_model_format",
-                        "Phase 1 import accepts GLB, PLY, or OBJ. Use a package for dependent files.",
+                        "Phase 1 import accepts GLB, GLTF, PLY, OBJ, STL, FBX, DAE, 3DS, 3MF, OFF, U3D, and X3D. Use a package for dependent files.",
                         false,
                     ));
                 }
@@ -353,7 +357,7 @@ async fn handle_import_project(
         ApiErrorResponse::new(
             StatusCode::BAD_REQUEST,
             "missing_model",
-            "Choose a GLB, PLY, or OBJ model to import.",
+            "Choose a GLB, GLTF, PLY, OBJ, STL, FBX, DAE, 3DS, 3MF, OFF, U3D, or X3D model to import.",
             false,
         )
     })?;
@@ -1029,9 +1033,18 @@ fn archive_too_large_api_error() -> ApiErrorResponse {
 
 fn model_media_type(extension: &str) -> &'static str {
     match extension {
+        "3ds" => "application/x-3ds",
+        "3mf" => "model/3mf",
+        "dae" => "model/vnd.collada+xml",
+        "fbx" => "model/fbx",
         "glb" => "model/gltf-binary",
-        "ply" => "application/ply",
+        "gltf" => "model/gltf+json",
+        "off" => "model/off",
+        "u3d" => "model/u3d",
         "obj" => "model/obj",
+        "ply" => "application/ply",
+        "stl" => "model/stl",
+        "x3d" => "model/x3d+xml",
         _ => "application/octet-stream",
     }
 }
@@ -1048,7 +1061,7 @@ fn validated_import_units(
         return Err(ApiErrorResponse::new(
             StatusCode::BAD_REQUEST,
             "missing_units",
-            "PLY, OBJ, STL, and LAS imports require explicit source units.",
+            "GLTF, PLY, OBJ, STL, FBX, DAE, 3DS, 3MF, OFF, U3D, X3D, and LAS imports require explicit source units.",
             false,
         ));
     };

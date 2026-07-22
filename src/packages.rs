@@ -871,6 +871,13 @@ fn detect_media_type(path: &str, bytes: &[u8]) -> &'static str {
         {
             "model/obj"
         }
+        "3ds" => "application/x-3ds",
+        "3mf" => "model/3mf",
+        "dae" => "model/vnd.collada+xml",
+        "fbx" => "model/fbx",
+        "off" => "model/off",
+        "u3d" => "model/u3d",
+        "x3d" if text.trim_start().starts_with("<") => "model/x3d+xml",
         "mtl"
             if text.lines().any(|line| {
                 let line = line.trim_start();
@@ -901,6 +908,13 @@ fn resolve_primary_model(
                 "model/gltf-binary" => "glb",
                 "model/gltf+json" => "gltf",
                 "model/obj" => "obj",
+                "model/fbx" => "fbx",
+                "model/vnd.collada+xml" => "dae",
+                "application/x-3ds" => "3ds",
+                "model/3mf" => "3mf",
+                "model/off" => "off",
+                "model/u3d" => "u3d",
+                "model/x3d+xml" => "x3d",
                 "application/ply" => "ply",
                 "application/vnd.las" => "las",
                 "model/stl" => "stl",
@@ -917,8 +931,9 @@ fn resolve_primary_model(
                 "glb" => 40,
                 "gltf" => 30,
                 "obj" => 25,
+                "fbx" | "dae" | "3ds" | "3mf" | "off" | "u3d" | "x3d" => 15,
                 "ply" | "las" => 20,
-                "stl" => 15,
+                "stl" => 10,
                 _ => 0,
             };
             let mut reasons = vec![format!("detected {format} content")];

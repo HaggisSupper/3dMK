@@ -13,4 +13,3 @@ anyhow = "1"
 axum = "0.7"
 tauri = { version = "2", features = [] }
 tokio = { version = "1", features = ["net"] }
-
