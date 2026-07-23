@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "app_version": "0.5.0",
+  "active_workspace": "view",
+  "active_layout_profile": "default-engineering",
+  "viewport": {
+    "fixed_center": true,
+    "camera": {
+      "position": [4.0, 3.0, 4.0],
+      "target": [0.0, 0.0, 0.0],
+      "up": [0.0, 1.0, 0.0],
+      "projection": "perspective"
+    },
+    "coordinate_frame": "project.local",
+    "selected_entities": [],
+    "expanded_tree_nodes": ["project", "sources", "point_clouds", "meshes"]
+  },
+  "panels": [
+    {"panel_id": "project_tree", "state_version": 1, "region": "left", "tab_group": "left.primary", "tab_order": 0, "active": true, "visible": true, "floating": false, "pinned": true, "auto_hidden": false, "floating_bounds": null, "monitor_id": null},
+    {"panel_id": "properties", "state_version": 1, "region": "right", "tab_group": "right.primary", "tab_order": 0, "active": true, "visible": true, "floating": false, "pinned": true, "auto_hidden": false, "floating_bounds": null, "monitor_id": null},
+    {"panel_id": "validation", "state_version": 1, "region": "right", "tab_group": "right.primary", "tab_order": 1, "active": false, "visible": true, "floating": false, "pinned": true, "auto_hidden": false, "floating_bounds": null, "monitor_id": null},
+    {"panel_id": "jobs", "state_version": 1, "region": "bottom", "tab_group": "bottom.primary", "tab_order": 0, "active": true, "visible": true, "floating": false, "pinned": true, "auto_hidden": false, "floating_bounds": null, "monitor_id": null},
+    {"panel_id": "processing_history", "state_version": 1, "region": "bottom", "tab_group": "bottom.primary", "tab_order": 1, "active": false, "visible": true, "floating": false, "pinned": true, "auto_hidden": false, "floating_bounds": null, "monitor_id": null},
+    {"panel_id": "measurements", "state_version": 1, "region": "bottom", "tab_group": "bottom.primary", "tab_order": 2, "active": false, "visible": true, "floating": false, "pinned": true, "auto_hidden": false, "floating_bounds": null, "monitor_id": null}
+  ],
+  "splitters": [
+    {"splitter_id": "left.viewport", "orientation": "vertical", "ratio": 0.18},
+    {"splitter_id": "viewport.right", "orientation": "vertical", "ratio": 0.78},
+    {"splitter_id": "main.bottom", "orientation": "horizontal", "ratio": 0.76}
+  ],
+  "monitor_topology": [
+    {"monitor_id": "default-primary", "work_area": {"x": 0, "y": 0, "width": 1920, "height": 1040}, "scale_factor": 1.0, "primary": true}
+  ],
+  "saved_at_utc": "2026-07-23T00:00:00Z"
+}

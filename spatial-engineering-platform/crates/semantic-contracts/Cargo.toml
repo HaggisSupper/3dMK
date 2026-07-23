@@ -1,0 +1,10 @@
+[package]
+name = "semantic-contracts"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+[dependencies]
+spatial-types = { path = "../spatial-types" }
+[lints]
+workspace = true

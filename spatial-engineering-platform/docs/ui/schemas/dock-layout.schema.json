@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sep://schemas/dock-layout.schema.json",
+  "title": "Spatial Engineering Platform Dock Layout",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "app_version", "active_workspace", "viewport", "panels", "splitters", "monitor_topology", "saved_at_utc"],
+  "properties": {
+    "schema_version": {"type": "integer", "const": 1},
+    "app_version": {"type": "string", "minLength": 1, "maxLength": 64},
+    "active_workspace": {"enum": ["view", "clean", "register", "segment", "reconstruct", "bim", "inspect"]},
+    "active_layout_profile": {"type": "string", "minLength": 1, "maxLength": 128, "default": "default"},
+    "viewport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fixed_center", "camera", "coordinate_frame"],
+      "properties": {
+        "fixed_center": {"const": true},
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["position", "target", "up", "projection"],
+          "properties": {
+            "position": {"$ref": "#/$defs/vec3"},
+            "target": {"$ref": "#/$defs/vec3"},
+            "up": {"$ref": "#/$defs/vec3"},
+            "projection": {"enum": ["perspective", "orthographic"]}
+          }
+        },
+        "coordinate_frame": {"type": "string", "minLength": 1, "maxLength": 128},
+        "selected_entities": {"type": "array", "maxItems": 10000, "items": {"type": "string", "maxLength": 256}},
+        "expanded_tree_nodes": {"type": "array", "maxItems": 10000, "items": {"type": "string", "maxLength": 256}}
+      }
+    },
+    "panels": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["panel_id", "state_version", "region", "visible", "floating", "pinned", "tab_order"],
+        "properties": {
+          "panel_id": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,127}$"},
+          "state_version": {"type": "integer", "minimum": 1, "maximum": 65535},
+          "region": {"enum": ["left", "right", "bottom", "floating"]},
+          "tab_group": {"type": ["string", "null"], "maxLength": 128},
+          "tab_order": {"type": "integer", "minimum": 0, "maximum": 127},
+          "active": {"type": "boolean", "default": false},
+          "visible": {"type": "boolean"},
+          "floating": {"type": "boolean"},
+          "pinned": {"type": "boolean"},
+          "auto_hidden": {"type": "boolean", "default": false},
+          "floating_bounds": {"oneOf": [{"$ref": "#/$defs/rect"}, {"type": "null"}]},
+          "monitor_id": {"type": ["string", "null"], "maxLength": 256}
+        }
+      }
+    },
+    "splitters": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["splitter_id", "orientation", "ratio"],
+        "properties": {
+          "splitter_id": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,127}$"},
+          "orientation": {"enum": ["horizontal", "vertical"]},
+          "ratio": {"type": "number", "exclusiveMinimum": 0.0, "exclusiveMaximum": 1.0}
+        }
+      }
+    },
+    "monitor_topology": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["monitor_id", "work_area", "scale_factor", "primary"],
+        "properties": {
+          "monitor_id": {"type": "string", "minLength": 1, "maxLength": 256},
+          "work_area": {"$ref": "#/$defs/rect"},
+          "scale_factor": {"type": "number", "minimum": 0.5, "maximum": 8.0},
+          "primary": {"type": "boolean"}
+        }
+      }
+    },
+    "saved_at_utc": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {
+    "finite": {"type": "number", "minimum": -1e15, "maximum": 1e15},
+    "vec3": {"type": "array", "prefixItems": [{"$ref": "#/$defs/finite"}, {"$ref": "#/$defs/finite"}, {"$ref": "#/$defs/finite"}], "items": false},
+    "rect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": {"$ref": "#/$defs/finite"},
+        "y": {"$ref": "#/$defs/finite"},
+        "width": {"type": "number", "minimum": 64, "maximum": 100000},
+        "height": {"type": "number", "minimum": 48, "maximum": 100000}
+      }
+    }
+  }
+}

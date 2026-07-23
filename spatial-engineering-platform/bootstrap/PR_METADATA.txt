@@ -1,3 +1,0 @@
-head=agent/spatial-engineering-platform
-base=main
-draft=true

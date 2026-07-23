@@ -1,0 +1,26 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/spatial-types",
+  "crates/pointcloud-core",
+  "crates/format-contracts",
+  "crates/format-io",
+  "crates/mesh-core",
+  "crates/world-model-contracts",
+  "crates/geometry-fit",
+  "crates/semantic-contracts",
+  "crates/bim-contracts",
+  "crates/metrology",
+  "crates/ui-layout-contracts",
+  "crates/spatial-cli",
+]
+exclude = ["apps/desktop/src-tauri"]
+
+[workspace.package]
+version = "0.5.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.78"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"

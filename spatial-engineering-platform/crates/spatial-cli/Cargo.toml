@@ -1,0 +1,16 @@
+[package]
+name = "spatial-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+[dependencies]
+format-contracts = { path = "../format-contracts" }
+spatial-types = { path = "../spatial-types" }
+pointcloud-core = { path = "../pointcloud-core" }
+format-io = { path = "../format-io" }
+mesh-core = { path = "../mesh-core" }
+geometry-fit = { path = "../geometry-fit" }
+metrology = { path = "../metrology" }
+[lints]
+workspace = true

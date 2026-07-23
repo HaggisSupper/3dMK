@@ -1,0 +1,18 @@
+[package]
+name = "format-io"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+spatial-types = { path = "../spatial-types" }
+pointcloud-core = { path = "../pointcloud-core" }
+mesh-core = { path = "../mesh-core" }
+e57 = { version = "0.11.13", features = ["crc32c"] }
+las = { version = "0.9.11", features = ["laz-parallel"] }
+gltf = { version = "1.4.1", features = ["import"] }
+serde_json = "1.0"
+
+[lints]
+workspace = true

@@ -1,0 +1,11 @@
+[package]
+name = "pointcloud-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+[dependencies]
+spatial-types = { path = "../spatial-types" }
+format-contracts = { path = "../format-contracts" }
+[lints]
+workspace = true

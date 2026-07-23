@@ -1,0 +1,129 @@
+{
+  "contract": "SEP-UI",
+  "version": "1.1.0",
+  "status": "immutable-normative",
+  "default_density": "compact",
+  "metrics": {
+    "base_spacing_px": 2,
+    "control_height_px": 26,
+    "dense_control_height_px": 22,
+    "tree_row_px": 24,
+    "table_row_px": 24,
+    "toolbar_px": 30,
+    "tab_px": 28,
+    "panel_header_px": 28,
+    "status_bar_px": 22,
+    "panel_padding_px": 6,
+    "panel_gap_px": 3,
+    "border_radius_px": 2,
+    "border_radius_max_px": 3,
+    "minimum_pointer_target_px": 24
+  },
+  "workspaces": [
+    "view",
+    "clean",
+    "register",
+    "segment",
+    "reconstruct",
+    "bim",
+    "inspect"
+  ],
+  "tree_order": [
+    "coordinate_systems",
+    "sources",
+    "point_clouds",
+    "meshes",
+    "images",
+    "registrations",
+    "segments",
+    "engineering_objects",
+    "cad",
+    "bim",
+    "measurements",
+    "inspections",
+    "processing_history"
+  ],
+  "required_shell_regions": [
+    "menu_command_strip",
+    "project_tree",
+    "viewport",
+    "inspector",
+    "results_history_jobs",
+    "status_bar"
+  ],
+  "transactional_operations": [
+    "registration",
+    "segmentation",
+    "primitive_fit",
+    "classification_acceptance",
+    "bim_derivation",
+    "inspection_control"
+  ],
+  "transaction_steps": [
+    "configure",
+    "preview",
+    "inspect_metrics",
+    "accept_or_recalculate_or_cancel"
+  ],
+  "prohibited_patterns": [
+    "dashboard_cards",
+    "desktop_hamburger_navigation",
+    "routine_modal_wizards",
+    "architecture_prose_in_panels",
+    "marketing_copy",
+    "blue_tinted_dark_chrome",
+    "unsynchronized_selection",
+    "silent_unit_assumptions",
+    "color_only_status"
+  ],
+  "required_evaluation_states": [
+    "normal",
+    "hover",
+    "focus",
+    "active",
+    "disabled",
+    "loading",
+    "empty",
+    "warning",
+    "error"
+  ],
+  "source_documents": [
+    "ACCESSIBILITY_CONTRACT.md",
+    "CONTROL_BEHAVIOR_CONTRACT.md",
+    "DENSITY_AND_TOKENS.md",
+    "ERROR_AND_STATUS_CONTRACT.md",
+    "KEYBOARD_AND_COMMAND_CONTRACT.md",
+    "NAVIGATION_CONTRACT.md",
+    "REAL_WORLD_WORKFLOW_RESEARCH.md",
+    "UI_CONTRACT.md",
+    "UI_EVALUATION_MATRIX.md",
+    "VIEWPORT_INTERACTION_CONTRACT.md",
+    "WORKSPACE_CONTRACTS.md",
+    "DOCK_LAYOUT_PERSISTENCE_CONTRACT.md",
+    "LAYOUT_RECOVERY_AND_MIGRATION.md"
+  ],
+  "primary_viewport": {
+    "role": "fixed_spatial_authority",
+    "dockable": false,
+    "floatable": false,
+    "closable": false,
+    "alignment_reference_for_child_views": true
+  },
+  "dock_layout_persistence": {
+    "required": true,
+    "restore_before_first_interactive_frame": true,
+    "schema_version": 1,
+    "save_debounce_ms": 500,
+    "max_dirty_interval_ms": 10000,
+    "atomic_write": true,
+    "last_known_good_required": true,
+    "fallback_order": [
+      "current",
+      "last_known_good",
+      "shipped_default"
+    ],
+    "monitor_and_dpi_reconciliation_required": true,
+    "canonical_schema": "schemas/dock-layout.schema.json",
+    "default_layout": "layouts/default-engineering-layout.json"
+  }
+}
