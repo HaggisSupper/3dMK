@@ -39,6 +39,25 @@ fn frontend_has_a_usable_entry_point() {
     assert!(html.contains("function rememberSceneAnalysis"));
     assert!(html.contains("function renderSceneAnalysisOverlay"));
     assert!(html.contains("function clearSceneAnalysisOverlay"));
+    assert!(html.contains("id=\"floatingMeshReviewList\""));
+    assert!(html.contains("id=\"selectAllFloatingBtn\""));
+    assert!(html.contains("id=\"hideSelectedFloatingBtn\""));
+    assert!(html.contains("id=\"deleteSelectedFloatingBtn\""));
+    assert!(html.contains("id=\"saveFloatingEditsBtn\""));
+    assert!(html.contains("id=\"discardFloatingEditsBtn\""));
+    assert!(html.contains("id=\"floatingMeshContextMenu\""));
+    assert!(html.contains("function renderFloatingMeshReviewList"));
+    assert!(html.contains("function setFloatingClustersHidden"));
+    assert!(html.contains("function stageFloatingClusterDeletion"));
+    assert!(html.contains("function discardFloatingMeshEdits"));
+    assert!(html.contains("function saveFloatingMeshEdits"));
+    assert!(html.contains("function handleFloatingMeshContextMenu"));
+    assert!(html.contains("hidden_cluster_ids"));
+    assert!(html.contains("pending_deletion_cluster_ids"));
+    assert!(html.contains("Detached mesh staging mutated model geometry"));
+    assert!(html.contains("Save edits did not squash staged geometry"));
+    assert!(html.contains("Save edits did not retain hidden state"));
+    assert!(html.contains("Detached mesh undo did not restore staged state"));
     assert!(html.contains("function updateContextHelp"));
     assert!(html.contains("async function buildModelPackage"));
     assert!(html.contains("reference_images: {"));
@@ -46,6 +65,13 @@ fn frontend_has_a_usable_entry_point() {
     assert!(html.contains("id=\"refinePackageImagesBtn\""));
     assert!(html.contains("async function refinePackageTexture"));
     assert!(html.contains("/api/image-assisted-refinement"));
+    assert!(html.contains("id=\"calibratedPhotoProjectionBtn\""));
+    assert!(html.contains("id=\"projectionMaxImages\""));
+    assert!(html.contains("id=\"projectionOcclusionTolerance\""));
+    assert!(html.contains("id=\"projectionMinObservations\""));
+    assert!(html.contains("id=\"projectionOriginalColorWeight\""));
+    assert!(html.contains("async function projectCalibratedPhotos"));
+    assert!(html.contains("/api/calibrated-photo-project"));
     assert!(html.contains("class=\"nested-accordion\""));
     assert!(html.contains("Import geometry or package"));
     assert!(html.contains("id=\"packageImportReview\""));
@@ -65,7 +91,7 @@ fn frontend_has_a_usable_entry_point() {
     assert!(html.contains("const rememberTextureAsset ="));
     assert!(html.contains("pointGeometry.userData.texture = sourceTexture || null"));
     assert!(html.contains("meshGeometry.userData.texture = sourceTexture || null"));
-    assert!(html.contains("Saved ${packaged.filename} with geometry, textures, reference photos, analysis, room-plan review, and measurements when available."));
+    assert!(html.contains("Saved ${packaged.filename} from current PLY geometry"));
     assert!(html.contains("Exported ${asset.filename} as a raw 3D model."));
     assert!(html.contains("scene_analysis_context"));
     assert!(html.contains("mesh_smoothing"));
@@ -118,4 +144,102 @@ fn frontend_has_a_usable_entry_point() {
     assert!(!html.to_ascii_lowercase().contains("splat"));
     assert!(!html.to_ascii_lowercase().contains("voxelize"));
     assert!(!html.to_ascii_lowercase().contains("convex mesh"));
+}
+
+#[test]
+fn calibrated_projection_posts_complete_inputs_and_commits_once() {
+    let html = include_str!("../public/index.html");
+
+    for id in [
+        "calibratedPhotoProjectionBtn",
+        "projectionMaxImages",
+        "projectionOcclusionTolerance",
+        "projectionMinObservations",
+        "projectionOriginalColorWeight",
+        "calibratedPhotoProjectionStatus",
+    ] {
+        assert!(html.contains(&format!("id=\"{id}\"")), "missing {id}");
+    }
+    assert!(html.contains("safeBind('calibratedPhotoProjectionBtn', 'click', projectCalibratedPhotos)"));
+    assert!(html.contains("async function projectCalibratedPhotos"));
+    assert!(html.contains("form.append('cloud', geometryPlyBlob(2000000, true"));
+    assert!(html.contains("form.append('camera_set'"));
+    assert!(html.contains("form.append('photo_manifest'"));
+    assert!(html.contains("form.append('geometry_provenance'"));
+    assert!(html.contains("form.append('projection_options'"));
+    assert!(html.contains("form.append('reference_photo'"));
+    assert!(html.contains("fetchJson('/api/calibrated-photo-project'"));
+    assert!(html.contains("loadPlyGeometryFromUrl(data.projected_model)"));
+    assert!(html.contains("commitGeometryEdit([projectedGeometry]"));
+    assert!(html.contains("source_geometry_fingerprint: activeGeometryFingerprint"));
+    assert!(html.contains("photoEvidence.length"));
+    assert!(html.contains("photoProjection: currentModelPackage.photoProjection || null"));
+}
+
+#[test]
+fn ply_and_photo_pairing_contract_preserves_source_data() {
+    let html = include_str!("../public/index.html");
+
+    assert!(html.contains("const normalizePackageSourcePath ="));
+    assert!(html.contains("sourcePath: packageAssetSourcePath(asset)"));
+    assert!(html.contains("camera_id: camera.id"));
+    assert!(html.contains("normalizePackageSourcePath(photo.sourcePath || photo.name)"));
+    assert!(html.contains("source_path: referencePhotos[index].sourcePath || file"));
+    assert!(html.contains("property float nx"));
+    assert!(html.contains("property uchar red"));
+    assert!(html.contains("property float s"));
+    assert!(html.contains("property list uchar int vertex_indices"));
+    assert!(html.contains("concatenateGeometryAttribute('uv'"));
+}
+
+#[test]
+fn detached_review_uses_revision_bound_exact_membership() {
+    let html = include_str!("../public/index.html");
+
+    assert!(html.contains("function geometryConnectedComponents"));
+    assert!(html.contains("function buildFloatingComponentMasks"));
+    assert!(html.contains("function meshGeometryByFaceMask"));
+    assert!(html.contains("function pointGeometryByIndexMask"));
+    assert!(html.contains("faceIndices: new Set"));
+    assert!(html.contains("pointIndices: new Set"));
+    assert!(html.contains("const result = source.clone()"));
+    assert!(html.contains("Object.entries(source.attributes)"));
+    assert!(html.contains("rebuildFilteredGeometryGroups"));
+    assert!(html.contains("removedFaces !== expectedRemoval.faces"));
+    assert!(html.contains("removedPoints !== expectedRemoval.points"));
+    assert!(!html.contains("function subsetGeometryByBounds"));
+    assert!(html.contains("Exact indexed-face removal contract failed"));
+    assert!(html.contains("Overlapping bounds removed unrelated component"));
+    assert!(html.contains("Component mask attribute preservation failed"));
+    assert!(html.contains("Component group preservation failed"));
+    assert!(html.contains("Exact point-index mask contract failed"));
+    assert!(html.contains("function geometryFingerprint"));
+    assert!(html.contains("function requireCurrentFloatingReview"));
+    assert!(html.contains("geometry_fingerprint: activeGeometryFingerprint"));
+    assert!(html.contains("saveState();"), "hide/show edits must enter history");
+}
+
+#[test]
+fn divergent_rust_projects_force_current_browser_package() {
+    let html = include_str!("../public/index.html");
+
+    assert!(html.contains("currentModelPackage.rustProjectId && !rustProjectHasLocalDivergence"));
+    assert!(html.contains("const forcedBrowserPackage"));
+    assert!(html.contains("geometryPlyBlob(2000000, true, loadedGeometryStore)"));
+    assert!(html.contains("Local geometry or detached-review edits are not committed to the Rust revision"));
+    assert!(html.contains("The Rust-backed revision remains unchanged."));
+}
+
+#[test]
+fn vwm_perception_reports_fallback_provenance_honestly() {
+    let html = include_str!("../public/index.html");
+
+    assert!(html.contains("id=\"vwmPerceptionImageInput\""));
+    assert!(html.contains("id=\"vwmPerceptionBtn\""));
+    assert!(html.contains("safeBind('vwmPerceptionBtn', 'click', runVwmPerception)"));
+    assert!(html.contains("async function runVwmPerception"));
+    assert!(html.contains("fetchJson('/api/vwm-perception'"));
+    assert!(html.contains("const mode = String(data?.mode || 'unspecified')"));
+    assert!(html.contains("deterministic fallback was used and packaged ONNX inference was not used"));
+    assert!(!html.contains("Packaged ONNX inference ready"));
 }

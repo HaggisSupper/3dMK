@@ -13,6 +13,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
     sync::atomic::{AtomicU64, Ordering},
 };
@@ -35,6 +36,14 @@ use crate::{
 };
 
 static LEGACY_API_REQUESTS: AtomicU64 = AtomicU64::new(0);
+const MAX_CALIBRATED_ROUTE_BODY_BYTES: usize = 384 * 1024 * 1024;
+const MAX_CALIBRATED_MULTIPART_PAYLOAD_BYTES: usize = 376 * 1024 * 1024;
+const MAX_CALIBRATED_CLOUD_BYTES: usize = 128 * 1024 * 1024;
+const MAX_CALIBRATED_CAMERA_REPORT_BYTES: usize = 4 * 1024 * 1024;
+const MAX_CALIBRATED_MANIFEST_BYTES: usize = 512 * 1024;
+const MAX_CALIBRATED_PROVENANCE_BYTES: usize = 16 * 1024;
+const MAX_CALIBRATED_OPTIONS_BYTES: usize = 64 * 1024;
+const MAX_CALIBRATED_COMPRESSED_IMAGE_BYTES: usize = 192 * 1024 * 1024;
 
 pub fn create_router(
     output_dir: PathBuf,
@@ -95,6 +104,11 @@ pub fn create_router(
             "/api/point-cloud-analyze",
             post(handle_point_cloud_analysis),
         )
+        .route(
+            "/api/vwm-geometry-analyze",
+            post(handle_vwm_geometry_analysis)
+                .layer(DefaultBodyLimit::max(256 * 1024 * 1024)),
+        )
         .route("/api/vwm-perception", post(handle_vwm_perception))
         .route(
             "/api/flat-surface-correct",
@@ -104,6 +118,11 @@ pub fn create_router(
         .route(
             "/api/image-assisted-refinement",
             post(handle_image_assisted_refinement),
+        )
+        .route(
+            "/api/calibrated-photo-project",
+            post(handle_calibrated_photo_project)
+                .layer(DefaultBodyLimit::max(MAX_CALIBRATED_ROUTE_BODY_BYTES)),
         )
         .route(
             "/api/model-floorplan-recognize",
@@ -179,6 +198,32 @@ struct ImportTempFile {
 impl Drop for ImportTempFile {
     fn drop(&mut self) {
         let _ = std::fs::remove_file(&self.path);
+    }
+}
+
+struct PendingOutputFile {
+    path: PathBuf,
+    preserve: bool,
+}
+
+impl PendingOutputFile {
+    fn new(path: PathBuf) -> Self {
+        Self {
+            path,
+            preserve: false,
+        }
+    }
+
+    fn preserve(mut self) {
+        self.preserve = true;
+    }
+}
+
+impl Drop for PendingOutputFile {
+    fn drop(&mut self) {
+        if !self.preserve {
+            let _ = std::fs::remove_file(&self.path);
+        }
     }
 }
 
@@ -301,15 +346,11 @@ async fn handle_import_project(
                     .and_then(|value| value.to_str())
                     .map(str::to_ascii_lowercase)
                     .unwrap_or_default();
-                if !matches!(
-                    extension.as_str(),
-                    "3ds" | "3mf" | "dae" | "fbx" | "glb" | "gltf" | "off" | "obj" | "ply"
-                        | "stl" | "u3d" | "x3d"
-                ) {
+                if !matches!(extension.as_str(), "glb" | "ply" | "obj") {
                     return Err(ApiErrorResponse::new(
                         StatusCode::UNSUPPORTED_MEDIA_TYPE,
                         "unsupported_model_format",
-                        "Phase 1 import accepts GLB, GLTF, PLY, OBJ, STL, FBX, DAE, 3DS, 3MF, OFF, U3D, and X3D. Use a package for dependent files.",
+                        "Phase 1 import accepts GLB, PLY, or OBJ. Use a package for dependent files.",
                         false,
                     ));
                 }
@@ -357,7 +398,7 @@ async fn handle_import_project(
         ApiErrorResponse::new(
             StatusCode::BAD_REQUEST,
             "missing_model",
-            "Choose a GLB, GLTF, PLY, OBJ, STL, FBX, DAE, 3DS, 3MF, OFF, U3D, or X3D model to import.",
+            "Choose a GLB, PLY, or OBJ model to import.",
             false,
         )
     })?;
@@ -1033,18 +1074,9 @@ fn archive_too_large_api_error() -> ApiErrorResponse {
 
 fn model_media_type(extension: &str) -> &'static str {
     match extension {
-        "3ds" => "application/x-3ds",
-        "3mf" => "model/3mf",
-        "dae" => "model/vnd.collada+xml",
-        "fbx" => "model/fbx",
         "glb" => "model/gltf-binary",
-        "gltf" => "model/gltf+json",
-        "off" => "model/off",
-        "u3d" => "model/u3d",
-        "obj" => "model/obj",
         "ply" => "application/ply",
-        "stl" => "model/stl",
-        "x3d" => "model/x3d+xml",
+        "obj" => "model/obj",
         _ => "application/octet-stream",
     }
 }
@@ -1061,7 +1093,7 @@ fn validated_import_units(
         return Err(ApiErrorResponse::new(
             StatusCode::BAD_REQUEST,
             "missing_units",
-            "GLTF, PLY, OBJ, STL, FBX, DAE, 3DS, 3MF, OFF, U3D, X3D, and LAS imports require explicit source units.",
+            "PLY, OBJ, STL, and LAS imports require explicit source units.",
             false,
         ));
     };
@@ -1192,10 +1224,12 @@ async fn handle_health() -> Json<serde_json::Value> {
             "vwm_surface_nets": true,
             "vwm_perception_contracts": true,
             "vwm_perception_pipeline": true,
+            "object_recognition": true,
             "flat_surface_correction": true,
             "mesh_smoothing": true,
-            "image_assisted_refinement": false,
-            "model_floorplan_recognition": false,
+            "image_assisted_refinement": true,
+            "calibrated_photo_projection": true,
+            "model_floorplan_recognition": true,
             "scene_analysis_context": true,
             "support_plane_ranking": true,
             "rust_package_ingest": true,
@@ -1303,18 +1337,31 @@ fn build_capabilities(vision: bool, pdal: bool) -> Vec<CapabilityDescriptor> {
         },
         CapabilityDescriptor {
             id: "image_assisted_refinement",
-            status: unavailable,
-            reason: "Calibrated image projection and geometry refinement are not implemented.",
-            engine_version: None,
+            status: experimental,
+            reason: "Quality-guided contrast normalization of an existing texture image is implemented; it does not use camera calibration or alter geometry.",
+            engine_version: Some(env!("CARGO_PKG_VERSION")),
             dependencies: vec![],
-            supported_scene_kinds: &["mesh"],
-            requires: &["calibrated_cameras", "visibility_projection"],
+            supported_scene_kinds: &[],
+            requires: &["package_texture", "reference_images"],
+        },
+        CapabilityDescriptor {
+            id: "calibrated_photo_projection",
+            status: experimental,
+            reason: "Calibrated photos can project occlusion-aware vertex colors without changing topology. Meshes use triangle-rasterized depth and signed front-face weighting; point clouds use projected-point depth buckets and unsigned normals. Texture baking and geometry displacement are not claimed.",
+            engine_version: Some(env!("CARGO_PKG_VERSION")),
+            dependencies: vec![],
+            supported_scene_kinds: &["mesh", "point_cloud"],
+            requires: &[
+                "validated_calibrated_camera_report",
+                "explicit_camera_photo_bindings",
+                "metres_capture_frame_provenance",
+            ],
         },
         CapabilityDescriptor {
             id: "model_floorplan_recognition",
-            status: unavailable,
-            reason: "The legacy horizontal slice is not a validated wall, corner, or room solver.",
-            engine_version: None,
+            status: experimental,
+            reason: "Rust structural slice recognition is connected; review wall and corner output before export.",
+            engine_version: Some(env!("CARGO_PKG_VERSION")),
             dependencies: vec![],
             supported_scene_kinds: &["mesh"],
             requires: &["three_dimensional_structural_solver"],
@@ -1334,7 +1381,7 @@ fn build_capabilities(vision: bool, pdal: bool) -> Vec<CapabilityDescriptor> {
         CapabilityDescriptor {
             id: "non_destructive_cleanup",
             status: unavailable,
-            reason: "Candidates are detected, but reviewed cleanup revisions are not implemented.",
+            reason: "Exact component masks and reviewed immutable revision semantics are not implemented.",
             engine_version: None,
             dependencies: vec![],
             supported_scene_kinds: &["point_cloud", "mesh"],
@@ -1354,8 +1401,8 @@ fn build_capabilities(vision: bool, pdal: bool) -> Vec<CapabilityDescriptor> {
         },
         CapabilityDescriptor {
             id: "object_recognition",
-            status: unavailable,
-            reason: "No licensed ONNX model and view-to-source workflow are packaged.",
+            status: experimental,
+            reason: "The VWM perception endpoint is connected with deterministic region and shape fallbacks; packaged ONNX inference remains optional.",
             engine_version: Some("vwm-perception:0.1.0"),
             dependencies: vec![CapabilityDependency {
                 id: "packaged_onnx_model",
@@ -1558,6 +1605,9 @@ async fn handle_pdf_to_3d(
 
 async fn handle_vwm_perception(mut multipart: Multipart) -> impl IntoResponse {
     let mut image_data: Option<(String, Vec<u8>)> = None;
+    let mut options = perception::VwmPerceptionOptions::default();
+    let mut mode = "vlm".to_string();
+    let mut vlm_options = ai_vision::VlmObjectDetectionOptions::default();
     while let Some(field) = match multipart.next_field().await {
         Ok(field) => field,
         Err(error) => {
@@ -1578,6 +1628,64 @@ async fn handle_vwm_perception(mut multipart: Multipart) -> impl IntoResponse {
                     );
                 }
             }
+        } else if field.name().unwrap_or_default() == "mode" {
+            match field.text().await {
+                Ok(value) => mode = value.trim().to_ascii_lowercase(),
+                Err(error) => {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({"error": format!("Failed to read perception mode: {error}")})),
+                    )
+                }
+            }
+        } else if field.name().unwrap_or_default() == "options" {
+            match field.bytes().await {
+                Ok(data) if data.len() <= 64 * 1024 => match serde_json::from_slice(&data) {
+                    Ok(value) => options = value,
+                    Err(error) => {
+                        return (
+                            StatusCode::BAD_REQUEST,
+                            Json(json!({"error": format!("Invalid VWM perception controls: {error}")})),
+                        )
+                    }
+                },
+                Ok(_) => {
+                    return (
+                        StatusCode::PAYLOAD_TOO_LARGE,
+                        Json(json!({"error": "VWM perception controls are too large"})),
+                    )
+                }
+                Err(error) => {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({"error": format!("Failed to read VWM controls: {error}")})),
+                    )
+                }
+            }
+        } else if field.name().unwrap_or_default() == "vlm_options" {
+            match field.bytes().await {
+                Ok(data) if data.len() <= 64 * 1024 => match serde_json::from_slice(&data) {
+                    Ok(value) => vlm_options = value,
+                    Err(error) => {
+                        return (
+                            StatusCode::BAD_REQUEST,
+                            Json(json!({"error": format!("Invalid VLM controls: {error}")})),
+                        )
+                    }
+                },
+                Ok(_) => {
+                    return (
+                        StatusCode::PAYLOAD_TOO_LARGE,
+                        Json(json!({"error": "VLM controls are too large"})),
+                    )
+                }
+                Err(error) => {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({"error": format!("Failed to read VLM controls: {error}")})),
+                    )
+                }
+            }
         }
     }
     let (filename, bytes) = match image_data {
@@ -1589,12 +1697,45 @@ async fn handle_vwm_perception(mut multipart: Multipart) -> impl IntoResponse {
             );
         }
     };
-    match perception::recognize_image(&filename, &bytes) {
+    if mode != "vlm" && mode != "auto" && mode != "deterministic" {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "Perception mode must be vlm, auto, or deterministic"})),
+        );
+    }
+    let mut vlm_error = None;
+    if mode == "vlm" || mode == "auto" {
+        match ai_vision::detect_objects_vlm(&filename, &bytes, vlm_options).await {
+            Ok(batch) => {
+                return (
+                    StatusCode::OK,
+                    Json(json!({
+                        "backend": "openai-compatible-vlm",
+                        "mode": "vlm-object-detection",
+                        "model": batch.model,
+                        "image_width": batch.image_width,
+                        "image_height": batch.image_height,
+                        "detections": batch.detections,
+                    })),
+                )
+            }
+            Err(error) if mode == "vlm" => {
+                return (
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    Json(json!({"error": format!("VLM object detection failed: {error}")})),
+                )
+            }
+            Err(error) => vlm_error = Some(error.to_string()),
+        }
+    }
+    match perception::recognize_image_with_options(&filename, &bytes, options) {
         Ok(batch) => (
             StatusCode::OK,
             Json(json!({
                 "backend": "vwm-perception",
-                "mode": "deterministic-color-regions",
+                "mode": if vlm_error.is_some() { "deterministic-color-regions-fallback" } else { "deterministic-color-regions" },
+                "vlm_error": vlm_error,
+                "options": options,
                 "batch": batch,
             })),
         ),
@@ -1609,13 +1750,17 @@ async fn handle_point_cloud_analysis(
     State(state): State<AppState>,
     multipart: Multipart,
 ) -> impl IntoResponse {
-    let (input_path, _filename, metadata) = match save_ascii_cloud_upload(&state, multipart).await {
+    let (input_path, _filename, metadata, floating_mesh_settings) = match save_ascii_cloud_upload(&state, multipart).await {
         Ok(upload) => upload,
         Err(response) => return response,
     };
     let run_input = input_path.clone();
     let result = tokio::task::spawn_blocking(move || {
-        point_cloud::analyze_file_with_metadata(&run_input, metadata)
+        point_cloud::analyze_file_with_metadata_and_settings(
+            &run_input,
+            metadata,
+            floating_mesh_settings,
+        )
     })
     .await;
     std::fs::remove_file(&input_path).ok();
@@ -1631,11 +1776,102 @@ async fn handle_point_cloud_analysis(
     }
 }
 
+async fn handle_vwm_geometry_analysis(
+    State(state): State<AppState>,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
+    let mut cloud = None::<(String, Vec<u8>)>;
+    let mut options = point_cloud::VwmGeometryOptions::default();
+    while let Some(field) = match multipart.next_field().await {
+        Ok(field) => field,
+        Err(error) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": format!("Multipart error: {error}")})),
+            )
+        }
+    } {
+        match field.name().unwrap_or_default() {
+            "cloud" => {
+                let filename = safe_filename(field.file_name().unwrap_or("vwm-geometry.ply"));
+                match field.bytes().await {
+                    Ok(bytes) => cloud = Some((filename, bytes.to_vec())),
+                    Err(error) => {
+                        return (
+                            StatusCode::BAD_REQUEST,
+                            Json(json!({"error": format!("Failed to read VWM geometry: {error}")})),
+                        )
+                    }
+                }
+            }
+            "options" => match field.bytes().await {
+                Ok(bytes) if bytes.len() <= 64 * 1024 => match serde_json::from_slice(&bytes) {
+                    Ok(value) => options = value,
+                    Err(error) => {
+                        return (
+                            StatusCode::BAD_REQUEST,
+                            Json(json!({"error": format!("Invalid VWM geometry controls: {error}")})),
+                        )
+                    }
+                },
+                Ok(_) => {
+                    return (
+                        StatusCode::PAYLOAD_TOO_LARGE,
+                        Json(json!({"error": "VWM geometry controls are too large"})),
+                    )
+                }
+                Err(error) => {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({"error": format!("Failed to read VWM geometry controls: {error}")})),
+                    )
+                }
+            },
+            _ => {}
+        }
+    }
+    let (filename, bytes) = match cloud {
+        Some(value) => value,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "Missing 'cloud' field"})),
+            )
+        }
+    };
+    if !is_ply_filename(&filename) {
+        return (
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            Json(json!({"error": "VWM geometry analysis accepts PLY meshes"})),
+        );
+    }
+    let input_path = match save_ascii_cloud_bytes(&state, &filename, &bytes) {
+        Ok(path) => path,
+        Err(response) => return response,
+    };
+    let run_input = input_path.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        point_cloud::analyze_vwm_geometry_file(&run_input, options)
+    })
+    .await;
+    std::fs::remove_file(&input_path).ok();
+    match result.unwrap_or_else(|error| Err(anyhow::anyhow!(error))) {
+        Ok(analysis) => (
+            StatusCode::OK,
+            Json(json!({"status": "ok", "engine": "vwm-geometry", "options": options, "analysis": analysis})),
+        ),
+        Err(error) => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": format!("VWM geometry analysis failed: {error}")})),
+        ),
+    }
+}
+
 async fn handle_flat_surface_correction(
     State(state): State<AppState>,
     multipart: Multipart,
 ) -> impl IntoResponse {
-    let (input_path, _filename, metadata) = match save_ascii_cloud_upload(&state, multipart).await {
+    let (input_path, _filename, metadata, _floating_mesh_settings) = match save_ascii_cloud_upload(&state, multipart).await {
         Ok(upload) => upload,
         Err(response) => return response,
     };
@@ -1871,6 +2107,678 @@ async fn handle_image_assisted_refinement(
     }
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CalibratedPhotoManifestEntry {
+    #[serde(alias = "cameraId")]
+    camera_id: String,
+    #[serde(alias = "sourcePath")]
+    source_path: String,
+    #[serde(alias = "upload_filename")]
+    filename: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct CalibratedGeometryProvenance {
+    units: String,
+    #[serde(alias = "coordinateFrame")]
+    coordinate_frame: String,
+    #[serde(alias = "captureId")]
+    capture_id: String,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+struct AsciiPlySummary {
+    vertices: usize,
+    faces: usize,
+}
+
+#[derive(Debug, Serialize)]
+struct UnmatchedCalibratedPhoto {
+    filename: String,
+    camera_id: String,
+    source_path: String,
+    reason: &'static str,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ProjectionUploadLimitError {
+    Field,
+    Multipart,
+    CompressedImages,
+}
+
+fn projection_json_error(
+    status: StatusCode,
+    message: impl Into<String>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    (status, Json(json!({ "error": message.into() })))
+}
+
+fn checked_projection_upload_size(
+    field_bytes: usize,
+    multipart_bytes: usize,
+    compressed_image_bytes: usize,
+    chunk_bytes: usize,
+    field_limit: usize,
+    is_compressed_image: bool,
+) -> std::result::Result<(usize, usize, usize), ProjectionUploadLimitError> {
+    let field_bytes = field_bytes
+        .checked_add(chunk_bytes)
+        .ok_or(ProjectionUploadLimitError::Field)?;
+    if field_bytes > field_limit {
+        return Err(ProjectionUploadLimitError::Field);
+    }
+    let multipart_bytes = multipart_bytes
+        .checked_add(chunk_bytes)
+        .ok_or(ProjectionUploadLimitError::Multipart)?;
+    if multipart_bytes > MAX_CALIBRATED_MULTIPART_PAYLOAD_BYTES {
+        return Err(ProjectionUploadLimitError::Multipart);
+    }
+    let compressed_image_bytes = if is_compressed_image {
+        let total = compressed_image_bytes
+            .checked_add(chunk_bytes)
+            .ok_or(ProjectionUploadLimitError::CompressedImages)?;
+        if total > MAX_CALIBRATED_COMPRESSED_IMAGE_BYTES {
+            return Err(ProjectionUploadLimitError::CompressedImages);
+        }
+        total
+    } else {
+        compressed_image_bytes
+    };
+    Ok((field_bytes, multipart_bytes, compressed_image_bytes))
+}
+
+async fn read_calibrated_projection_field(
+    mut field: Field<'_>,
+    field_limit: usize,
+    label: &'static str,
+    multipart_bytes: &mut usize,
+    compressed_image_bytes: &mut usize,
+    is_compressed_image: bool,
+) -> std::result::Result<Vec<u8>, (StatusCode, Json<serde_json::Value>)> {
+    let mut bytes = Vec::new();
+    while let Some(chunk) = field.chunk().await.map_err(|error| {
+        projection_json_error(
+            StatusCode::BAD_REQUEST,
+            format!("Failed to read {label}: {error}"),
+        )
+    })? {
+        let (new_field_bytes, new_multipart_bytes, new_compressed_image_bytes) =
+            checked_projection_upload_size(
+                bytes.len(),
+                *multipart_bytes,
+                *compressed_image_bytes,
+                chunk.len(),
+                field_limit,
+                is_compressed_image,
+            )
+            .map_err(|limit| {
+                let message = match limit {
+                    ProjectionUploadLimitError::Field => format!("{label} exceeds its size limit."),
+                    ProjectionUploadLimitError::Multipart => {
+                        "Calibrated projection multipart payload exceeds its size limit.".to_owned()
+                    }
+                    ProjectionUploadLimitError::CompressedImages => {
+                        "Calibrated photos exceed the aggregate compressed-image budget.".to_owned()
+                    }
+                };
+                projection_json_error(StatusCode::PAYLOAD_TOO_LARGE, message)
+            })?;
+        bytes.try_reserve(chunk.len()).map_err(|_| {
+            projection_json_error(
+                StatusCode::PAYLOAD_TOO_LARGE,
+                format!("Could not reserve bounded memory for {label}."),
+            )
+        })?;
+        bytes.extend_from_slice(&chunk);
+        debug_assert_eq!(bytes.len(), new_field_bytes);
+        *multipart_bytes = new_multipart_bytes;
+        *compressed_image_bytes = new_compressed_image_bytes;
+    }
+    Ok(bytes)
+}
+
+fn validate_ascii_ply_input(
+    bytes: &[u8],
+) -> std::result::Result<AsciiPlySummary, &'static str> {
+    if bytes.is_empty() || !bytes.is_ascii() {
+        return Err("Projection input must be an ASCII PLY file.");
+    }
+    let text = std::str::from_utf8(bytes).map_err(|_| "Projection PLY is not valid ASCII.")?;
+    let mut lines = text.lines();
+    if lines.next().map(str::trim) != Some("ply") {
+        return Err("Projection input is missing the PLY signature.");
+    }
+    let mut format_seen = false;
+    let mut end_header_seen = false;
+    let mut vertex_count = None;
+    let mut face_count = None;
+    for line in lines {
+        let line = line.trim();
+        if line == "end_header" {
+            end_header_seen = true;
+            break;
+        }
+        if line.starts_with("format ") {
+            if format_seen || line != "format ascii 1.0" {
+                return Err("Projection PLY must declare exactly format ascii 1.0.");
+            }
+            format_seen = true;
+            continue;
+        }
+        let Some(element) = line.strip_prefix("element ") else {
+            continue;
+        };
+        let mut parts = element.split_whitespace();
+        let name = parts.next().ok_or("Malformed PLY element declaration.")?;
+        let count = parts
+            .next()
+            .ok_or("Malformed PLY element declaration.")?
+            .parse::<usize>()
+            .map_err(|_| "Malformed PLY element count.")?;
+        if parts.next().is_some() {
+            return Err("Malformed PLY element declaration.");
+        }
+        match name {
+            "vertex" if vertex_count.replace(count).is_some() => {
+                return Err("Projection PLY declares vertices more than once.");
+            }
+            "face" if face_count.replace(count).is_some() => {
+                return Err("Projection PLY declares faces more than once.");
+            }
+            _ => {}
+        }
+    }
+    if !format_seen || !end_header_seen {
+        return Err("Projection PLY has an incomplete ASCII header.");
+    }
+    let vertices = vertex_count.ok_or("Projection PLY does not declare vertices.")?;
+    let faces = face_count.unwrap_or(0);
+    if vertices == 0 || vertices > image_refinement::MAX_PROJECTION_VERTICES {
+        return Err("Projection PLY exceeds the vertex budget or is empty.");
+    }
+    if faces > image_refinement::MAX_PROJECTION_FACES {
+        return Err("Projection PLY exceeds the face budget.");
+    }
+    Ok(AsciiPlySummary { vertices, faces })
+}
+
+fn validate_calibrated_provenance(
+    provenance: &CalibratedGeometryProvenance,
+    camera_set: &packages::IphoneCaptureReport,
+) -> std::result::Result<(), &'static str> {
+    if provenance.units != "metres" {
+        return Err("Geometry provenance must declare units as metres.");
+    }
+    if provenance.coordinate_frame != "capture" {
+        return Err("Geometry provenance must declare the capture coordinate frame.");
+    }
+    if provenance.capture_id != camera_set.capture_id {
+        return Err("Geometry provenance capture_id does not match the camera report.");
+    }
+    Ok(())
+}
+
+fn bind_calibrated_photos(
+    cameras: &[packages::CanonicalCamera],
+    manifest: Vec<CalibratedPhotoManifestEntry>,
+    uploads: Vec<image_refinement::UploadedImage>,
+) -> std::result::Result<Vec<image_refinement::CalibratedPhoto>, Vec<UnmatchedCalibratedPhoto>> {
+    let mut uploads_by_name = HashMap::with_capacity(uploads.len());
+    let mut errors = Vec::new();
+    for upload in uploads {
+        let key = upload.filename.to_ascii_lowercase();
+        if uploads_by_name.contains_key(&key) {
+            errors.push(UnmatchedCalibratedPhoto {
+                filename: upload.filename,
+                camera_id: String::new(),
+                source_path: String::new(),
+                reason: "duplicate_upload_filename",
+            });
+        } else {
+            uploads_by_name.insert(key, upload);
+        }
+    }
+    if !errors.is_empty() {
+        return Err(errors);
+    }
+
+    let mut matched_camera_ids = HashSet::with_capacity(manifest.len());
+    let mut calibrated_photos = Vec::with_capacity(manifest.len());
+    for entry in manifest {
+        let safe_manifest_filename = safe_filename(&entry.filename);
+        if safe_manifest_filename != entry.filename {
+            errors.push(UnmatchedCalibratedPhoto {
+                filename: entry.filename,
+                camera_id: entry.camera_id,
+                source_path: entry.source_path,
+                reason: "unsafe_manifest_filename",
+            });
+            continue;
+        }
+        let Some(upload) = uploads_by_name.remove(&entry.filename.to_ascii_lowercase()) else {
+            errors.push(UnmatchedCalibratedPhoto {
+                filename: entry.filename,
+                camera_id: entry.camera_id,
+                source_path: entry.source_path,
+                reason: "manifest_upload_not_found",
+            });
+            continue;
+        };
+        let camera = match packages::camera_for_explicit_binding(
+            cameras,
+            entry.camera_id.trim(),
+            &entry.source_path,
+        ) {
+            Ok(camera) => camera.clone(),
+            Err(error) => {
+                errors.push(UnmatchedCalibratedPhoto {
+                    filename: upload.filename,
+                    camera_id: entry.camera_id,
+                    source_path: entry.source_path,
+                    reason: error.reason(),
+                });
+                continue;
+            }
+        };
+        if !matched_camera_ids.insert(camera.id.clone()) {
+            errors.push(UnmatchedCalibratedPhoto {
+                filename: upload.filename,
+                camera_id: entry.camera_id,
+                source_path: entry.source_path,
+                reason: "duplicate_camera_binding",
+            });
+            continue;
+        }
+        calibrated_photos.push(image_refinement::CalibratedPhoto {
+            camera,
+            image: upload,
+        });
+    }
+    let mut unbound_uploads = uploads_by_name.into_values().collect::<Vec<_>>();
+    unbound_uploads.sort_by(|left, right| left.filename.cmp(&right.filename));
+    errors.extend(unbound_uploads.into_iter().map(|upload| UnmatchedCalibratedPhoto {
+        filename: upload.filename,
+        camera_id: String::new(),
+        source_path: String::new(),
+        reason: "upload_missing_explicit_manifest_binding",
+    }));
+    if errors.is_empty() && !calibrated_photos.is_empty() {
+        Ok(calibrated_photos)
+    } else {
+        Err(errors)
+    }
+}
+
+fn save_calibrated_projection_input(
+    state: &AppState,
+    bytes: &[u8],
+) -> std::result::Result<ImportTempFile, (StatusCode, Json<serde_json::Value>)> {
+    std::fs::create_dir_all(&state.output_dir).map_err(|error| {
+        projection_json_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to prepare projection output: {error}"),
+        )
+    })?;
+    let input = ImportTempFile {
+        path: state.output_dir.join(format!(
+            "calibrated_projection_input_{}.ply",
+            Uuid::new_v4()
+        )),
+    };
+    std::fs::write(&input.path, bytes).map_err(|error| {
+        projection_json_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to save bounded projection input: {error}"),
+        )
+    })?;
+    Ok(input)
+}
+
+async fn handle_calibrated_photo_project(
+    State(state): State<AppState>,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
+    let mut cloud: Option<Vec<u8>> = None;
+    let mut ply_summary = None;
+    let mut camera_set: Option<packages::IphoneCaptureReport> = None;
+    let mut manifest: Option<Vec<CalibratedPhotoManifestEntry>> = None;
+    let mut provenance: Option<CalibratedGeometryProvenance> = None;
+    let mut options: Option<image_refinement::PhotoProjectionOptions> = None;
+    let mut uploads = Vec::<image_refinement::UploadedImage>::new();
+    let mut upload_names = HashSet::new();
+    let mut multipart_bytes = 0_usize;
+    let mut compressed_image_bytes = 0_usize;
+
+    while let Some(field) = match multipart.next_field().await {
+        Ok(field) => field,
+        Err(error) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": format!("Multipart error: {}", error)})),
+            );
+        }
+    } {
+        let field_name = field.name().unwrap_or_default().to_string();
+        match field_name.as_str() {
+            "cloud" => {
+                if cloud.is_some() {
+                    return projection_json_error(StatusCode::BAD_REQUEST, "Duplicate cloud field.");
+                }
+                let filename = safe_filename(field.file_name().unwrap_or("input.ply"));
+                if !is_ply_filename(&filename) {
+                    return projection_json_error(
+                        StatusCode::UNSUPPORTED_MEDIA_TYPE,
+                        "Calibrated projection accepts only PLY geometry.",
+                    );
+                }
+                let bytes = match read_calibrated_projection_field(
+                    field,
+                    MAX_CALIBRATED_CLOUD_BYTES,
+                    "projection cloud",
+                    &mut multipart_bytes,
+                    &mut compressed_image_bytes,
+                    false,
+                )
+                .await
+                {
+                    Ok(bytes) => bytes,
+                    Err(response) => return response,
+                };
+                let summary = match validate_ascii_ply_input(&bytes) {
+                    Ok(summary) => summary,
+                    Err(error) => {
+                        return projection_json_error(StatusCode::UNPROCESSABLE_ENTITY, error)
+                    }
+                };
+                ply_summary = Some(summary);
+                cloud = Some(bytes);
+            }
+            "camera_set" => {
+                if camera_set.is_some() {
+                    return projection_json_error(
+                        StatusCode::BAD_REQUEST,
+                        "Duplicate camera_set field.",
+                    );
+                }
+                let bytes = match read_calibrated_projection_field(
+                    field,
+                    MAX_CALIBRATED_CAMERA_REPORT_BYTES,
+                    "camera report",
+                    &mut multipart_bytes,
+                    &mut compressed_image_bytes,
+                    false,
+                )
+                .await
+                {
+                    Ok(bytes) => bytes,
+                    Err(response) => return response,
+                };
+                match serde_json::from_slice(&bytes) {
+                    Ok(value) => camera_set = Some(value),
+                    Err(error) => {
+                        return projection_json_error(
+                            StatusCode::BAD_REQUEST,
+                            format!("Invalid calibrated camera report: {error}"),
+                        )
+                    }
+                }
+            }
+            "photo_manifest" => {
+                if manifest.is_some() {
+                    return projection_json_error(
+                        StatusCode::BAD_REQUEST,
+                        "Duplicate photo_manifest field.",
+                    );
+                }
+                let bytes = match read_calibrated_projection_field(
+                    field,
+                    MAX_CALIBRATED_MANIFEST_BYTES,
+                    "photo manifest",
+                    &mut multipart_bytes,
+                    &mut compressed_image_bytes,
+                    false,
+                )
+                .await
+                {
+                    Ok(bytes) => bytes,
+                    Err(response) => return response,
+                };
+                match serde_json::from_slice(&bytes) {
+                    Ok(value) => manifest = Some(value),
+                    Err(error) => {
+                        return projection_json_error(
+                            StatusCode::BAD_REQUEST,
+                            format!("Invalid photo manifest: {error}"),
+                        )
+                    }
+                }
+            }
+            "geometry_provenance" => {
+                if provenance.is_some() {
+                    return projection_json_error(
+                        StatusCode::BAD_REQUEST,
+                        "Duplicate geometry_provenance field.",
+                    );
+                }
+                let bytes = match read_calibrated_projection_field(
+                    field,
+                    MAX_CALIBRATED_PROVENANCE_BYTES,
+                    "geometry provenance",
+                    &mut multipart_bytes,
+                    &mut compressed_image_bytes,
+                    false,
+                )
+                .await
+                {
+                    Ok(bytes) => bytes,
+                    Err(response) => return response,
+                };
+                match serde_json::from_slice(&bytes) {
+                    Ok(value) => provenance = Some(value),
+                    Err(error) => {
+                        return projection_json_error(
+                            StatusCode::BAD_REQUEST,
+                            format!("Invalid geometry provenance: {error}"),
+                        )
+                    }
+                }
+            }
+            "projection_options" => {
+                if options.is_some() {
+                    return projection_json_error(
+                        StatusCode::BAD_REQUEST,
+                        "Duplicate projection_options field.",
+                    );
+                }
+                let bytes = match read_calibrated_projection_field(
+                    field,
+                    MAX_CALIBRATED_OPTIONS_BYTES,
+                    "projection options",
+                    &mut multipart_bytes,
+                    &mut compressed_image_bytes,
+                    false,
+                )
+                .await
+                {
+                    Ok(bytes) => bytes,
+                    Err(response) => return response,
+                };
+                match serde_json::from_slice(&bytes) {
+                    Ok(value) => options = Some(value),
+                    Err(error) => {
+                        return projection_json_error(
+                            StatusCode::BAD_REQUEST,
+                            format!("Invalid projection options: {error}"),
+                        )
+                    }
+                }
+            }
+            "reference_photo" => {
+                if uploads.len() >= image_refinement::MAX_REFERENCE_IMAGES {
+                    return projection_json_error(
+                        StatusCode::PAYLOAD_TOO_LARGE,
+                        format!(
+                            "Use at most {} calibrated photos per projection.",
+                            image_refinement::MAX_REFERENCE_IMAGES
+                        ),
+                    );
+                }
+                let Some(raw_filename) = field.file_name() else {
+                    return projection_json_error(
+                        StatusCode::BAD_REQUEST,
+                        "Every reference_photo needs a filename for explicit binding.",
+                    );
+                };
+                let filename = safe_filename(raw_filename);
+                if !upload_names.insert(filename.to_ascii_lowercase()) {
+                    return projection_json_error(
+                        StatusCode::BAD_REQUEST,
+                        format!("Duplicate calibrated photo filename: {filename}"),
+                    );
+                }
+                let bytes = match read_calibrated_projection_field(
+                    field,
+                    image_refinement::MAX_IMAGE_BYTES,
+                    "calibrated photo",
+                    &mut multipart_bytes,
+                    &mut compressed_image_bytes,
+                    true,
+                )
+                .await
+                {
+                    Ok(bytes) => bytes,
+                    Err(response) => return response,
+                };
+                uploads.push(image_refinement::UploadedImage { filename, bytes });
+            }
+            _ => {
+                return projection_json_error(
+                    StatusCode::BAD_REQUEST,
+                    format!("Unknown calibrated projection field: {field_name}"),
+                )
+            }
+        }
+    }
+
+    let cloud = match cloud {
+        Some(cloud) => cloud,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "A PLY mesh or point cloud is required."})),
+            );
+        }
+    };
+    let camera_set = match camera_set {
+        Some(camera_set) => camera_set,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "A calibrated iPhone camera set is required."})),
+            );
+        }
+    };
+    if let Err(error) = packages::validate_iphone_capture_report(&camera_set) {
+        return projection_json_error(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("Invalid calibrated camera report: {error}"),
+        );
+    }
+    if uploads.is_empty() {
+        return projection_json_error(
+            StatusCode::BAD_REQUEST,
+            "At least one calibrated reference photo is required.",
+        );
+    }
+    let manifest = match manifest {
+        Some(manifest) if !manifest.is_empty() => manifest,
+        _ => {
+            return projection_json_error(
+                StatusCode::BAD_REQUEST,
+                "An explicit camera_id/source_path photo manifest is required.",
+            )
+        }
+    };
+    let provenance = match provenance {
+        Some(provenance) => provenance,
+        None => {
+            return projection_json_error(
+                StatusCode::BAD_REQUEST,
+                "Geometry provenance declaring metres and capture frame is required.",
+            )
+        }
+    };
+    if let Err(error) = validate_calibrated_provenance(&provenance, &camera_set) {
+        return projection_json_error(StatusCode::UNPROCESSABLE_ENTITY, error);
+    }
+    let calibrated_photos = match bind_calibrated_photos(&camera_set.cameras, manifest, uploads) {
+        Ok(photos) => photos,
+        Err(errors) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({
+                    "error": "Every photo must bind uniquely by upload filename, camera_id, and exact package source_path.",
+                    "unmatched_photos": errors,
+                })),
+            )
+        }
+    };
+    let photos_matched = calibrated_photos.len();
+    let input = match save_calibrated_projection_input(&state, &cloud) {
+        Ok(input) => input,
+        Err(response) => return response,
+    };
+    let output_name = format!("calibrated_vertex_colors_{}.ply", Uuid::new_v4());
+    let output_path = state.output_dir.join(&output_name);
+    let run_output = output_path.clone();
+    let options = options.unwrap_or_default();
+    let result = tokio::task::spawn_blocking(move || {
+        let pending_output = PendingOutputFile::new(run_output.clone());
+        match image_refinement::project_photos_to_geometry(
+            &input.path,
+            calibrated_photos,
+            options,
+            &run_output,
+        ) {
+            Ok(report) => {
+                pending_output.preserve();
+                Ok(report)
+            }
+            Err(error) => Err(error),
+        }
+    })
+    .await;
+
+    match result.unwrap_or_else(|error| Err(anyhow::anyhow!(error))) {
+        Ok(projection) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "ok",
+                "operation": "occlusion_aware_vertex_color_projection",
+                "projected_model": format!("/output/{}", output_name),
+                "topology_preserved": true,
+                "texture_baked": false,
+                "geometry_displaced": false,
+                "photos_matched": photos_matched,
+                "input_summary": ply_summary.expect("validated PLY summary"),
+                "geometry_provenance": provenance,
+                "projection": projection,
+                "unmatched_photos": [],
+            })),
+        ),
+        Err(error) => {
+            std::fs::remove_file(&output_path).ok();
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": format!("Calibrated photo projection failed: {}", error)})),
+            )
+        }
+    }
+}
+
 async fn handle_model_floorplan_recognition(
     State(state): State<AppState>,
     mut multipart: Multipart,
@@ -1995,9 +2903,8 @@ async fn handle_poisson(
     State(state): State<AppState>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
-    let use_pdal = point_cloud::pdal_available();
-
     let mut input_data: Option<(String, Vec<u8>)> = None;
+    let mut vwm_options = point_cloud::VwmReconstructionOptions::default();
 
     while let Some(field) = match multipart.next_field().await {
         Ok(f) => f,
@@ -2018,6 +2925,30 @@ async fn handle_poisson(
                         StatusCode::BAD_REQUEST,
                         Json(json!({"error": format!("Failed to read file: {}", e)})),
                     );
+                }
+            }
+        } else if name == "vwm_options" {
+            match field.bytes().await {
+                Ok(data) if data.len() <= 64 * 1024 => match serde_json::from_slice(&data) {
+                    Ok(value) => vwm_options = value,
+                    Err(error) => {
+                        return (
+                            StatusCode::BAD_REQUEST,
+                            Json(json!({"error": format!("Invalid VWM reconstruction controls: {error}")})),
+                        )
+                    }
+                },
+                Ok(_) => {
+                    return (
+                        StatusCode::PAYLOAD_TOO_LARGE,
+                        Json(json!({"error": "VWM reconstruction controls are too large"})),
+                    )
+                }
+                Err(error) => {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({"error": format!("Failed to read VWM controls: {error}")})),
+                    )
                 }
             }
         }
@@ -2062,23 +2993,63 @@ async fn handle_poisson(
     let output_name = format!("reconstructed_{}.ply", job_id);
     let output_path = state.output_dir.join(&output_name);
     let run_input = input_path.clone();
+    let cleaned_input = state.output_dir.join(format!("cleaned_{}.ply", job_id));
     let run_output = output_path.clone();
+    let run_cleaned = cleaned_input.clone();
+    let pdal_available = point_cloud::pdal_available();
+    let use_pdal = match vwm_options.backend {
+        point_cloud::VwmReconstructionBackend::Auto => pdal_available,
+        point_cloud::VwmReconstructionBackend::Pdal if pdal_available => true,
+        point_cloud::VwmReconstructionBackend::Pdal => {
+            std::fs::remove_file(&input_path).ok();
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({"error": "PDAL was selected but is not installed"})),
+            );
+        }
+        point_cloud::VwmReconstructionBackend::Vwm => false,
+    };
+    if use_pdal && vwm_options.extraction == point_cloud::VwmSurfaceExtraction::SurfaceNets {
+        std::fs::remove_file(&input_path).ok();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "Surface Nets requires the VWM backend"})),
+        );
+    }
     let result = tokio::task::spawn_blocking(move || {
+        let reconstruction_input = match point_cloud::write_clean_reconstruction_input(&run_input, &run_cleaned) {
+            Ok(()) => run_cleaned,
+            Err(error) if use_pdal => {
+                // PDAL can ingest binary LAS/LAZ that the Rust artifact pass cannot parse.
+                let _ = error;
+                run_input.clone()
+            }
+            Err(error) => return Err(error),
+        };
         if use_pdal {
-            point_cloud::run_pdal_pipeline(&run_input, &run_output)
+            point_cloud::run_pdal_pipeline(&reconstruction_input, &run_output).map(|_| None)
         } else {
-            point_cloud::run_implicit_pipeline(&run_input, &run_output)
+            point_cloud::run_implicit_pipeline_with_options(
+                &reconstruction_input,
+                &run_output,
+                vwm_options,
+            )
+            .map(Some)
         }
     })
     .await;
     std::fs::remove_file(&input_path).ok();
+    std::fs::remove_file(&cleaned_input).ok();
 
-    if let Err(e) = result.unwrap_or_else(|e| Err(anyhow::anyhow!(e))) {
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error": format!("PDAL pipeline failed: {}", e)})),
-        );
-    }
+    let reconstruction = match result.unwrap_or_else(|e| Err(anyhow::anyhow!(e))) {
+        Ok(report) => report,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": format!("Reconstruction failed: {}", e)})),
+            )
+        }
+    };
 
     (
         StatusCode::OK,
@@ -2086,18 +3057,52 @@ async fn handle_poisson(
             "status": "ok",
             "mesh_file": format!("/output/{}", output_name),
             "ply_file": format!("/output/{}", output_name),
-            "backend": if use_pdal { "pdal" } else { "vwm-implicit-poisson" },
+            "backend": if use_pdal {
+                "pdal"
+            } else if vwm_options.extraction == point_cloud::VwmSurfaceExtraction::SurfaceNets {
+                "vwm-surface-nets"
+            } else {
+                "vwm-screened-poisson"
+            },
+            "vwm": reconstruction,
         })),
     )
 }
 
 fn safe_filename(filename: &str) -> String {
+    const MAX_SAFE_FILENAME_BYTES: usize = 120;
+    let basename = filename
+        .trim()
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or_default();
+    let mut sanitized = String::new();
+    for character in basename.chars() {
+        let safe_character = if character.is_ascii_alphanumeric()
+            || matches!(character, '-' | '_' | '.' | ' ')
+        {
+            character
+        } else {
+            '_'
+        };
+        if sanitized.len() + safe_character.len_utf8() > MAX_SAFE_FILENAME_BYTES {
+            break;
+        }
+        sanitized.push(safe_character);
+    }
+    let sanitized = sanitized.trim_matches(|character| character == '.' || character == ' ');
+    if sanitized.is_empty() {
+        "point-cloud.ply".to_owned()
+    } else {
+        sanitized.to_owned()
+    }
+}
+
+fn is_ply_filename(filename: &str) -> bool {
     std::path::Path::new(filename)
-        .file_name()
-        .and_then(|name| name.to_str())
-        .filter(|name| !name.is_empty())
-        .unwrap_or("point-cloud.ply")
-        .to_string()
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("ply"))
 }
 
 fn is_point_cloud_filename(filename: &str) -> bool {
@@ -2130,11 +3135,17 @@ async fn save_ascii_cloud_upload(
     state: &AppState,
     mut multipart: Multipart,
 ) -> std::result::Result<
-    (PathBuf, String, Option<point_cloud::ScenePackageMetadata>),
+    (
+        PathBuf,
+        String,
+        Option<point_cloud::ScenePackageMetadata>,
+        point_cloud::FloatingMeshSettings,
+    ),
     (StatusCode, Json<serde_json::Value>),
 > {
     let mut input_data: Option<(String, Vec<u8>)> = None;
     let mut scene_metadata: Option<point_cloud::ScenePackageMetadata> = None;
+    let mut floating_mesh_settings = point_cloud::FloatingMeshSettings::default();
     while let Some(field) = multipart.next_field().await.map_err(|error| {
         (
             StatusCode::BAD_REQUEST,
@@ -2170,6 +3181,30 @@ async fn save_ascii_cloud_upload(
                 })?;
                 scene_metadata = Some(metadata);
             }
+            "floating_mesh_settings" => {
+                let settings_text = field.text().await.map_err(|error| {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({"error": format!("Failed to read floating-mesh settings: {error}")})),
+                    )
+                })?;
+                floating_mesh_settings = serde_json::from_str::<point_cloud::FloatingMeshSettings>(
+                    &settings_text,
+                )
+                .map_err(|error| {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({"error": format!("Invalid floating-mesh settings JSON: {error}")})),
+                    )
+                })?
+                .validate()
+                .map_err(|error| {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({"error": error.to_string()})),
+                    )
+                })?;
+            }
             _ => {}
         }
     }
@@ -2189,7 +3224,7 @@ async fn save_ascii_cloud_upload(
         ));
     }
     let path = save_ascii_cloud_bytes(state, &filename, &data)?;
-    Ok((path, filename, scene_metadata))
+    Ok((path, filename, scene_metadata, floating_mesh_settings))
 }
 
 fn save_ascii_cloud_bytes(
@@ -2250,6 +3285,8 @@ mod tests {
     fn uploaded_filename_cannot_escape_output_directory() {
         assert_eq!(safe_filename(r"..\..\cloud.ply"), "cloud.ply");
         assert_eq!(safe_filename("../../cloud.ply"), "cloud.ply");
+        assert_eq!(safe_filename("bad<name>?.jpg"), "bad_name__.jpg");
+        assert_eq!(safe_filename("..."), "point-cloud.ply");
     }
 
     #[test]
@@ -2269,22 +3306,152 @@ mod tests {
     }
 
     #[test]
+    fn calibrated_projection_helpers_reject_malformed_and_over_budget_input() {
+        let valid = b"ply\nformat ascii 1.0\nelement vertex 1\nproperty float x\nproperty float y\nproperty float z\nend_header\n0 0 0\n";
+        assert_eq!(
+            validate_ascii_ply_input(valid).unwrap(),
+            AsciiPlySummary {
+                vertices: 1,
+                faces: 0,
+            }
+        );
+        assert!(validate_ascii_ply_input(
+            b"ply\nformat binary_little_endian 1.0\nelement vertex 1\nend_header\n"
+        )
+        .is_err());
+        let excessive_vertices = format!(
+            "ply\nformat ascii 1.0\nelement vertex {}\nend_header\n",
+            image_refinement::MAX_PROJECTION_VERTICES + 1
+        );
+        assert!(validate_ascii_ply_input(excessive_vertices.as_bytes()).is_err());
+
+        assert_eq!(
+            checked_projection_upload_size(0, 0, 0, 2, 1, false),
+            Err(ProjectionUploadLimitError::Field)
+        );
+        assert_eq!(
+            checked_projection_upload_size(
+                0,
+                MAX_CALIBRATED_MULTIPART_PAYLOAD_BYTES,
+                0,
+                1,
+                2,
+                false,
+            ),
+            Err(ProjectionUploadLimitError::Multipart)
+        );
+        assert_eq!(
+            checked_projection_upload_size(
+                0,
+                0,
+                MAX_CALIBRATED_COMPRESSED_IMAGE_BYTES,
+                1,
+                2,
+                true,
+            ),
+            Err(ProjectionUploadLimitError::CompressedImages)
+        );
+    }
+
+    fn calibrated_api_test_camera(
+        id: &str,
+        index: u64,
+        image_path: &str,
+    ) -> packages::CanonicalCamera {
+        packages::CanonicalCamera {
+            id: id.to_owned(),
+            index,
+            image_path: image_path.to_owned(),
+            camera_json_path: image_path
+                .rsplit_once('.')
+                .map_or_else(|| format!("{image_path}.json"), |(stem, _)| format!("{stem}.json")),
+            dimensions: [128, 128],
+            focal_pixels: [96.0, 96.0],
+            principal_point_pixels: [64.0, 64.0],
+            world_from_camera: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ],
+            image_present: true,
+            camera_json_present: true,
+            calibration_valid: true,
+        }
+    }
+
+    #[test]
+    fn calibrated_projection_binding_uses_filename_camera_id_and_path_not_position() {
+        let cameras = vec![
+            calibrated_api_test_camera("camera-a", 1, "RawImages/a.jpg"),
+            calibrated_api_test_camera("camera-b", 2, "RawImages/b.jpg"),
+        ];
+        let uploads = vec![
+            image_refinement::UploadedImage {
+                filename: "a.jpg".to_owned(),
+                bytes: vec![1],
+            },
+            image_refinement::UploadedImage {
+                filename: "b.jpg".to_owned(),
+                bytes: vec![2],
+            },
+        ];
+        let manifest = vec![
+            CalibratedPhotoManifestEntry {
+                camera_id: "camera-b".to_owned(),
+                source_path: "RawImages/b.jpg".to_owned(),
+                filename: "b.jpg".to_owned(),
+            },
+            CalibratedPhotoManifestEntry {
+                camera_id: "camera-a".to_owned(),
+                source_path: "RawImages/a.jpg".to_owned(),
+                filename: "a.jpg".to_owned(),
+            },
+        ];
+        let bound = bind_calibrated_photos(&cameras, manifest, uploads).unwrap();
+        assert_eq!(bound[0].camera.id, "camera-b");
+        assert_eq!(bound[0].image.bytes, vec![2]);
+        assert_eq!(bound[1].camera.id, "camera-a");
+        assert_eq!(bound[1].image.bytes, vec![1]);
+    }
+
+    #[test]
     fn capability_contract_does_not_claim_unimplemented_features() {
         let capabilities = build_capabilities(false, false);
 
+        let cleanup = capabilities
+            .iter()
+            .find(|capability| capability.id == "non_destructive_cleanup")
+            .expect("non-destructive cleanup capability should be reported");
+        assert_eq!(cleanup.status, CapabilityStatus::Unavailable);
+        assert!(cleanup.requires.contains(&"exact_component_masks"));
+
         for id in [
             "image_assisted_refinement",
-            "model_floorplan_recognition",
-            "non_destructive_cleanup",
+            "calibrated_photo_projection",
             "object_recognition",
         ] {
             let capability = capabilities
                 .iter()
                 .find(|capability| capability.id == id)
                 .unwrap_or_else(|| panic!("missing capability {id}"));
-            assert_eq!(capability.status, CapabilityStatus::Unavailable);
+            assert_eq!(capability.status, CapabilityStatus::Experimental);
             assert!(!capability.reason.is_empty());
         }
+
+        let calibrated_projection = capabilities
+            .iter()
+            .find(|capability| capability.id == "calibrated_photo_projection")
+            .expect("calibrated image projection should be reported");
+        assert!(calibrated_projection
+            .requires
+            .contains(&"explicit_camera_photo_bindings"));
+
+        let model_floorplan = capabilities
+            .iter()
+            .find(|capability| capability.id == "model_floorplan_recognition")
+            .expect("model floorplan recognition should be reported");
+        assert_eq!(model_floorplan.status, CapabilityStatus::Experimental);
         assert_eq!(
             capabilities
                 .iter()

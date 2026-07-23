@@ -52,6 +52,207 @@ pub struct FloorplanLayout {
     pub source: String,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct VlmObjectDetectionOptions {
+    pub endpoint: String,
+    pub model: String,
+    pub api_key: String,
+    pub candidate_labels: Vec<String>,
+    pub confidence_threshold: f64,
+}
+
+impl Default for VlmObjectDetectionOptions {
+    fn default() -> Self {
+        Self {
+            endpoint: std::env::var("THREEDMK_VLM_ENDPOINT")
+                .unwrap_or_else(|_| mistral_endpoint()),
+            model: std::env::var("THREEDMK_VLM_MODEL")
+                .unwrap_or_else(|_| "pixtral".to_string()),
+            api_key: std::env::var("THREEDMK_VLM_API_KEY").unwrap_or_default(),
+            candidate_labels: vec![
+                "door".to_string(),
+                "window".to_string(),
+                "chair".to_string(),
+                "table".to_string(),
+                "sofa".to_string(),
+                "bed".to_string(),
+                "cabinet".to_string(),
+                "appliance".to_string(),
+            ],
+            confidence_threshold: 0.35,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct VlmObjectDetection {
+    pub label: String,
+    pub confidence: f64,
+    /// Normalized [left, top, right, bottom] coordinates.
+    pub bbox: [f64; 4],
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct VlmObjectDetectionBatch {
+    pub source_id: String,
+    pub model: String,
+    pub image_width: u32,
+    pub image_height: u32,
+    pub detections: Vec<VlmObjectDetection>,
+}
+
+#[derive(Deserialize)]
+struct RawVlmDetectionEnvelope {
+    #[serde(default)]
+    detections: Vec<RawVlmDetection>,
+}
+
+#[derive(Deserialize)]
+struct RawVlmDetection {
+    label: String,
+    #[serde(default = "default_detection_confidence")]
+    confidence: f64,
+    #[serde(alias = "box_2d", alias = "bounding_box")]
+    bbox: [f64; 4],
+}
+
+fn default_detection_confidence() -> f64 {
+    0.5
+}
+
+pub async fn detect_objects_vlm(
+    source_id: &str,
+    image_bytes: &[u8],
+    mut options: VlmObjectDetectionOptions,
+) -> Result<VlmObjectDetectionBatch> {
+    options.endpoint = options.endpoint.trim().trim_end_matches('/').to_string();
+    options.model = options.model.trim().to_string();
+    if !options.endpoint.starts_with("http://") && !options.endpoint.starts_with("https://") {
+        anyhow::bail!("VLM endpoint must use http:// or https://");
+    }
+    if options.model.is_empty() {
+        anyhow::bail!("VLM model name is required");
+    }
+    if !options.confidence_threshold.is_finite()
+        || !(0.0..=1.0).contains(&options.confidence_threshold)
+    {
+        anyhow::bail!("VLM confidence threshold must be between 0 and 1");
+    }
+    let decoded = image::load_from_memory(image_bytes)
+        .context("VLM object detection could not decode the supplied image")?;
+    let (image_width, image_height) = (decoded.width(), decoded.height());
+    let mime = match Path::new(source_id)
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
+        Some("jpg" | "jpeg") => "image/jpeg",
+        _ => "image/png",
+    };
+    let labels = options
+        .candidate_labels
+        .iter()
+        .map(|label| label.trim())
+        .filter(|label| !label.is_empty())
+        .collect::<Vec<_>>()
+        .join(", ");
+    let prompt = format!(
+        "Detect every visible object{} and return ONLY JSON using this exact schema: {{\"detections\":[{{\"label\":\"chair\",\"confidence\":0.93,\"bbox\":[left,top,right,bottom]}}]}}. Bounding coordinates must be integers from 0 to 1000 relative to the image. Do not add prose, masks, markdown, or invented objects.",
+        if labels.is_empty() {
+            String::new()
+        } else {
+            format!(" from these preferred classes: {labels}")
+        }
+    );
+    let payload = serde_json::json!({
+        "model": options.model,
+        "messages": [{
+            "role": "user",
+            "content": [
+                { "type": "image_url", "image_url": { "url": format!("data:{};base64,{}", mime, base64_encode(image_bytes)) } },
+                { "type": "text", "text": prompt }
+            ]
+        }],
+        "temperature": 0.0,
+        "max_tokens": 1800
+    });
+    let completion_url = if options.endpoint.ends_with("/chat/completions") {
+        options.endpoint.clone()
+    } else {
+        format!("{}/v1/chat/completions", options.endpoint)
+    };
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(120))
+        .build()?;
+    let mut request = client.post(&completion_url).json(&payload);
+    if !options.api_key.trim().is_empty() {
+        request = request.bearer_auth(options.api_key.trim());
+    }
+    let response = request
+        .send()
+        .await
+        .with_context(|| format!("Failed to connect to VLM service at {}", options.endpoint))?;
+    if !response.status().is_success() {
+        anyhow::bail!("VLM service returned {}", response.status());
+    }
+    let content = response
+        .json::<ChatResponse>()
+        .await
+        .context("Failed to parse VLM service response")?
+        .choices
+        .into_iter()
+        .next()
+        .context("VLM service returned no choices")?
+        .message
+        .content;
+    let json = extract_json(&content).context("VLM did not return a JSON detection object")?;
+    let raw: RawVlmDetectionEnvelope =
+        serde_json::from_str(json).context("VLM returned invalid detection JSON")?;
+    let mut detections = raw
+        .detections
+        .into_iter()
+        .filter_map(|item| {
+            let divisor = if item.bbox.iter().copied().fold(0.0_f64, f64::max) <= 1.0 {
+                1.0
+            } else {
+                1000.0
+            };
+            let bbox = [
+                (item.bbox[0] / divisor).clamp(0.0, 1.0),
+                (item.bbox[1] / divisor).clamp(0.0, 1.0),
+                (item.bbox[2] / divisor).clamp(0.0, 1.0),
+                (item.bbox[3] / divisor).clamp(0.0, 1.0),
+            ];
+            let confidence = item.confidence.clamp(0.0, 1.0);
+            (!item.label.trim().is_empty()
+                && confidence >= options.confidence_threshold
+                && bbox[2] > bbox[0]
+                && bbox[3] > bbox[1])
+                .then(|| VlmObjectDetection {
+                    label: item.label.trim().to_string(),
+                    confidence,
+                    bbox,
+                })
+        })
+        .collect::<Vec<_>>();
+    detections.sort_by(|left, right| {
+        right
+            .confidence
+            .partial_cmp(&left.confidence)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    detections.truncate(100);
+    Ok(VlmObjectDetectionBatch {
+        source_id: source_id.to_string(),
+        model: options.model,
+        image_width,
+        image_height,
+        detections,
+    })
+}
+
 impl FloorplanLayout {
     pub fn enrich_features(&mut self) {
         let raw_outer = if self.raw_outer_boundary.len() >= 3 {
