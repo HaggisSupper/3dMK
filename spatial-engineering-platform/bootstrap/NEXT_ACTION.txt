@@ -1,0 +1,1 @@
+Run install-spatial-platform.ps1, verify the extracted source, commit the materialized files, and remove the encoded transport archive.
