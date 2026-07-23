@@ -1,0 +1,3 @@
+python spatial-engineering-platform\scripts\verify_repo.py
+python -m unittest discover -s spatial-engineering-platform\reference\tests -v
+cargo test --manifest-path spatial-engineering-platform\Cargo.toml --workspace
