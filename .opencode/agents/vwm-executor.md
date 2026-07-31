@@ -10,8 +10,13 @@ permission:
     "git log*": allow
     "git show*": allow
     "git branch*": allow
+    "git branch -D*": deny
     "git switch*": allow
+    "git switch main*": deny
+    "git switch master*": deny
     "git checkout*": allow
+    "git checkout main*": deny
+    "git checkout master*": deny
     "git add*": allow
     "git commit*": allow
     "git push*": allow
@@ -19,6 +24,7 @@ permission:
     "git push origin master*": deny
     "git push --force*": deny
     "git push --force-with-lease*": deny
+    "git merge*": deny
     "git reset --hard*": deny
     "git clean*": deny
     "cargo *": allow
