@@ -8,6 +8,7 @@ $RepositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $required = @(
     'AGENTS.md',
     'opencode.json',
+    '.github\workflows\opencode-big-pickle.yml',
     '.opencode\agents\vwm-executor.md',
     '.opencode\agents\vwm-reviewer.md',
     '.opencode\agents\vwm-verifier.md',
@@ -85,6 +86,44 @@ $agentsContract = Get-Content -LiteralPath (Join-Path $RepositoryRoot 'AGENTS.md
 foreach ($state in @('TASK_COMPLETE', 'BATCH_COMPLETE', 'SESSION_BOUNDARY', 'BLOCKED', 'PROJECT_COMPLETE')) {
     if (-not $agentsContract.Contains($state)) {
         throw "AGENTS.md is missing completion state: $state"
+    }
+}
+
+$workflowPath = Join-Path $RepositoryRoot '.github\workflows\opencode-big-pickle.yml'
+$workflow = Get-Content -LiteralPath $workflowPath -Raw
+$workflowRequirements = @(
+    'workflow_dispatch:',
+    'issue_comment:',
+    'pull_request_review_comment:',
+    "model: opencode/big-pickle",
+    'agent: vwm-executor',
+    'share: false',
+    'use_github_token: true',
+    'OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}',
+    'GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}',
+    "github.event.comment.author_association == 'OWNER'",
+    "github.event.comment.author_association == 'MEMBER'",
+    "github.event.comment.author_association == 'COLLABORATOR'",
+    'uses: anomalyco/opencode/github@v1.18.7'
+)
+foreach ($requirement in $workflowRequirements) {
+    if (-not $workflow.Contains($requirement)) {
+        throw "OpenCode GitHub workflow is missing required contract: $requirement"
+    }
+}
+
+foreach ($forbidden in @('pull_request_target:', 'schedule:', 'model: opencode/', 'share: true')) {
+    if ($forbidden -eq 'model: opencode/') {
+        $modelLines = [regex]::Matches($workflow, '(?m)^\s*model:\s*(\S+)\s*$')
+        foreach ($modelLine in $modelLines) {
+            if ($modelLine.Groups[1].Value -ne 'opencode/big-pickle') {
+                throw "OpenCode GitHub workflow contains an unapproved model: $($modelLine.Groups[1].Value)"
+            }
+        }
+        continue
+    }
+    if ($workflow.Contains($forbidden)) {
+        throw "OpenCode GitHub workflow contains forbidden trigger or sharing mode: $forbidden"
     }
 }
 
