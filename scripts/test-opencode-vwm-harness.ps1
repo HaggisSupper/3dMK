@@ -45,8 +45,8 @@ foreach ($instruction in $requiredInstructions) {
 
 $progress = Get-Content -LiteralPath (Join-Path $RepositoryRoot 'docs\agent-execution\VWM_PROGRESS.md') -Raw
 for ($task = 1; $task -le 17; $task++) {
-    if ($progress -notmatch "(?m)^- \[ \] \*\*Task $task:") {
-        throw "Progress ledger is missing unchecked Task $task."
+    if ($progress -notmatch "(?m)^- \[[ xX]\] \*\*Task $task:") {
+        throw "Progress ledger is missing Task $task."
     }
 }
 
@@ -62,9 +62,12 @@ foreach ($relative in $agents) {
 }
 
 $forbiddenRequired = @(
+    '"git switch main*": "deny"',
+    '"git checkout main*": "deny"',
     '"git push origin main*": "deny"',
     '"git push origin master*": "deny"',
     '"git push --force*": "deny"',
+    '"git merge*": "deny"',
     '"git reset --hard*": "deny"',
     '"git clean*": "deny"',
     '"docker *": "deny"',
