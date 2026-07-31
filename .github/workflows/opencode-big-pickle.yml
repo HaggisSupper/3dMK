@@ -1,0 +1,109 @@
+name: OpenCode Big Pickle
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: Instruction for the 3DMk VWM coding agent
+        required: false
+        default: >-
+          Execute the next dependency-ready task in the authoritative VWM implementation plan.
+          Follow AGENTS.md, use TDD, run the independent reviewer and verifier, update the
+          progress ledger with command evidence, and open or update a pull request. Do not
+          reduce scope or claim completion without the required gates.
+        type: string
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+concurrency:
+  group: opencode-big-pickle-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  comment-request:
+    name: Authorized comment request
+    if: >-
+      (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') &&
+      (github.event.comment.author_association == 'OWNER' ||
+       github.event.comment.author_association == 'MEMBER' ||
+       github.event.comment.author_association == 'COLLABORATOR') &&
+      (contains(github.event.comment.body, '/opencode') ||
+       contains(github.event.comment.body, '/oc'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require OpenCode Zen API key
+        shell: bash
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          if [ -z "${OPENCODE_API_KEY:-}" ]; then
+            echo "::error::Missing repository Actions secret OPENCODE_API_KEY. Add an OpenCode Zen API key before invoking /opencode."
+            exit 1
+          fi
+
+      - name: Run OpenCode with Big Pickle
+        uses: anomalyco/opencode/github@v1.18.7
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          model: opencode/big-pickle
+          agent: vwm-executor
+          share: false
+          use_github_token: true
+          mentions: /opencode,/oc
+
+  manual-request:
+    name: Manual implementation request
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require OpenCode Zen API key
+        shell: bash
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          if [ -z "${OPENCODE_API_KEY:-}" ]; then
+            echo "::error::Missing repository Actions secret OPENCODE_API_KEY. Add an OpenCode Zen API key before dispatching this workflow."
+            exit 1
+          fi
+
+      - name: Run OpenCode with Big Pickle
+        uses: anomalyco/opencode/github@v1.18.7
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          model: opencode/big-pickle
+          agent: vwm-executor
+          share: false
+          use_github_token: true
+          prompt: ${{ inputs.prompt }}
