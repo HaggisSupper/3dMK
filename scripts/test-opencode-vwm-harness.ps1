@@ -95,7 +95,7 @@ $workflowRequirements = @(
     'workflow_dispatch:',
     'issue_comment:',
     'pull_request_review_comment:',
-    "model: opencode/big-pickle",
+    'model: opencode/big-pickle',
     'agent: vwm-executor',
     'share: false',
     'use_github_token: true',
@@ -109,6 +109,20 @@ $workflowRequirements = @(
 foreach ($requirement in $workflowRequirements) {
     if (-not $workflow.Contains($requirement)) {
         throw "OpenCode GitHub workflow is missing required contract: $requirement"
+    }
+}
+
+$diagnosticRequirements = @(
+    'uses: actions/github-script@v7',
+    "content: 'eyes'",
+    'steps.key-check.outputs.available',
+    'OpenCode request could not start because repository Actions secret OPENCODE_API_KEY is missing.',
+    'actions/runs/${{ github.run_id }}',
+    "content: '+1'"
+)
+foreach ($requirement in $diagnosticRequirements) {
+    if (-not $workflow.Contains($requirement)) {
+        throw "OpenCode GitHub workflow is missing issue-visible diagnostic contract: $requirement"
     }
 }
 
