@@ -40,23 +40,62 @@ jobs:
       actions: read
 
     steps:
+      - name: Acknowledge authorized request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const params = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'eyes'
+            };
+            if (context.eventName === 'pull_request_review_comment') {
+              await github.rest.reactions.createForPullRequestReviewComment(params);
+            } else {
+              await github.rest.reactions.createForIssueComment(params);
+            }
+
+      - name: Detect OpenCode Zen API key
+        id: key-check
+        shell: bash
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          if [ -n "${OPENCODE_API_KEY:-}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report missing OpenCode Zen API key
+        if: steps.key-check.outputs.available != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = context.payload.issue?.number ?? context.payload.pull_request?.number;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: 'OpenCode request could not start because repository Actions secret OPENCODE_API_KEY is missing. Add the OpenCode Zen API key under Settings → Secrets and variables → Actions, then submit the command again.'
+            });
+
+      - name: Fail closed without OpenCode Zen API key
+        if: steps.key-check.outputs.available != 'true'
+        shell: bash
+        run: |
+          echo "::error::Missing repository Actions secret OPENCODE_API_KEY."
+          exit 1
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Require OpenCode Zen API key
-        shell: bash
-        env:
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-        run: |
-          if [ -z "${OPENCODE_API_KEY:-}" ]; then
-            echo "::error::Missing repository Actions secret OPENCODE_API_KEY. Add an OpenCode Zen API key before invoking /opencode."
-            exit 1
-          fi
-
       - name: Run OpenCode with Big Pickle
+        id: opencode
         uses: anomalyco/opencode/github@v1.18.7
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
@@ -67,6 +106,37 @@ jobs:
           share: false
           use_github_token: true
           mentions: /opencode,/oc
+
+      - name: Report OpenCode workflow failure
+        if: failure() && steps.key-check.outputs.available == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = context.payload.issue?.number ?? context.payload.pull_request?.number;
+            const runUrl = `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `OpenCode Big Pickle started but the workflow failed. Inspect the Actions run: ${runUrl}`
+            });
+
+      - name: Mark request complete
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const params = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '+1'
+            };
+            if (context.eventName === 'pull_request_review_comment') {
+              await github.rest.reactions.createForPullRequestReviewComment(params);
+            } else {
+              await github.rest.reactions.createForIssueComment(params);
+            }
 
   manual-request:
     name: Manual implementation request
