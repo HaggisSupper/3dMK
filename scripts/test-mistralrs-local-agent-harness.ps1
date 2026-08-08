@@ -155,11 +155,19 @@ Assert-ContainsNone 'Mistral.rs setup' $setup @(
 
 $runner = Read-RepositoryFile 'scripts/run-mistralrs-vwm-task.ps1'
 Assert-ContainsAll 'Mistral.rs controller' $runner @(
+    "[CmdletBinding(DefaultParameterSetName = 'Authoritative')]",
+    "[ValidateSet('FB1', 'FB2', 'FB3', 'FB4', 'FB5', 'FB6', 'FB7', 'FB8')]",
     "[string]`$Model = 'Qwen/Qwen3-Coder-30B-A3B-Instruct'",
     "[string]`$FallbackModel = 'Qwen/Qwen3-8B'",
     '[int]$ContextLength = 32768',
     '[int]$MaxRepairRounds = 3',
     "`$Branch = 'agent/vwm-authoritative-revision-implementation'",
+    '$TaskId',
+    '$TaskPlan',
+    '$TaskLedger',
+    'Assert-TaskDependencies',
+    'CUDA_FOUNDATION_PROGRESS.md',
+    '2026-08-07-3dmk-foundation-batch.md',
     'Invoke-Implementer',
     'Invoke-Reviewer',
     'Invoke-Verifier',
@@ -167,6 +175,12 @@ Assert-ContainsAll 'Mistral.rs controller' $runner @(
     'CUDA_RUNTIME: VERIFIED'
 )
 Assert-ContainsNone 'Mistral.rs controller' $runner @('AllowCpuFallback', 'CPU fallback')
+
+$dependencyIndex = $runner.IndexOf('Assert-TaskDependencies -Worktree $worktree', [StringComparison]::Ordinal)
+$cudaSetupIndex = $runner.IndexOf('Ensure-MistralRs -RepositoryRoot $RepositoryRoot', [StringComparison]::Ordinal)
+if ($dependencyIndex -lt 0 -or $cudaSetupIndex -lt 0 -or $dependencyIndex -gt $cudaSetupIndex) {
+    throw 'The controller must reject unmet task dependencies before CUDA/Mistral.rs setup begins.'
+}
 
 $common = Read-RepositoryFile 'scripts/mistralrs-agent/common.ps1'
 Assert-ContainsAll 'Mistral.rs common module' $common @(
@@ -192,11 +206,15 @@ Assert-ContainsAll 'Mistral.rs role module' $roles @(
     'function Invoke-Verifier',
     'function Invoke-Repair',
     'function Publish-VerifiedBranch',
+    '$TaskId',
+    '$TaskPlan',
+    '$TaskLedger',
     'VERDICT: PASS',
     'VERDICT: FAIL',
     'cuda-runtime-evidence.json',
     "'--draft'"
 )
+Assert-ContainsNone 'Mistral.rs role module' $roles @('$AuthoritativePlan', '$ProgressLedger')
 
 $scriptCorpus = @($setup, $runner, $common, $roles) -join [Environment]::NewLine
 foreach ($pattern in @(
@@ -227,6 +245,7 @@ Assert-ContainsAll 'AGENTS.md' $agents @(
 $runbook = Read-RepositoryFile 'docs/agent-execution/MISTRALRS_LOCAL_AGENT.md'
 Assert-ContainsAll 'Mistral.rs runbook' $runbook @(
     'run-mistralrs-vwm-task.ps1',
+    '-FoundationTask FB1',
     'Qwen/Qwen3-Coder-30B-A3B-Instruct',
     'Qwen/Qwen3-8B',
     'Qwen/Qwen3-4B',
@@ -238,6 +257,13 @@ Assert-ContainsAll 'Mistral.rs runbook' $runbook @(
     '.local-agent/task-XX/'
 )
 Assert-ContainsNone 'Mistral.rs runbook' $runbook @('AllowCpuFallback', 'degraded CPU mode')
+
+$executionReadme = Read-RepositoryFile 'docs/agent-execution/README.md'
+Assert-ContainsAll 'Agent execution README' $executionReadme @(
+    '-FoundationTask FB1',
+    'Task 6 cannot begin',
+    'CUDA_FOUNDATION_PROGRESS.md'
+)
 
 $gitignore = Read-RepositoryFile '.gitignore'
 Assert-ContainsAll '.gitignore' $gitignore @('/.local-agent/', '/.worktrees/', '/.opencode/')
