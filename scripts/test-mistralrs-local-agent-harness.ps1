@@ -47,6 +47,20 @@ function Assert-ContainsAll {
     }
 }
 
+function Assert-ContainsNone {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Content,
+        [Parameter(Mandatory)][string[]]$Forbidden
+    )
+
+    foreach ($value in $Forbidden) {
+        if ($Content.Contains($value, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "$Name contains prohibited contract text: $value"
+        }
+    }
+}
+
 function Assert-PowerShellParses {
     param([Parameter(Mandatory)][string]$RelativePath)
 
@@ -93,7 +107,7 @@ Assert-PowerShellParses -RelativePath 'scripts/test-mistralrs-local-agent-harnes
 $setup = Read-RepositoryFile -RelativePath 'scripts/setup-mistralrs-local-agent.ps1'
 Assert-ContainsAll -Name 'Mistral.rs setup' -Content $setup -Required @(
     "[string]`$Version = 'master'",
-    '[switch]$AllowCpuFallback',
+    '[switch]$ForceSourceBuild',
     'Rust 1.94+',
     "@('git', 'cargo', 'rustc', 'nvidia-smi', 'nvcc')",
     'Visual Studio 2022 C++ Build Tools',
@@ -101,8 +115,15 @@ Assert-ContainsAll -Name 'Mistral.rs setup' -Content $setup -Required @(
     "`$featureSet = 'cuda'",
     'cuda-install.json',
     'Get-FileHash',
+    'Assert-CudaDoctorEvidence',
+    'CUDA-enabled Mistral.rs is ready'
+)
+Assert-ContainsNone -Name 'Mistral.rs setup' -Content $setup -Forbidden @(
+    'AllowCpuFallback',
     'Install-CpuFallback',
-    'MISTRALRS_INSTALL_TAG'
+    'MISTRALRS_INSTALL_TAG',
+    'degraded CPU',
+    'CPU fallback'
 )
 
 $runner = Read-RepositoryFile -RelativePath 'scripts/run-mistralrs-vwm-task.ps1'
@@ -111,7 +132,6 @@ Assert-ContainsAll -Name 'Mistral.rs controller' -Content $runner -Required @(
     "[string]`$FallbackModel = 'Qwen/Qwen3-8B'",
     '[int]$ContextLength = 32768',
     '[int]$MaxRepairRounds = 3',
-    '[switch]$AllowCpuFallback',
     "`$Branch = 'agent/vwm-authoritative-revision-implementation'",
     "`$ModuleRoot = Join-Path `$PSScriptRoot 'mistralrs-agent'",
     ". (Join-Path `$ModuleRoot 'common.ps1')",
@@ -120,7 +140,13 @@ Assert-ContainsAll -Name 'Mistral.rs controller' -Content $runner -Required @(
     'Invoke-Reviewer',
     'Invoke-Verifier',
     'MaxRepairRounds',
-    'TASK_CANDIDATE'
+    'TASK_CANDIDATE',
+    'CUDA_RUNTIME: VERIFIED'
+)
+Assert-ContainsNone -Name 'Mistral.rs controller' -Content $runner -Forbidden @(
+    'AllowCpuFallback',
+    'CPU mode',
+    'CPU fallback'
 )
 
 $common = Read-RepositoryFile -RelativePath 'scripts/mistralrs-agent/common.ps1'
@@ -128,6 +154,10 @@ Assert-ContainsAll -Name 'Mistral.rs common module' -Content $common -Required @
     'Test-IsLinkedWorktree',
     'worktree add',
     'Assert-CleanImplementationBranch',
+    'Assert-CudaDoctorEvidence',
+    'Assert-CudaProcess',
+    'cuda-runtime-evidence.json',
+    '--query-compute-apps=pid,process_name,used_gpu_memory',
     "'--host', '127.0.0.1'",
     "'--max-seq-len'",
     "'--max-tool-rounds'",
@@ -143,6 +173,12 @@ Assert-ContainsAll -Name 'Mistral.rs common module' -Content $common -Required @
     "type = 'container_auto'",
     "tool_choice = 'auto'",
     'session_id = $SessionId'
+)
+Assert-ContainsNone -Name 'Mistral.rs common module' -Content $common -Forbidden @(
+    'AllowCpuFallback',
+    'degraded CPU',
+    'CPU mode',
+    "'--cpu'"
 )
 
 $roles = Read-RepositoryFile -RelativePath 'scripts/mistralrs-agent/roles.ps1'
@@ -180,6 +216,7 @@ Assert-ContainsAll -Name 'AGENTS.md' -Content $agents -Required @(
     'inactive historical tooling',
     'separate model sessions',
     'Reviewer and verifier sessions are read-only',
+    'The local Mistral.rs executor must run with CUDA acceleration.',
     'agent/vwm-authoritative-revision-implementation',
     'TASK_CANDIDATE',
     'Evidence before assertion. No exceptions.'
@@ -191,11 +228,40 @@ Assert-ContainsAll -Name 'Mistral.rs runbook' -Content $runbook -Required @(
     'Qwen/Qwen3-Coder-30B-A3B-Instruct',
     'Qwen/Qwen3-8B',
     'Qwen/Qwen3-4B',
-    '-AllowCpuFallback',
+    'CUDA is mandatory',
+    'CPU execution is prohibited',
+    'cuda-runtime-evidence.json',
     '127.0.0.1',
     'VERDICT: PASS',
     'VERDICT: FAIL',
     '.local-agent/task-XX/'
+)
+Assert-ContainsNone -Name 'Mistral.rs runbook' -Content $runbook -Forbidden @(
+    'AllowCpuFallback',
+    'CPU fallback',
+    'degraded CPU mode'
+)
+
+$design = Read-RepositoryFile -RelativePath 'docs/superpowers/specs/2026-08-07-mistralrs-local-agent-experiment-design.md'
+Assert-ContainsAll -Name 'Mistral.rs design' -Content $design -Required @(
+    'CUDA execution is mandatory',
+    'No CPU fallback is permitted',
+    'live CUDA process evidence'
+)
+Assert-ContainsNone -Name 'Mistral.rs design' -Content $design -Forbidden @(
+    'explicitly reported CPU fallback',
+    'CPU is the only automatic'
+)
+
+$plan = Read-RepositoryFile -RelativePath 'docs/superpowers/plans/2026-08-07-mistralrs-local-agent-experiment.md'
+Assert-ContainsAll -Name 'Mistral.rs implementation plan' -Content $plan -Required @(
+    'CUDA is mandatory',
+    'No CPU fallback is permitted',
+    'live CUDA process evidence'
+)
+Assert-ContainsNone -Name 'Mistral.rs implementation plan' -Content $plan -Forbidden @(
+    'AllowCpuFallback',
+    'explicit CPU fallback'
 )
 
 $gitignore = Read-RepositoryFile -RelativePath '.gitignore'
