@@ -127,8 +127,10 @@ The implementer, reviewer, verifier, and repair roles use separate model session
 
 ## Git discipline
 
+- The active product implementation branch is `agent/vwm-authoritative-revision-implementation`.
 - Never implement on `main` or `master`.
-- Use a focused `agent/<description>` branch and an isolated linked worktree.
+- Use a focused `agent/<description>` branch for separately scoped governance, documentation, or support work.
+- Use an isolated linked worktree for model-driven implementation.
 - Never force-push.
 - Never run `git reset --hard` or `git clean`.
 - Preserve unrelated user changes.
