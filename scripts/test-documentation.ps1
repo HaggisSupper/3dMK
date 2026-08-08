@@ -25,6 +25,23 @@ function Forbid-Path {
     }
 }
 
+function Get-TrackedRepositoryFiles {
+    $git = (Get-Command git -ErrorAction Stop).Source
+    $relativePaths = @(& $git -C $RepositoryRoot ls-files)
+    if ($LASTEXITCODE -ne 0) {
+        throw 'git ls-files failed while enumerating authoritative repository files.'
+    }
+
+    foreach ($relativePath in $relativePaths) {
+        if ([string]::IsNullOrWhiteSpace($relativePath)) { continue }
+        $resolvedPath = Resolve-RepositoryPath $relativePath
+        if (-not (Test-Path -LiteralPath $resolvedPath -PathType Leaf)) {
+            throw "Tracked repository file is missing from the checkout: $relativePath"
+        }
+        Get-Item -LiteralPath $resolvedPath
+    }
+}
+
 $requiredFiles = @(
     'README.md',
     'AGENTS.md',
@@ -73,9 +90,16 @@ $forbiddenPaths = @(
     'docs/superpowers/specs/2026-08-07-mistralrs-local-agent-experiment-design.md',
     'VWM-Repo-Implicit/docs/3dmk-implicit-engine-port-plan.md',
     'VWM-Repo-Implicit/docs/superpowers/plans/2026-07-18-vwm-implicit-fields.md',
+    'VWM-Repo-Implicit/PACKAGE_MANIFEST.sha256',
+    'VWM-Repo-Implicit/STATIC_VALIDATION.json',
     'spatial-engineering-platform/INTEGRATION_PLAN.md',
     'spatial-engineering-platform/bootstrap/README.md',
     'spatial-engineering-platform/bootstrap/PR_BODY.md',
+    'spatial-engineering-platform/bootstrap/VERIFY_AFTER_EXTRACT.txt',
+    'spatial-engineering-platform/bootstrap/BRANCH_COMPLETE.txt',
+    'spatial-engineering-platform/bootstrap/LAST_FILE.txt',
+    'spatial-engineering-platform/bootstrap/PUBLISH_STATUS.md',
+    'spatial-engineering-platform/bootstrap/NO_MORE_FILES.txt',
     'Open Design Prototypes/3DMk-UI_UX-2026-07-17/DESIGN-HANDOFF.md',
     'Open Design Prototypes/3DMk-UI_UX-2026-07-17/DESIGN-MANIFEST.json',
     'Open Design Prototypes/3DMk-photo-package-import/DESIGN-HANDOFF.md',
@@ -130,12 +154,22 @@ foreach ($required in @(
     }
 }
 
-$activeTextFiles = Get-ChildItem -LiteralPath $RepositoryRoot -Recurse -File |
-    Where-Object {
-        $_.Extension -in @('.md', '.json', '.yml', '.yaml', '.ps1') -and
-        $_.FullName -notmatch '[\\/]\.git[\\/]' -and
-        $_.FullName -notmatch '[\\/]target[\\/]'
+$probeDirectory = Resolve-RepositoryPath '.local-agent/documentation-validation'
+$probePath = Join-Path $probeDirectory ("untracked-{0}.md" -f [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Force -Path $probeDirectory | Out-Null
+Set-Content -LiteralPath $probePath -Encoding utf8 -Value 'OPENCODE_API_KEY [broken](missing-transient-target.md)'
+try {
+    $trackedFiles = @(Get-TrackedRepositoryFiles)
+    if ($trackedFiles.FullName -contains (Get-Item -LiteralPath $probePath).FullName) {
+        throw 'git ls-files unexpectedly returned an ignored transient documentation probe.'
     }
+}
+finally {
+    Remove-Item -LiteralPath $probePath -Force -ErrorAction SilentlyContinue
+}
+
+$activeTextFiles = $trackedFiles |
+    Where-Object { $_.Extension -in @('.md', '.json', '.yml', '.yaml', '.ps1') }
 
 $forbiddenText = @(
     'OPENCODE_API_KEY',
@@ -163,11 +197,7 @@ foreach ($file in $activeTextFiles) {
     }
 }
 
-$markdownFiles = Get-ChildItem -LiteralPath $RepositoryRoot -Recurse -File -Filter '*.md' |
-    Where-Object {
-        $_.FullName -notmatch '[\\/]\.git[\\/]' -and
-        $_.FullName -notmatch '[\\/]target[\\/]'
-    }
+$markdownFiles = $trackedFiles | Where-Object { $_.Extension -eq '.md' }
 $linkPattern = [regex]'\[[^\]]*\]\((?<target>[^)]+)\)'
 foreach ($file in $markdownFiles) {
     $content = Get-Content -LiteralPath $file.FullName -Raw
