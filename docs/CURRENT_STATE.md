@@ -1,7 +1,7 @@
 # 3DMk Current Implementation State
 
 **Audit date:** 2026-08-07  
-**Audited baseline:** merge commit `9e255e9362e2c7ac328beb5e90123a2a865e6118` plus the documentation-consolidation branch  
+**Audited product baseline:** `main` through PR #10 at `e42cb081e0d940c686ed8c6309ad339e51f55e9d`; `agent/vwm-authoritative-revision-implementation` is synchronized to the same commit  
 **Product state:** active implementation; not deployment-ready; `PROJECT_COMPLETE` has not been reached
 
 ## 1. What 3DMk is now
@@ -72,7 +72,7 @@ Implemented:
 
 Current limitation:
 
-- authoritative metadata is still stored as recoverable JSON files rather than the accepted SQLite transaction model.
+- authoritative metadata is still stored as recoverable JSON files rather than the accepted SQLite transaction model;
 - the full operation publication, review, accept/reject, generation-concurrency, and recovery contracts are not implemented.
 
 ### Viewer and workstation UI
@@ -88,9 +88,9 @@ Implemented:
 
 Current limitations:
 
-- `loadedGeometryStore`, browser undo stacks, overlays, measurements, and browser-built ZIP output can diverge from the Rust project record.
-- post-import geometry operations are not consistently revision-backed.
-- browser viewport traversal is still used by legacy export paths.
+- `loadedGeometryStore`, browser undo stacks, overlays, measurements, and browser-built ZIP output can diverge from the Rust project record;
+- post-import geometry operations are not consistently revision-backed;
+- browser viewport traversal is still used by legacy export paths;
 - the single-file frontend is not yet modularized and release assets are not fully offline-vendored.
 
 ## 3. VWM engine state
@@ -124,7 +124,10 @@ Implemented now:
 - a CUDA-only local Mistral.rs development-agent setup/controller;
 - source-build provenance and executable-hash checking;
 - local server CUDA-process observation through NVIDIA telemetry;
-- static Windows validation of the executor contracts.
+- separate authoritative Task 1–17 and CUDA Foundation FB1–FB8 selectors;
+- fail-closed predecessor admission before Mistral.rs setup or model loading;
+- selected plan, ledger, report, evidence, session, and pull-request routing for both task families;
+- static Windows validation of executor and documentation contracts.
 
 Not implemented in the product runtime:
 
@@ -136,14 +139,14 @@ Not implemented in the product runtime:
 - CUDA geometry, reconstruction, image, and perception kernels;
 - product-visible accelerator APIs and UI.
 
-Therefore, the repository has an accepted CUDA-first architecture but does not yet contain a complete CUDA-first product implementation.
+Therefore, the repository has an accepted CUDA-first architecture and a dependency-aware CUDA-only development executor, but it does not yet contain a complete CUDA-first product implementation.
 
 ## 5. Active implementation sequence
 
 ```text
 Authoritative Tasks 1–5
         ↓
-CUDA foundation FB1–FB8
+CUDA Foundation FB1–FB8
         ↓
 Authoritative Tasks 6–14 using CUDA-primary backends
         ↓
@@ -152,10 +155,12 @@ Tasks 15–16 frontend, offline packaging, security, and deployment
 Task 17 end-to-end fault, performance, soak, and clean-machine closure
 ```
 
-The live ledgers are:
+The controller enforces this sequence from the checked task entries in:
 
 - `agent-execution/VWM_PROGRESS.md`;
 - `agent-execution/CUDA_FOUNDATION_PROGRESS.md`.
+
+The next dependency-ready work is Authoritative Task 1, tracked by GitHub issue #6.
 
 ## 6. Current blockers to production readiness
 
@@ -170,4 +175,4 @@ The live ledgers are:
 
 ## 7. Completion rule
 
-3DMk may be reported as `PROJECT_COMPLETE` only when every authoritative task and CUDA-foundation task is independently reviewed, verified, recorded, synchronized, and supported by the full release evidence package. Documentation, routes, prototypes, scaffolding, or passing static checks alone do not satisfy that state.
+3DMk may be reported as `PROJECT_COMPLETE` only when every authoritative task and CUDA-foundation task is independently reviewed, verified, recorded, synchronized, and supported by the full release evidence package. Documentation, routes, prototypes, scaffolding, executor checks, or passing static checks alone do not satisfy that state.
