@@ -94,14 +94,15 @@ Read:
 3. the complete Task $Task section in $AuthoritativePlan
 4. every commit and the full diff in $BaseCommit...HEAD
 5. the implementer and repair reports under $relativeRunDirectory
+6. $relativeRunDirectory/cuda-runtime-evidence.json
 
-Review specification compliance first, then code and test quality. Verify that claimed failures or passes match the actual task semantics. Task 1 intentionally requires red tests that reproduce real authority defects; do not demand production fixes in Task 1.
+Review specification compliance first, then code and test quality. Verify that claimed failures or passes match the actual task semantics. Task 1 intentionally requires red tests that reproduce real authority defects; do not demand production fixes in Task 1. Also confirm mandatory CUDA runtime evidence: the JSON file must identify a positive Mistral.rs process ID, the selected model, and the observed NVIDIA compute-process row.
 
 Do not modify, stage, commit, push, reset, restore, or delete tracked files. You may run read-only git commands and tests. Do not use OpenCode or a cloud model.
 
 Write the complete review to $reportRelativePath.
 The first line must be exactly VERDICT: PASS or VERDICT: FAIL.
-A failing report must list each blocking or important finding with file evidence and a concrete correction. A passing report must account for every task acceptance condition.
+A failing report must list each blocking or important finding with file evidence and a concrete correction. A passing report must account for every task acceptance condition and the CUDA evidence gate.
 "@
 
     $sessionId = "3dmk-task-$Task-reviewer-$Round-$([Guid]::NewGuid().ToString('N'))"
@@ -137,10 +138,11 @@ You are the independent 3DMk verifier for authoritative plan Task $Task. This is
 Use the shell. Your first shell command must be:
 Set-Location -LiteralPath '$worktreeLiteral'
 
-Read AGENTS.md, $ProgressLedger, the full Task $Task plan section, and $BaseCommit...HEAD. Run fresh verification commands rather than trusting another model session.
+Read AGENTS.md, $ProgressLedger, the full Task $Task plan section, $BaseCommit...HEAD, and $relativeRunDirectory/cuda-runtime-evidence.json. Run fresh verification commands rather than trusting another model session.
 
 Verification requirements:
 - confirm branch $Branch and a clean tracked worktree;
+- confirm mandatory CUDA runtime evidence exists and contains a positive process_id, the selected model, and a non-empty nvidia_compute_process row;
 - run every focused command specified by Task $Task;
 - run directly affected regression checks;
 - confirm the progress ledger records observed commands and outcomes;
@@ -152,7 +154,7 @@ Do not modify, stage, commit, push, reset, restore, or delete tracked files. Do 
 
 Write the complete verification report to $reportRelativePath.
 The first line must be exactly VERDICT: PASS or VERDICT: FAIL.
-Include each command, exit code, and decisive output. A failure report must identify the exact repair required.
+Include each command, exit code, decisive output, and CUDA evidence fields. A failure report must identify the exact repair required.
 "@
 
     $sessionId = "3dmk-task-$Task-verifier-$Round-$([Guid]::NewGuid().ToString('N'))"
@@ -203,7 +205,12 @@ function Publish-VerifiedBranch {
         return
     }
 
-    Write-Step 'Pushing the reviewed and verified implementation branch.'
+    $cudaEvidencePath = Join-Path $RunDirectory 'cuda-runtime-evidence.json'
+    if (-not (Test-Path -LiteralPath $cudaEvidencePath -PathType Leaf)) {
+        throw 'Publication is prohibited because cuda-runtime-evidence.json is missing.'
+    }
+
+    Write-Step 'Pushing the CUDA-verified, reviewed, and verified implementation branch.'
     Invoke-Git $Worktree push -u origin $Branch | Out-Null
 
     $gh = Get-CommandPath 'gh'
@@ -240,7 +247,7 @@ function Publish-VerifiedBranch {
     @"
 ## Scope
 
-Executes the authoritative 3DMk VWM revision workflow through a local Mistral.rs model. This PR remains task-gated and does not claim the complete 17-task project is finished.
+Executes the authoritative 3DMk VWM revision workflow through a local CUDA-backed Mistral.rs model. This PR remains task-gated and does not claim the complete 17-task project is finished.
 
 ## Current task
 
@@ -250,13 +257,15 @@ Task $Task from $AuthoritativePlan.
 
 - Mistral.rs bound to 127.0.0.1
 - local model: $SelectedModel
+- CUDA build, host, and live process gates passed
+- live process proof recorded in `.local-agent/task-{0:d2}/cuda-runtime-evidence.json`
 - independent implementer, reviewer, and verifier sessions
 - OpenCode is not required
 
 ## Evidence
 
-See $ProgressLedger for exact commands and outcomes.
-"@ | Set-Content -LiteralPath $bodyPath -Encoding utf8
+See $ProgressLedger for exact task commands and outcomes. The ignored local run directory contains the CUDA process record and complete role reports.
+"@ -f $Task | Set-Content -LiteralPath $bodyPath -Encoding utf8
 
     $prCreateArguments = @(
         'pr', 'create',
