@@ -204,10 +204,28 @@ function Test-CudaMarker {
         $marker = Get-Content -LiteralPath $markerPath -Raw | ConvertFrom-Json
         $resolvedBinary = (Resolve-Path -LiteralPath $MistralPath).Path
         $binaryHash = (Get-FileHash -LiteralPath $resolvedBinary -Algorithm SHA256).Hash
-        return $marker.binary_path -eq $resolvedBinary -and $marker.binary_sha256 -eq $binaryHash
+        return (
+            $marker.binary_path -eq $resolvedBinary -and
+            $marker.binary_sha256 -eq $binaryHash -and
+            [string]$marker.features -match '(^|\s)cuda($|\s)'
+        )
     }
     catch {
         return $false
+    }
+}
+
+function Assert-CudaDoctorEvidence {
+    param([Parameter(Mandatory)][string]$DoctorText)
+
+    $compiledForCuda = $DoctorText -match '(?im)^\s*(?:\[INFO\]\s*)?(?:build|compiled)\s+features\s*:[^\r\n]*\bcuda\b'
+    $cudaHardwareDetected = $DoctorText -match '(?im)^\s*(?:\[INFO\]\s*)?CUDA\s*:[^\r\n]+'
+
+    if (-not $compiledForCuda) {
+        throw 'mistralrs doctor does not report the CUDA build feature.'
+    }
+    if (-not $cudaHardwareDetected) {
+        throw 'mistralrs doctor does not report a detected CUDA toolkit and NVIDIA driver.'
     }
 }
 
@@ -222,10 +240,8 @@ function Ensure-MistralRs {
         throw "Mistral.rs setup script is missing: $setup"
     }
 
-    $setupArguments = @('-NoLogo', '-NoProfile', '-File', $setup)
-    if ($AllowCpuFallback) { $setupArguments += '-AllowCpuFallback' }
-    & $pwsh @setupArguments
-    if ($LASTEXITCODE -ne 0) { throw 'Mistral.rs setup failed.' }
+    & $pwsh -NoLogo -NoProfile -File $setup
+    if ($LASTEXITCODE -ne 0) { throw 'Mistral.rs CUDA setup failed.' }
 
     $env:PATH = "$(Join-Path $env:USERPROFILE '.cargo\bin');$(Join-Path $env:USERPROFILE '.local\bin');$env:PATH"
     $mistral = Get-CommandPath 'mistralrs'
@@ -233,13 +249,13 @@ function Ensure-MistralRs {
 
     $doctor = (& $mistral doctor 2>&1 | Out-String)
     if ($doctor) { Write-Host $doctor.TrimEnd() }
+    Assert-CudaDoctorEvidence -DoctorText $doctor
 
-    $cudaConfirmed = Test-CudaMarker -MistralPath $mistral
-    if (-not $cudaConfirmed -and -not $AllowCpuFallback) {
-        throw 'The installed Mistral.rs binary is not confirmed by the CUDA source-build marker. Rerun setup or explicitly pass -AllowCpuFallback.'
+    if (Test-CudaMarker -MistralPath $mistral) {
+        Write-Step 'Mistral.rs CUDA build provenance marker is valid.'
     }
-    if (-not $cudaConfirmed) {
-        Write-Warning 'Mistral.rs is running in explicitly allowed degraded CPU mode.'
+    else {
+        Write-Step 'Mistral.rs CUDA capability is confirmed by doctor; local source-build provenance is unavailable.'
     }
     return $mistral
 }
@@ -272,6 +288,51 @@ function Wait-MistralServer {
 
     Stop-Process -Id $Process.Id -Force -ErrorAction SilentlyContinue
     throw "Mistral.rs did not become ready within $TimeoutSeconds seconds. Inspect $StdoutPath and $StderrPath."
+}
+
+function Assert-CudaProcess {
+    param(
+        [Parameter(Mandatory)][System.Diagnostics.Process]$Process,
+        [Parameter(Mandatory)][string]$RunDirectory,
+        [Parameter(Mandatory)][string]$ModelId,
+        [ValidateRange(10, 300)][int]$TimeoutSeconds = 60
+    )
+
+    $nvidiaSmi = Get-CommandPath 'nvidia-smi'
+    if (-not $nvidiaSmi) {
+        throw 'nvidia-smi is required to prove live CUDA execution.'
+    }
+
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    $lastOutput = ''
+    while ([DateTime]::UtcNow -lt $deadline) {
+        if ($Process.HasExited) {
+            throw "Mistral.rs process $($Process.Id) exited before CUDA runtime evidence was observed."
+        }
+
+        $rows = & $nvidiaSmi --query-compute-apps=pid,process_name,used_gpu_memory --format=csv,noheader,nounits 2>&1
+        $exitCode = $LASTEXITCODE
+        $lastOutput = ($rows | Out-String).Trim()
+        if ($exitCode -eq 0) {
+            $processRow = @($rows) | Where-Object { [string]$_ -match "^\s*$($Process.Id)\s*," } | Select-Object -First 1
+            if ($processRow) {
+                $evidence = [ordered]@{
+                    schema_version = 1
+                    verified_at_utc = [DateTime]::UtcNow.ToString('o')
+                    process_id = $Process.Id
+                    model = $ModelId
+                    nvidia_compute_process = [string]$processRow
+                }
+                $evidencePath = Join-Path $RunDirectory 'cuda-runtime-evidence.json'
+                $evidence | ConvertTo-Json | Set-Content -LiteralPath $evidencePath -Encoding utf8
+                Write-Step "Verified live CUDA execution for Mistral.rs process $($Process.Id): $processRow"
+                return $evidencePath
+            }
+        }
+        Start-Sleep -Seconds 2
+    }
+
+    throw "Mistral.rs became API-ready but process $($Process.Id) was not observed by NVIDIA's CUDA compute-process query within $TimeoutSeconds seconds. Last nvidia-smi output:`n$lastOutput"
 }
 
 function Start-MistralServer {
@@ -307,7 +368,7 @@ function Start-MistralServer {
     )
 
     $quotedArguments = $arguments | ForEach-Object { ConvertTo-NativeArgument -Value $_ }
-    Write-Step "Starting Mistral.rs with local model '$ModelId'."
+    Write-Step "Starting CUDA-mandatory Mistral.rs with local model '$ModelId'."
     $startProcessArguments = @{
         FilePath = $MistralPath
         ArgumentList = $quotedArguments
@@ -327,6 +388,7 @@ function Start-MistralServer {
         StderrPath = $stderrPath
     }
     Wait-MistralServer @waitArguments
+    $cudaEvidencePath = Assert-CudaProcess -Process $process -RunDirectory $RunDirectory -ModelId $ModelId
 
     $process.Id | Set-Content -LiteralPath (Join-Path $RunDirectory 'mistralrs.pid') -Encoding ascii
     return [pscustomobject]@{
@@ -335,6 +397,7 @@ function Start-MistralServer {
         Model = $ModelId
         Stdout = $stdoutPath
         Stderr = $stderrPath
+        CudaEvidence = $cudaEvidencePath
     }
 }
 
