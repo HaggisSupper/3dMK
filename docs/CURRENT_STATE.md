@@ -1,7 +1,8 @@
 # 3DMk Current Implementation State
 
 **Audit date:** 2026-08-07  
-**Audited product baseline:** `main` through PR #10 at `e42cb081e0d940c686ed8c6309ad339e51f55e9d`; `agent/vwm-authoritative-revision-implementation` is synchronized to the same commit  
+**Audited runtime/product baseline:** source behavior through PR #10 at `e42cb081e0d940c686ed8c6309ad339e51f55e9d`; subsequent merged changes are documentation-only  
+**Branch alignment:** `agent/vwm-authoritative-revision-implementation` is synchronized with current `main`  
 **Product state:** active implementation; not deployment-ready; `PROJECT_COMPLETE` has not been reached
 
 ## 1. What 3DMk is now
