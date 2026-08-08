@@ -16,6 +16,12 @@ function Invoke-Implementer {
     $outputPath = Join-Path $RunDirectory $responseName
     $reportRelativePath = "$relativeRunDirectory/$reportName"
     $worktreeLiteral = ConvertTo-PowerShellSingleQuotedLiteral -Value $Worktree
+    $taskSpecificRule = if ($TaskKind -eq 'authoritative' -and $TaskId -eq '1') {
+        '- Authoritative Task 1 requires intended red tests as evidence; do not change production behavior merely to make those tests green.'
+    }
+    else {
+        '- Implement the selected task production behavior only after observing the required failing test.'
+    }
 
     $repairSection = if ($RepairContext) {
         @"
@@ -32,25 +38,28 @@ $RepairContext
     }
 
     $prompt = @"
-You are the local Mistral.rs implementation worker for 3DMk Task $Task.
+You are the local Mistral.rs implementation worker for $TaskLabel.
 
 Use the shell tool continuously; do not merely describe commands. Your first shell command must be:
 Set-Location -LiteralPath '$worktreeLiteral'
 
 Read, in this exact order:
 1. AGENTS.md
-2. $ProgressLedger
-3. $AuthoritativePlan
-4. The complete section headed Task $Task and only its directly referenced files.
+2. docs/CURRENT_STATE.md
+3. $AuthoritativeLedger
+4. $FoundationLedger
+5. $TaskPlan
+6. The complete section headed Task $TaskId and only its directly referenced source and tests.
 
 Mandatory rules:
 - Confirm the current branch is exactly $Branch and never switch to main or master.
-- Execute only Task $Task. Do not begin the next task.
+- Execute only $TaskLabel. Do not begin the next task.
 - Follow test-driven development and the task's exact acceptance conditions.
-- For Task 1, intended red tests are evidence; do not change production behavior merely to make them green.
+$taskSpecificRule
 - Use real repository APIs and fixtures. Do not manufacture failures.
 - Run the focused commands and affected regression checks required by the task.
-- Update $ProgressLedger with exact commands, outputs, files, commit, and residual risks.
+- Update $TaskLedger with exact commands, exit codes, decisive outputs, files, commit, accelerator evidence when applicable, and residual risks.
+- Update docs/CURRENT_STATE.md in the same task when implementation truth changes.
 - Do not use Docker, Podman, WSL, OpenCode, cloud inference, force push, merge, git reset --hard, or git clean.
 - Preserve unrelated files.
 - Commit all tracked task changes locally with the prescribed message or a more accurate equivalent.
@@ -61,7 +70,7 @@ $repairSection
 Begin now and continue until this bounded task has a committed candidate or a genuine evidence-backed blocker.
 "@
 
-    $sessionId = "3dmk-task-$Task-implementer-$Round-$([Guid]::NewGuid().ToString('N'))"
+    $sessionId = "3dmk-$TaskKind-$TaskId-implementer-$Round-$([Guid]::NewGuid().ToString('N'))"
     Invoke-AgentResponse -BaseUri $BaseUri -Prompt $prompt -SessionId $sessionId -OutputPath $outputPath | Out-Null
 }
 
@@ -80,32 +89,40 @@ function Invoke-Reviewer {
     $responsePath = Join-Path $RunDirectory "review-$Round-response.json"
     $worktreeLiteral = ConvertTo-PowerShellSingleQuotedLiteral -Value $Worktree
     $expectedHead = (Invoke-Git $Worktree rev-parse HEAD | Select-Object -First 1).Trim()
+    $taskOneReviewNote = if ($TaskKind -eq 'authoritative' -and $TaskId -eq '1') {
+        'Authoritative Task 1 intentionally requires red tests that reproduce real authority defects; do not demand production fixes in that task.'
+    }
+    else {
+        'Require the selected task to implement its declared production behavior and make the intended failing test pass.'
+    }
     Remove-Item -LiteralPath $reportPath -Force -ErrorAction SilentlyContinue
 
     $prompt = @"
-You are the independent 3DMk reviewer for authoritative plan Task $Task. This is a read-only tracked-file role.
+You are the independent 3DMk reviewer for $TaskLabel. This is a read-only tracked-file role.
 
 Use the shell. Your first shell command must be:
 Set-Location -LiteralPath '$worktreeLiteral'
 
 Read:
 1. AGENTS.md
-2. $ProgressLedger
-3. the complete Task $Task section in $AuthoritativePlan
-4. every commit and the full diff in $BaseCommit...HEAD
-5. the implementer and repair reports under $relativeRunDirectory
-6. $relativeRunDirectory/cuda-runtime-evidence.json
+2. docs/CURRENT_STATE.md
+3. $AuthoritativeLedger
+4. $FoundationLedger
+5. the complete Task $TaskId section in $TaskPlan
+6. every commit and the full diff in $BaseCommit...HEAD
+7. the implementer and repair reports under $relativeRunDirectory
+8. $relativeRunDirectory/cuda-runtime-evidence.json
 
-Review specification compliance first, then code and test quality. Verify that claimed failures or passes match the actual task semantics. Task 1 intentionally requires red tests that reproduce real authority defects; do not demand production fixes in Task 1. Also confirm mandatory CUDA runtime evidence: the JSON file must identify a positive Mistral.rs process ID, the selected model, and the observed NVIDIA compute-process row.
+Review specification compliance first, then architecture, safety, code, tests, documentation truth, and scope. Verify that claimed failures or passes match the actual task semantics. $taskOneReviewNote Confirm mandatory CUDA runtime evidence: the JSON file must identify a positive Mistral.rs process ID, the selected model, and the observed NVIDIA compute-process row.
 
 Do not modify, stage, commit, push, reset, restore, or delete tracked files. You may run read-only git commands and tests. Do not use OpenCode or a cloud model.
 
 Write the complete review to $reportRelativePath.
 The first line must be exactly VERDICT: PASS or VERDICT: FAIL.
-A failing report must list each blocking or important finding with file evidence and a concrete correction. A passing report must account for every task acceptance condition and the CUDA evidence gate.
+A failing report must list each blocking or important finding with file evidence and a concrete correction. A passing report must account for every task acceptance condition, dependency boundary, documentation update, and CUDA evidence gate.
 "@
 
-    $sessionId = "3dmk-task-$Task-reviewer-$Round-$([Guid]::NewGuid().ToString('N'))"
+    $sessionId = "3dmk-$TaskKind-$TaskId-reviewer-$Round-$([Guid]::NewGuid().ToString('N'))"
     Invoke-AgentResponse -BaseUri $BaseUri -Prompt $prompt -SessionId $sessionId -OutputPath $responsePath | Out-Null
     Assert-ReadOnlyRoleState -Worktree $Worktree -Role 'Reviewer' -ExpectedHead $expectedHead
 
@@ -130,34 +147,41 @@ function Invoke-Verifier {
     $responsePath = Join-Path $RunDirectory "verification-$Round-response.json"
     $worktreeLiteral = ConvertTo-PowerShellSingleQuotedLiteral -Value $Worktree
     $expectedHead = (Invoke-Git $Worktree rev-parse HEAD | Select-Object -First 1).Trim()
+    $taskOneVerificationNote = if ($TaskKind -eq 'authoritative' -and $TaskId -eq '1') {
+        'Interpret the expected red tests correctly: PASS means they compile, execute, and fail for the intended authority gaps rather than syntax, fixture, path, or harness errors.'
+    }
+    else {
+        'Require the intended failure-reproducing test to pass after the production implementation and reject unexecuted or fabricated evidence.'
+    }
     Remove-Item -LiteralPath $reportPath -Force -ErrorAction SilentlyContinue
 
     $prompt = @"
-You are the independent 3DMk verifier for authoritative plan Task $Task. This is a read-only tracked-file role.
+You are the independent 3DMk verifier for $TaskLabel. This is a read-only tracked-file role.
 
 Use the shell. Your first shell command must be:
 Set-Location -LiteralPath '$worktreeLiteral'
 
-Read AGENTS.md, $ProgressLedger, the full Task $Task plan section, $BaseCommit...HEAD, and $relativeRunDirectory/cuda-runtime-evidence.json. Run fresh verification commands rather than trusting another model session.
+Read AGENTS.md, docs/CURRENT_STATE.md, $AuthoritativeLedger, $FoundationLedger, the full Task $TaskId section in $TaskPlan, $BaseCommit...HEAD, and $relativeRunDirectory/cuda-runtime-evidence.json. Run fresh verification commands rather than trusting another model session.
 
 Verification requirements:
 - confirm branch $Branch and a clean tracked worktree;
+- confirm all selected-task predecessors remain complete in the appropriate ledgers;
 - confirm mandatory CUDA runtime evidence exists and contains a positive process_id, the selected model, and a non-empty nvidia_compute_process row;
-- run every focused command specified by Task $Task;
+- run every focused command specified by Task $TaskId;
 - run directly affected regression checks;
-- confirm the progress ledger records observed commands and outcomes;
+- confirm $TaskLedger records observed commands and outcomes;
+- confirm docs/CURRENT_STATE.md remains accurate when implementation truth changed;
 - confirm the commit contains only bounded task changes;
-- interpret Task 1's expected red tests correctly: PASS means they compile, execute, and fail for the intended authority gaps rather than syntax, fixture, path, or harness errors;
-- reject fabricated or unexecuted evidence.
+- $taskOneVerificationNote
 
 Do not modify, stage, commit, push, reset, restore, or delete tracked files. Do not use OpenCode or a cloud model.
 
 Write the complete verification report to $reportRelativePath.
 The first line must be exactly VERDICT: PASS or VERDICT: FAIL.
-Include each command, exit code, decisive output, and CUDA evidence fields. A failure report must identify the exact repair required.
+Include each command, exit code, decisive output, dependency evidence, and CUDA evidence fields. A failure report must identify the exact repair required.
 "@
 
-    $sessionId = "3dmk-task-$Task-verifier-$Round-$([Guid]::NewGuid().ToString('N'))"
+    $sessionId = "3dmk-$TaskKind-$TaskId-verifier-$Round-$([Guid]::NewGuid().ToString('N'))"
     Invoke-AgentResponse -BaseUri $BaseUri -Prompt $prompt -SessionId $sessionId -OutputPath $responsePath | Out-Null
     Assert-ReadOnlyRoleState -Worktree $Worktree -Role 'Verifier' -ExpectedHead $expectedHead
 
@@ -247,25 +271,25 @@ function Publish-VerifiedBranch {
     @"
 ## Scope
 
-Executes the authoritative 3DMk VWM revision workflow through a local CUDA-backed Mistral.rs model. This PR remains task-gated and does not claim the complete 17-task project is finished.
+Executes $TaskLabel through a local CUDA-backed Mistral.rs model. This PR remains task-gated and does not claim the complete 3DMk project is finished.
 
-## Current task
+## Selected task
 
-Task $Task from $AuthoritativePlan.
+$TaskLabel from $TaskPlan.
 
 ## Execution backend
 
 - Mistral.rs bound to 127.0.0.1
 - local model: $SelectedModel
 - CUDA build, host, and live process gates passed
-- live process proof recorded in `.local-agent/task-{0:d2}/cuda-runtime-evidence.json`
+- live process proof recorded in `.local-agent/$RunDirectoryName/cuda-runtime-evidence.json`
 - independent implementer, reviewer, and verifier sessions
 - OpenCode is not required
 
 ## Evidence
 
-See $ProgressLedger for exact task commands and outcomes. The ignored local run directory contains the CUDA process record and complete role reports.
-"@ -f $Task | Set-Content -LiteralPath $bodyPath -Encoding utf8
+See $TaskLedger for exact task commands and outcomes. The ignored local run directory contains the CUDA process record and complete role reports.
+"@ | Set-Content -LiteralPath $bodyPath -Encoding utf8
 
     $prCreateArguments = @(
         'pr', 'create',
@@ -273,7 +297,7 @@ See $ProgressLedger for exact task commands and outcomes. The ignored local run 
         '--draft',
         '--base', $BaseBranch,
         '--head', $Branch,
-        '--title', "3DMk authoritative revision workflow: Task $Task",
+        '--title', "3DMk workflow: $TaskLabel",
         '--body-file', $bodyPath
     )
     & $gh @prCreateArguments
