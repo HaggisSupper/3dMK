@@ -347,6 +347,7 @@ function Start-MistralServer {
 
     $stdoutPath = Join-Path $RunDirectory "mistralrs-$AttemptName.stdout.log"
     $stderrPath = Join-Path $RunDirectory "mistralrs-$AttemptName.stderr.log"
+    $pidPath = Join-Path $RunDirectory "mistralrs-$AttemptName.pid"
     $pwsh = Get-CommandPath 'pwsh'
     if (-not $pwsh) { throw 'PowerShell 7 (pwsh) is required for the local shell executor.' }
 
@@ -377,27 +378,40 @@ function Start-MistralServer {
         RedirectStandardOutput = $stdoutPath
         RedirectStandardError = $stderrPath
     }
-    $process = Start-Process @startProcessArguments
 
-    $baseUri = "http://127.0.0.1:$ListenPort"
-    $waitArguments = @{
-        Process = $process
-        BaseUri = $baseUri
-        TimeoutSeconds = $ServerStartTimeoutSeconds
-        StdoutPath = $stdoutPath
-        StderrPath = $stderrPath
+    $process = $null
+    try {
+        $process = Start-Process @startProcessArguments
+        $process.Id | Set-Content -LiteralPath $pidPath -Encoding ascii
+
+        $baseUri = "http://127.0.0.1:$ListenPort"
+        $waitArguments = @{
+            Process = $process
+            BaseUri = $baseUri
+            TimeoutSeconds = $ServerStartTimeoutSeconds
+            StdoutPath = $stdoutPath
+            StderrPath = $stderrPath
+        }
+        Wait-MistralServer @waitArguments
+        $cudaEvidencePath = Assert-CudaProcess -Process $process -RunDirectory $RunDirectory -ModelId $ModelId
+
+        $process.Id | Set-Content -LiteralPath (Join-Path $RunDirectory 'mistralrs.pid') -Encoding ascii
+        return [pscustomobject]@{
+            Process = $process
+            BaseUri = $baseUri
+            Model = $ModelId
+            Stdout = $stdoutPath
+            Stderr = $stderrPath
+            CudaEvidence = $cudaEvidencePath
+        }
     }
-    Wait-MistralServer @waitArguments
-    $cudaEvidencePath = Assert-CudaProcess -Process $process -RunDirectory $RunDirectory -ModelId $ModelId
-
-    $process.Id | Set-Content -LiteralPath (Join-Path $RunDirectory 'mistralrs.pid') -Encoding ascii
-    return [pscustomobject]@{
-        Process = $process
-        BaseUri = $baseUri
-        Model = $ModelId
-        Stdout = $stdoutPath
-        Stderr = $stderrPath
-        CudaEvidence = $cudaEvidencePath
+    catch {
+        if ($process -and -not $process.HasExited) {
+            Write-Warning "CUDA startup failed; stopping Mistral.rs process $($process.Id)."
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        }
+        Remove-Item -LiteralPath $pidPath -Force -ErrorAction SilentlyContinue
+        throw
     }
 }
 
