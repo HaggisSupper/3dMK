@@ -8,6 +8,8 @@
 /tmp/
 /magi-run-*/
 /__pycache__/
+/.local-agent/
+/.worktrees/
 /.opencode/*
 !/.opencode/agents/
 !/.opencode/agents/*.md
