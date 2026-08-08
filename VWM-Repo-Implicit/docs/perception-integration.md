@@ -2,104 +2,114 @@
 
 ## Purpose
 
-`vwm-perception` converts rendered visual evidence into isolated, classified VWM object candidates without modifying measured source geometry.
+`vwm-perception` converts rendered visual evidence into isolated, classified object candidates with exact source-geometry evidence. It never modifies accepted measured geometry.
 
-## Concrete input boundary
+## Input boundary
 
-A `PerceptionInput` contains:
+A production `PerceptionInput` is tied to one project revision and contains:
 
-- one RGBA image frame;
-- optional camera intrinsics and camera-to-scene transform;
-- optional per-pixel face IDs, point IDs, and depth from the 3D renderer;
-- the immutable `CanonicalScene` used to render that frame;
-- an optional closed list of domain labels.
+- one RGBA frame;
+- depth or visibility evidence when required;
+- camera intrinsics and camera-to-scene transform;
+- a same-size face-ID, point-ID, primitive-ID, or instance-ID buffer;
+- the immutable canonical scene/revision used to render the evidence;
+- an approved closed label set and model manifest;
+- capture/view identity, timestamp, viewport parameters, and evidence hashes.
 
-The renderer should produce an ID buffer with the same dimensions as the image. Each visible pixel contains either a source face ID, source point ID, or `u32::MAX` for background. This is more reliable than trying to infer 3D membership from color alone.
+Background pixels use an explicit sentinel. Source-ID buffers are required for authoritative 3D membership; color-only inference cannot establish exact source geometry.
 
 ## Processing flow
 
 ```text
-RGBA frame
-|
-instance segmenter
-|
-2D masks and bounding boxes
-|
-renderer face/point ID projection
-|
-independent submesh or point subset
-|
-image and geometry feature extraction
-|
-local classifier
-|
-optional VLM adjudication when confidence is low
-|
-PerceptionBatch
+revision-bound RGBA/depth/source-ID views
+        ↓
+approved instance segmenter
+        ↓
+2D masks, boxes, classes, scores
+        ↓
+source-ID projection and exact selections
+        ↓
+multiview association and deterministic fusion
+        ↓
+image + geometry features and local classification
+        ↓
+optional advisory VLM adjudication under policy
+        ↓
+persisted object candidates and evidence
+        ↓
+operator review
+        ↓
+optional candidate derived-object revision
 ```
 
-## Concrete output boundary
+## Output boundary
 
-Each `PerceivedObject` contains:
+Each object candidate records:
 
-- the original proposal and binary mask;
-- a transparent RGBA crop;
-- a derived `CanonicalScene` containing only selected faces or points;
-- source face or point IDs for complete traceability;
+- proposal, masks, boxes, transparent crops, and contributing view IDs;
+- exact source-selection assets and counts;
+- optional derived preview scene;
 - image and geometric features;
-- classification, confidence, model ID, alternatives, source, and optional rationale.
+- classification, alternatives, confidence, model ID/hash, ABI version, thresholds, and backend evidence;
+- source revision, cameras, projection evidence, parameters, and warnings;
+- deterministic fusion identity;
+- operator decision and optional advisory rationale.
 
-The object slice has `GeometryOrigin::Derived`. The source scene is not edited.
+The source scene is not edited. An extracted object becomes geometry only through a root-application candidate revision and normal compare/accept/reject workflow.
 
-## ML model ABI
+## Current versus target backend
 
-The crate uses pure-Rust `tract-onnx` inference. Models are configured with JSON manifests rather than hard-coded model names.
+Implemented today:
 
-### Segmentation ABI A: `direct_masks_v1`
+- deterministic region/shape fallbacks;
+- tract-based ONNX paths with explicit model manifests;
+- mask/source-slicing and optional compatible VLM hooks.
 
-- detections output: `[N,6]` or `[1,N,6]`;
-- each row: `[x1,y1,x2,y2,confidence,class_id]` in model-input pixels;
-- masks output: `[N,H,W]` or `[1,N,H,W]`;
-- mask values: probabilities.
+Required for production availability:
 
-### Segmentation ABI B: `yolo_proto_v1`
+- packaged approved model assets and licenses;
+- complete revision-bound RGBA/depth/source-ID capture;
+- multiview fusion and persisted object records;
+- CUDA-backed production inference;
+- brokered memory, supervised execution, cancellation/fault containment, accelerator provenance, and measured acceptance evidence.
 
-Supports the common YOLO segmentation structure:
+The current tract path remains a CPU reference/migration implementation. It is not the final production fallback for a CUDA-compliant installation.
 
-- predictions in channel-first or channel-last layout;
-- `cx,cy,w,h`, optional objectness, class scores, and mask coefficients;
-- prototype tensor `[M,H,W]` or `[1,M,H,W]`;
-- class-aware non-maximum suppression;
-- mask reconstruction and letterbox reversal.
+## Model ABI
 
-The manifest must match the exact export. Model output formats can change between YOLO generations, so the ABI is explicit rather than guessed at runtime.
+Every model manifest defines:
 
-### Classification ABI
+- license and redistribution status;
+- file SHA-256;
+- input names, dtypes, color space, normalization, resize/letterbox policy, and shape bounds;
+- output names, shapes, decoder version, label map, confidence/NMS/mask thresholds;
+- approved execution providers and precision;
+- model/version identity written into operation and object records.
 
-- one NCHW float RGB input;
-- output tensor with at least one score per manifest label;
-- softmax logits or already-normalized probabilities.
+Output tensor layouts are never guessed silently. A mismatch fails closed with a precise model-ABI error.
 
-## VLM hook
+## Advisory VLM boundary
 
-`OpenAiCompatibleVlm` sends the isolated PNG crop, geometry summary, local classification, and candidate labels to an OpenAI-compatible multimodal chat endpoint. This supports local LM Studio-compatible endpoints and remote compatible services.
+The VLM receives only bounded, redacted evidence required by policy. It may rank or explain candidates but cannot:
 
-The VLM is called only below the configured local-confidence threshold. Its output must be strict JSON and must meet both the VLM minimum confidence and the current local confidence before replacing the classification. It cannot modify geometry.
+- change exact source membership;
+- mutate geometry;
+- accept/reject a revision;
+- override deterministic validation;
+- publish a product record without the normal Rust transaction path.
 
-## Integration into 3DMk
+## Verification
 
-1. Render an RGBA view plus face-ID or point-ID buffer.
-2. Construct `ImageFrame` and attach `ProjectionMap`.
-3. Pass the original `CanonicalScene` in `PerceptionInput`.
-4. Configure a segmenter and classifier.
-5. Add a VLM hook only when required.
-6. Store accepted object slices as derived scene objects with their source IDs and model provenance.
+Required tests include:
 
-## Required validation on the development laptop
+- image/source-ID dimension and sentinel validation;
+- malformed and incompatible model manifests;
+- decoder fixtures for every supported ABI;
+- exact source-slice membership;
+- multiview ordering and seeded repeatability;
+- CPU/CUDA differential tolerances;
+- cancellation, OOM, worker death, stale generation, and late-result suppression;
+- model/backend provenance and package round-trip;
+- negative tests proving VLM output cannot mutate accepted state.
 
-```powershell
-cargo fmt --all
-cargo check --workspace --all-features
-cargo test --workspace --all-features
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-```
+Run the workspace gates through `../scripts/check.ps1`. Production CUDA acceptance requires the supported NVIDIA Windows host and root product workflow evidence.
