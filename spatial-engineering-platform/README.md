@@ -1,59 +1,21 @@
-# Spatial Engineering Platform Integration Payload
+# Spatial Engineering Platform Payload
 
-This branch introduces the Spatial Engineering Platform as a bounded subsystem under `spatial-engineering-platform/`.
+This directory is **not an active 3DMk workspace member, runtime subsystem, or authoritative implementation plan**.
 
-## Why the bootstrap payload exists
+It contains a retained historical integration payload from an earlier platform-expansion experiment. The materialized Rust workspace described by the former bootstrap instructions is not present in the current repository, and the root application does not compile, launch, or depend on this directory.
 
-The connected GitHub publishing environment cannot perform an authenticated native `git push`. The complete verified source tree is therefore committed as a compressed, base64-encoded archive together with a deterministic PowerShell extraction script.
+## Current authority
 
-This is an integration transport mechanism, not the intended final repository layout. The archive contains the full v0.5 source tree, including Rust crates, Tauri shell, format adapters, immutable UX contracts, layout-persistence contracts, schemas, tests, samples, and verification scripts.
+Current product architecture and implementation work are governed by:
 
-## Materialize the source tree
+- `../docs/CURRENT_STATE.md`
+- `../docs/superpowers/specs/2026-08-07-3dmk-world-class-quality-standard.md`
+- `../docs/superpowers/specs/2026-08-07-3dmk-cuda-first-system-design.md`
+- `../docs/superpowers/plans/2026-07-31-vwm-authoritative-revision-workflow.md`
+- `../docs/superpowers/plans/2026-08-07-3dmk-foundation-batch.md`
 
-From the repository root in PowerShell 7:
+Do not extract, integrate, or implement this payload unless a future accepted architecture decision explicitly reactivates it and defines how it fits the authoritative project/revision, CUDA, Tauri/Axum, and release boundaries.
 
-```powershell
-.\spatial-engineering-platform\bootstrap\install-spatial-platform.ps1
-```
+## Why the payload is retained
 
-The script:
-
-1. Decodes the committed archive to a temporary file.
-2. Extracts it into `spatial-engineering-platform/`.
-3. Refuses to overwrite an already-materialized source tree.
-4. Removes the temporary archive.
-
-Then verify:
-
-```powershell
-python .\spatial-engineering-platform\scripts\verify_repo.py
-python -m unittest discover -s .\spatial-engineering-platform\reference\tests -v
-```
-
-Where Rust is installed:
-
-```powershell
-cargo test --manifest-path .\spatial-engineering-platform\Cargo.toml --workspace
-cargo clippy --manifest-path .\spatial-engineering-platform\Cargo.toml --workspace --all-targets -- -D warnings
-```
-
-## Required follow-up commit
-
-After extraction, commit the materialized source files and remove:
-
-```text
-spatial-engineering-platform/bootstrap/spatial-engineering-platform.tar.gz.b64
-```
-
-The extraction script may remain as a migration utility or be removed in the same cleanup commit.
-
-## Integration boundary
-
-The subsystem must remain isolated from the current root backend except through explicit adapters:
-
-- `vwm-adapter` for `VWM-Repo-Implicit`
-- `cad-truck-adapter` for the existing Truck kernel
-- `cad-occ-adapter` for later OpenCascade integration
-- typed processing and artifact contracts for existing root CLI forwarding
-
-The fixed primary viewport, dock-layout persistence, compact UI density, explanation suppression, format capability reporting, provenance, uncertainty, and AI validation rules are normative contracts—not optional implementation guidance.
+The non-document payload is retained only as historical implementation material that may contain reusable ideas. It has no current capability, completion, dependency, or verification status. Git history remains the primary archive for the deleted bootstrap and integration instructions.
