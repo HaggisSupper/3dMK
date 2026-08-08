@@ -1,4 +1,4 @@
-# 3DMk OpenCode Agent Contract
+# 3DMk Agent Contract
 
 ## Mission
 
@@ -8,9 +8,19 @@ Implement the authoritative plan:
 
 The goal is not to produce more scaffolding. The goal is a verified 3DMk application in which Rust project/revision state is authoritative from import through processing, review, save, reopen, and export.
 
+## Active execution backend
+
+The active executor experiment is the local Mistral.rs harness documented in:
+
+`docs/agent-execution/MISTRALRS_LOCAL_AGENT.md`
+
+Mistral.rs runs a local model and shell loop against an isolated worktree. OpenCode files remain in the repository as inactive historical tooling; they are not required by, and must not be invoked during, this experiment.
+
+Changing the executor does not change the product architecture, task order, evidence gates, branch rules, or completion criteria.
+
 ## Mandatory context order
 
-At the beginning of every session:
+At the beginning of every implementation, review, or verification session:
 
 1. Read this file.
 2. Read `docs/agent-execution/VWM_PROGRESS.md`.
@@ -28,7 +38,7 @@ Do not re-plan the product. Do not replace the plan with a smaller interpretatio
 - Tauri 2 is the desktop framework.
 - Axum remains the single browser/Tauri backend.
 - The existing Three.js UI is modularized incrementally; no framework rewrite in this lane.
-- CUDA is not part of this plan.
+- CUDA is not part of the 3DMk product implementation plan. CUDA may accelerate the local Mistral.rs executor without becoming a 3DMk runtime dependency.
 - No Docker, Podman, WSL, Electron, or Python production backend.
 - No Apple-specific development chain.
 
@@ -56,13 +66,16 @@ For every task:
 4. Implement the smallest coherent production change.
 5. Run the focused test.
 6. Run affected regression tests.
-7. Invoke `vwm-reviewer` with the task, plan section, and complete diff.
-8. Invoke `vwm-verifier` with the exact verification commands.
-9. Fix every blocking or major finding.
-10. Re-run verification.
+7. Run an independent reviewer session against the task requirements and complete task diff.
+8. Run an independent verifier session with the exact verification commands.
+9. Fix every blocking or important finding.
+10. Re-run review and verification after repairs.
 11. Update `docs/agent-execution/VWM_PROGRESS.md` with commands, results, files, commit, and residual risks.
 12. Commit the task with the plan's prescribed commit message or a more accurate equivalent.
-13. Continue only when the task's dependency gate is satisfied.
+13. Push only after the task's independent review and verification gates pass.
+14. Continue only when the task's dependency gate is satisfied.
+
+The implementer, reviewer, and verifier must use separate model sessions. Reviewer and verifier sessions are read-only with respect to tracked repository files.
 
 Never combine unrelated plan tasks into one unreviewable change.
 
@@ -77,27 +90,29 @@ Ask the user only when one of these is true:
 - three evidence-based fix attempts expose a genuine architecture conflict;
 - local-only files differ materially from GitHub and the correct source cannot be inferred.
 
-Do not ask for approval of ordinary code, test, refactor, or branch decisions already governed by the plan.
+Do not ask for approval of ordinary code, test, refactor, model fallback, or branch decisions already governed by the plan and local-agent runbook.
 
 ## Git discipline
 
 - Never implement on `main` or `master`.
 - Use `agent/vwm-authoritative-revision-implementation`.
+- Use an isolated git worktree for model-driven edits.
 - Do not force push.
 - Do not use `git reset --hard` or `git clean`.
 - Preserve unrelated user changes.
 - Commit after each verified task.
-- Pushing the implementation branch is permitted only after the corresponding task is verified.
-- Never merge directly into `main`; open or update a PR.
+- Pushing the implementation branch is permitted only after the corresponding task is independently reviewed and verified.
+- Never merge directly into `main`; open or update a draft PR.
 
 ## Completion vocabulary
 
 Use these exact states:
 
-- `TASK_COMPLETE` — one authoritative plan task is fully verified.
+- `TASK_CANDIDATE` — implementation is committed locally but independent gates or GitHub synchronization remain.
+- `TASK_COMPLETE` — one authoritative plan task is independently reviewed, verified, recorded, and pushed.
 - `BATCH_COMPLETE` — the plan's required first execution batch is fully verified.
 - `SESSION_BOUNDARY` — work is committed and resumable, but the plan remains incomplete.
-- `BLOCKED` — external evidence shows progress cannot continue without a credential, licensed asset, or architecture decision.
+- `BLOCKED` — external evidence shows progress cannot continue without a credential, licensed asset, architecture decision, or required local toolchain.
 - `PROJECT_COMPLETE` — all 17 tasks and every Definition-of-Done item have fresh evidence.
 
 Do not say “done,” “complete,” “finished,” or give a project percentage unless the state is `PROJECT_COMPLETE`.
