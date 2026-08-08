@@ -110,6 +110,18 @@ function Assert-PowerShellParses {
     }
 }
 
+function Invoke-NativeChecked {
+    param(
+        [Parameter(Mandatory)][string]$FilePath,
+        [Parameter(ValueFromRemainingArguments)][string[]]$Arguments
+    )
+    $output = & $FilePath @Arguments 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "$FilePath $($Arguments -join ' ') failed:`n$($output | Out-String)"
+    }
+    @($output)
+}
+
 foreach ($relativePath in $requiredFiles) {
     if (-not (Test-Path -LiteralPath (Resolve-RepositoryFile $relativePath) -PathType Leaf)) {
         throw "Required harness file is missing: $relativePath"
@@ -185,6 +197,12 @@ if ($dependencyIndex -lt 0 -or $cudaSetupIndex -lt 0 -or $dependencyIndex -gt $c
 $common = Read-RepositoryFile 'scripts/mistralrs-agent/common.ps1'
 Assert-ContainsAll 'Mistral.rs common module' $common @(
     'Test-IsLinkedWorktree',
+    'function Test-GitAncestor',
+    'function Sync-ImplementationBranchWithMain',
+    'refs/remotes/origin/$BaseBranch',
+    'pull --ff-only origin $BaseBranch',
+    'BLOCKED: implementation branch has diverged from origin/',
+    'Sync-ImplementationBranchWithMain -Worktree',
     'Assert-CleanImplementationBranch',
     'Assert-CudaDoctorEvidence',
     'Assert-CudaProcess',
@@ -236,6 +254,7 @@ Assert-ContainsAll 'AGENTS.md' $agents @(
     'CUDA Foundation FB1–FB8',
     'separate model sessions',
     'Reviewer and verifier sessions are read-only',
+    'origin/main is an ancestor of the active implementation branch',
     'CPU LLM inference and cloud inference fallback are prohibited.',
     'agent/vwm-authoritative-revision-implementation',
     'TASK_CANDIDATE',
@@ -246,6 +265,10 @@ $runbook = Read-RepositoryFile 'docs/agent-execution/MISTRALRS_LOCAL_AGENT.md'
 Assert-ContainsAll 'Mistral.rs runbook' $runbook @(
     'run-mistralrs-vwm-task.ps1',
     '-FoundationTask FB1',
+    'Mainline admission',
+    'origin/main',
+    'fast-forwards the branch when it is strictly behind',
+    'blocks before model startup when the refs have diverged',
     'Qwen/Qwen3-Coder-30B-A3B-Instruct',
     'Qwen/Qwen3-8B',
     'Qwen/Qwen3-4B',
@@ -257,6 +280,18 @@ Assert-ContainsAll 'Mistral.rs runbook' $runbook @(
     '.local-agent/task-XX/'
 )
 Assert-ContainsNone 'Mistral.rs runbook' $runbook @('AllowCpuFallback', 'degraded CPU mode')
+
+$currentState = Read-RepositoryFile 'docs/CURRENT_STATE.md'
+Assert-ContainsAll 'Current-state branch admission' $currentState @(
+    '**Branch admission policy:**',
+    'origin/main',
+    'fast-forwards the branch when it is strictly behind',
+    'blocks on divergence'
+)
+Assert-ContainsNone 'Current-state branch admission' $currentState @(
+    'is synchronized with current `main`',
+    'subsequent merged changes are documentation-only'
+)
 
 $executionReadme = Read-RepositoryFile 'docs/agent-execution/README.md'
 Assert-ContainsAll 'Agent execution README' $executionReadme @(
@@ -274,5 +309,67 @@ Assert-ContainsAll 'Mistral.rs validation workflow' $workflow @(
     'scripts/test-mistralrs-local-agent-harness.ps1',
     'pwsh'
 )
+
+$commonPath = Resolve-RepositoryFile 'scripts/mistralrs-agent/common.ps1'
+. $commonPath
+$git = (Get-Command git -ErrorAction Stop).Source
+$tempRoot = Join-Path ([IO.Path]::GetTempPath()) ("3dmk-mainline-admission-{0}" -f [Guid]::NewGuid().ToString('N'))
+$origin = Join-Path $tempRoot 'origin.git'
+$seed = Join-Path $tempRoot 'seed'
+$work = Join-Path $tempRoot 'work'
+try {
+    New-Item -ItemType Directory -Force -Path $tempRoot | Out-Null
+    Invoke-NativeChecked $git init --bare $origin | Out-Null
+    Invoke-NativeChecked $git init $seed | Out-Null
+    Invoke-NativeChecked $git -C $seed config user.name '3DMk Harness'
+    Invoke-NativeChecked $git -C $seed config user.email '3dmk-harness@example.invalid'
+    Set-Content -LiteralPath (Join-Path $seed 'state.txt') -Value 'base' -Encoding utf8
+    Invoke-NativeChecked $git -C $seed add state.txt | Out-Null
+    Invoke-NativeChecked $git -C $seed commit -m 'base' | Out-Null
+    Invoke-NativeChecked $git -C $seed branch -M main | Out-Null
+    Invoke-NativeChecked $git -C $seed remote add origin $origin | Out-Null
+    Invoke-NativeChecked $git -C $seed push -u origin main | Out-Null
+    Invoke-NativeChecked $git -C $seed switch -c $Branch | Out-Null
+    Invoke-NativeChecked $git -C $seed push -u origin $Branch | Out-Null
+    Invoke-NativeChecked $git clone --branch $Branch $origin $work | Out-Null
+    Invoke-NativeChecked $git -C $work config user.name '3DMk Harness'
+    Invoke-NativeChecked $git -C $work config user.email '3dmk-harness@example.invalid'
+
+    Invoke-NativeChecked $git -C $seed switch main | Out-Null
+    Set-Content -LiteralPath (Join-Path $seed 'main-a.txt') -Value 'main-a' -Encoding utf8
+    Invoke-NativeChecked $git -C $seed add main-a.txt | Out-Null
+    Invoke-NativeChecked $git -C $seed commit -m 'main-a' | Out-Null
+    Invoke-NativeChecked $git -C $seed push origin main | Out-Null
+
+    Sync-ImplementationBranchWithMain -Worktree $work
+    $head = (Invoke-NativeChecked $git -C $work rev-parse HEAD | Select-Object -First 1).Trim()
+    $main = (Invoke-NativeChecked $git -C $work rev-parse origin/main | Select-Object -First 1).Trim()
+    if ($head -ne $main) {
+        throw "Mainline admission did not fast-forward a strictly behind branch. HEAD=$head origin/main=$main"
+    }
+
+    Set-Content -LiteralPath (Join-Path $work 'branch-only.txt') -Value 'branch' -Encoding utf8
+    Invoke-NativeChecked $git -C $work add branch-only.txt | Out-Null
+    Invoke-NativeChecked $git -C $work commit -m 'branch-only' | Out-Null
+
+    Set-Content -LiteralPath (Join-Path $seed 'main-b.txt') -Value 'main-b' -Encoding utf8
+    Invoke-NativeChecked $git -C $seed add main-b.txt | Out-Null
+    Invoke-NativeChecked $git -C $seed commit -m 'main-b' | Out-Null
+    Invoke-NativeChecked $git -C $seed push origin main | Out-Null
+
+    $divergenceObserved = $false
+    try {
+        Sync-ImplementationBranchWithMain -Worktree $work
+    }
+    catch {
+        $divergenceObserved = $_.Exception.Message -like 'BLOCKED: implementation branch has diverged from origin/*'
+    }
+    if (-not $divergenceObserved) {
+        throw 'Mainline admission did not fail closed when the implementation branch diverged from origin/main.'
+    }
+}
+finally {
+    Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 Write-Host 'MISTRALRS_LOCAL_AGENT_HARNESS_OK'
