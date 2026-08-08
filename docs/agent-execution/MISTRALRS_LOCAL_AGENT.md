@@ -1,232 +1,189 @@
-# 3DMk Mistral.rs Local Agent Runbook
+# 3DMk Local Mistral.rs Execution Runbook
 
 ## Purpose
 
-This runbook replaces OpenCode as the active executor for the current experiment. It does not replace or reorder the authoritative 3DMk product plan.
+This is the active autonomous development executor for 3DMk. It runs a local coding model through Mistral.rs against an isolated Git worktree and enforces separate implementation, review, verification, repair, and publication gates.
 
-**Authoritative implementation plan:**
+It is not the product implementation itself. Product runtime integration of Mistral.rs, the shared GPU broker, and the product CUDA worker remain planned work recorded in `../CURRENT_STATE.md`.
 
-`docs/superpowers/plans/2026-07-31-vwm-authoritative-revision-workflow.md`
+## Mandatory environment
 
-**Implementation branch:**
+- Windows 11 x64;
+- PowerShell 7;
+- Git and an authenticated GitHub remote;
+- the Rust toolchain required by the current Mistral.rs source;
+- Visual Studio C++ Build Tools;
+- a supported NVIDIA driver and CUDA toolkit with `nvcc` on `PATH`;
+- a supported NVIDIA GPU;
+- sufficient RAM, VRAM, and NVMe capacity for the selected local model and repository workload.
 
-`agent/vwm-authoritative-revision-implementation`
+CPU inference and cloud inference fallback are prohibited.
 
-## Non-negotiable accelerator rule
+## Governing branch
 
-**CUDA is mandatory. CPU execution is prohibited for this experiment.**
-
-The controller must establish all three forms of evidence before any model-driven repository work begins:
-
-1. `mistralrs doctor` reports that the binary was compiled with the `cuda` feature;
-2. `mistralrs doctor` reports a detected CUDA toolkit and NVIDIA driver;
-3. after the model server becomes API-ready, `nvidia-smi` reports the exact Mistral.rs process ID in the CUDA compute-process table.
-
-Failure of any gate stops execution as `BLOCKED`. Selecting a smaller model does not weaken the CUDA requirement.
-
-## Operating command
-
-From the 3DMk repository on Windows 11 with PowerShell 7:
-
-```powershell
-pwsh -NoLogo -NoProfile -File .\scripts\run-mistralrs-vwm-task.ps1 -Task 1
-```
-
-The controller will:
-
-1. validate or build a CUDA-enabled Mistral.rs binary;
-2. verify NVIDIA driver and CUDA-toolkit diagnostics;
-3. park a clean primary checkout on `main` when necessary;
-4. create or reuse an isolated worktree for the implementation branch;
-5. bind Mistral.rs only to `127.0.0.1`;
-6. load the selected local coding model;
-7. prove that the live server process owns a CUDA compute context;
-8. execute independent implementer, reviewer, and verifier model sessions;
-9. repair failed review or verification findings up to three rounds;
-10. push only a reviewed and verified task commit;
-11. create or update a draft pull request when `gh` is authenticated.
-
-The script never merges the pull request.
-
-## Default models
+Model-driven edits use an isolated linked worktree on:
 
 ```text
-Primary:  Qwen/Qwen3-Coder-30B-A3B-Instruct, quant 4
-Fallback: Qwen/Qwen3-8B, quant 4
-Smoke:    Qwen/Qwen3-4B, quant 4
+agent/vwm-authoritative-revision-implementation
+```
+
+The controller refuses `main` or `master`, uncommitted tracked changes, a non-linked worktree, force pushes, destructive resets, and repository cleaning.
+
+## Setup
+
+From the repository root:
+
+```powershell
+pwsh -NoLogo -NoProfile `
+  -File .\scripts\setup-mistralrs-local-agent.ps1
+```
+
+The setup path:
+
+1. checks Git, Cargo, Rust, `nvidia-smi`, `nvcc`, and Visual Studio Build Tools;
+2. accepts only a CUDA-confirmed Mistral.rs source build;
+3. first attempts `cuda flash-attn cudnn`;
+4. retries with the mandatory `cuda` feature when optional integrations fail;
+5. records the source commit, feature set, executable path, and executable SHA-256;
+6. rejects any CPU-only installation.
+
+## Run one authoritative task
+
+```powershell
+pwsh -NoLogo -NoProfile `
+  -File .\scripts\run-mistralrs-vwm-task.ps1 `
+  -Task 1
+```
+
+The controller starts Mistral.rs on `127.0.0.1`, disables its web UI, scopes the PowerShell shell tool to the isolated worktree, and keeps one model server alive while using fresh model sessions for each role.
+
+## Model profiles
+
+The repository currently exposes these default profiles:
+
+```text
+Primary:  Qwen/Qwen3-Coder-30B-A3B-Instruct, 4-bit
+Fallback: Qwen/Qwen3-8B, 4-bit
+Smoke:    Qwen/Qwen3-4B, 4-bit
 Context:  32,768 tokens by default
 ```
 
-The primary model is sparse: 30.5 billion total parameters with 3.3 billion activated per token. On the reference RTX 4050 6 GB system, Mistral.rs may map some quantized weights outside VRAM while still executing supported operations through CUDA. The 8B and 4B choices exist only to reduce memory pressure; both remain subject to the live CUDA-process gate.
+A smaller model or shorter context may be selected to fit the CUDA budget. The fallback changes model size, not accelerator policy: every model must remain CUDA-backed.
 
-Use a previously downloaded local model directory by passing it as `-Model`:
-
-```powershell
-pwsh -NoLogo -NoProfile -File .\scripts\run-mistralrs-vwm-task.ps1 `
-  -Task 1 `
-  -Model 'D:\Models\Qwen3-Coder-30B-A3B-Instruct'
-```
-
-Use the smaller model ladder when the primary model cannot become CUDA-ready:
+Example:
 
 ```powershell
-pwsh -NoLogo -NoProfile -File .\scripts\run-mistralrs-vwm-task.ps1 `
+pwsh -NoLogo -NoProfile `
+  -File .\scripts\run-mistralrs-vwm-task.ps1 `
   -Task 1 `
   -Model 'Qwen/Qwen3-8B' `
-  -FallbackModel 'Qwen/Qwen3-4B'
+  -FallbackModel 'Qwen/Qwen3-4B' `
+  -ContextLength 16384
 ```
 
-A `-DryRun` validates the CUDA toolchain and worktree without loading a model or changing product files:
+## CUDA gates
 
-```powershell
-pwsh -NoLogo -NoProfile -File .\scripts\run-mistralrs-vwm-task.ps1 `
-  -Task 1 `
-  -DryRun
-```
+Before the implementer session starts, all of these must pass:
 
-## CUDA setup
+1. the installed executable matches the recorded source-build hash;
+2. Mistral.rs reports a CUDA-capable build;
+3. the NVIDIA host is visible and usable;
+4. the model endpoint becomes ready;
+5. the exact Mistral.rs process ID appears in NVIDIA's active CUDA compute-process inventory.
 
-The Windows release artifact does not provide the required CUDA execution path. The harness therefore accepts a separately installed binary only when `mistralrs doctor` proves both CUDA compilation and detected CUDA hardware; otherwise it performs a native source build requiring:
-
-- Rust 1.94 or newer;
-- Visual Studio 2022 C++ Build Tools;
-- an NVIDIA driver exposing `nvidia-smi`;
-- the CUDA toolkit with `nvcc` on `PATH`.
-
-Run:
-
-```powershell
-pwsh -NoLogo -NoProfile -File .\scripts\setup-mistralrs-local-agent.ps1
-```
-
-The setup script builds the current agent-capable Mistral.rs source and records the exact source commit, feature set, installed executable path, and executable SHA-256 hash. It tries, in order:
-
-1. `cuda flash-attn cudnn`;
-2. `cuda` only.
-
-If both builds fail, the harness stops. It does not install or retain a non-CUDA binary as an acceptable executor.
-
-Mistral.rs does not currently provide a native Windows Vulkan or WebGPU inference backend. The harness does not claim that such a path satisfies this experiment.
-
-## Runtime CUDA proof
-
-After `/v1/models` reports the selected model ready, the controller polls:
-
-```powershell
-nvidia-smi --query-compute-apps=pid,process_name,used_gpu_memory --format=csv,noheader,nounits
-```
-
-The exact server PID must appear. The observed row is written to:
+Runtime evidence is written beneath:
 
 ```text
 .local-agent/task-XX/cuda-runtime-evidence.json
 ```
 
-The task controller does not invoke the implementer until that file has been created. This distinguishes a CUDA-capable installation from an actually CUDA-active model server.
+Missing evidence is a hard blocker and prevents publication.
 
-## Task controls
-
-```powershell
-# Execute Task 1 with mandatory CUDA verification
-.\scripts\run-mistralrs-vwm-task.ps1 -Task 1
-
-# Use the 8B model directly, still CUDA-gated
-.\scripts\run-mistralrs-vwm-task.ps1 -Task 1 -Model 'Qwen/Qwen3-8B'
-
-# Reduce context if model startup is memory constrained
-.\scripts\run-mistralrs-vwm-task.ps1 -Task 1 -ContextLength 16384
-
-# Retain the verified model server after the task
-.\scripts\run-mistralrs-vwm-task.ps1 -Task 1 -KeepServer
-
-# Do not push, even after local gates pass
-.\scripts\run-mistralrs-vwm-task.ps1 -Task 1 -SkipPush
-
-# Run setup/worktree preflight without loading a model
-.\scripts\run-mistralrs-vwm-task.ps1 -Task 1 -DryRun
-```
-
-## Worktree behavior
-
-The local model is never allowed to edit `main` or `master`.
-
-- If the implementation branch already has a linked worktree, the controller reuses it.
-- If the script is launched while the implementation branch is checked out in the primary repository, the controller first requires that checkout to be clean, switches the primary checkout to `main`, and then creates a linked worktree.
-- If the primary checkout has tracked or untracked changes, the controller stops rather than moving or deleting them.
-- The implementation worktree lives under `%LOCALAPPDATA%\3DMk\worktrees` when available.
-
-## Execution roles
+## Role topology
 
 ### Implementer
 
-The implementer reads `AGENTS.md`, the progress ledger, and the selected authoritative plan task. It uses the Mistral.rs shell tool to write tests, observe the required failure, implement bounded changes where the task requires production code, run checks, update the ledger, and create a local commit. It does not push.
+- reads `AGENTS.md`, `docs/CURRENT_STATE.md`, both progress ledgers, the governing standards, and only the current task's referenced source;
+- uses test-driven development;
+- executes shell commands rather than describing them;
+- updates the evidence ledger;
+- commits a bounded candidate locally;
+- does not push.
 
 ### Reviewer
 
-The reviewer is a separate model request. It reads the complete task diff and requirements and writes a specification/code-quality verdict. The controller rejects any reviewer session that changes HEAD or tracked files.
+- uses a separate model session;
+- reads the complete requirements and diff;
+- verifies specification compliance and code/test quality;
+- writes `VERDICT: PASS` or `VERDICT: FAIL`;
+- may run tests but cannot modify tracked files or HEAD.
 
 ### Verifier
 
-The verifier is another separate model request. It reruns the task commands and records exit codes and decisive output. The controller rejects any verifier session that changes HEAD or tracked files.
+- uses another separate session;
+- reruns fresh task and regression commands;
+- records exit codes and decisive output;
+- checks CUDA evidence where applicable;
+- cannot modify tracked files or HEAD.
 
-## Evidence files
+### Repair
 
-Transient local records are written beneath:
+A failed review or verification report is passed to a fresh implementer repair session. The controller permits at most three repair rounds before reporting `BLOCKED`.
+
+## Evidence locations
+
+Transient evidence:
 
 ```text
 .local-agent/task-XX/
 ```
 
-They include:
-
-- Mistral.rs stdout and stderr;
-- `cuda-runtime-evidence.json` containing the observed NVIDIA compute-process row;
-- complete Responses API payloads;
-- implementer output;
-- reviewer report;
-- verifier report;
-- repair-round reports;
-- final controller summary.
-
-This directory is ignored by git. Durable task evidence belongs in:
-
-`docs/agent-execution/VWM_PROGRESS.md`
-
-## Required verdict format
-
-Reviewer and verifier reports must begin with exactly one of:
+Durable evidence:
 
 ```text
-VERDICT: PASS
-VERDICT: FAIL
+docs/agent-execution/VWM_PROGRESS.md
+docs/agent-execution/CUDA_FOUNDATION_PROGRESS.md
 ```
 
-A missing or malformed verdict is treated as failure.
+Typical transient records include:
+
+- Mistral.rs stdout/stderr;
+- exact request/response payloads;
+- implementer and repair reports;
+- reviewer and verifier reports;
+- GitHub authentication and PR metadata;
+- controller summary;
+- CUDA process evidence.
+
+The transient directory is ignored by Git. Required evidence is summarized into the appropriate durable ledger before a task can pass.
+
+## Publication
+
+After independent review and verification pass, the controller:
+
+- confirms the branch and tracked worktree are clean;
+- confirms the CUDA evidence exists;
+- pushes the implementation branch;
+- creates or finds the draft pull request through the authenticated GitHub CLI;
+- never merges the pull request.
 
 ## Stop conditions
 
-The controller reports `BLOCKED` rather than guessing when:
+The controller fails closed when:
 
-- the installed Mistral.rs binary does not report the CUDA build feature;
-- the NVIDIA driver or CUDA toolkit is not detected;
-- the live server PID does not appear in the NVIDIA CUDA compute-process table;
-- Mistral.rs cannot start either selected local model;
+- CUDA cannot be proven;
+- neither approved model profile can start on CUDA;
 - the branch cannot be isolated safely;
-- tracked or untracked user changes are present in the implementation worktree;
-- the model fails three repair rounds;
-- required tests cannot run because an external dependency or credential is absent;
-- GitHub authentication is required to push and `-SkipPush` was not supplied.
+- user changes are present;
+- required tests or native toolchains are unavailable;
+- a credential or licensed model asset is required;
+- reviewer or verifier does not pass after three repair rounds;
+- GitHub publication is required but authentication is unavailable.
 
-## Prohibited behavior
+## Security
 
-- No non-CUDA model execution.
-- No Docker, Podman, WSL, or Electron.
-- No cloud inference path.
-- No OpenCode invocation.
-- No work on `main` or `master`.
-- No force push.
-- No merge.
-- No `git reset --hard`.
-- No `git clean`.
-- No deletion of unrelated user files.
-- No completion claim without fresh CUDA, reviewer, and verifier evidence.
+- bind only to loopback;
+- do not put secrets, credentials, personal data, proprietary third-party content, or unredacted support material in prompts;
+- do not grant the model access outside the dedicated worktree;
+- do not weaken repository or product requirements to accommodate model limitations;
+- do not treat a model response as verification evidence.

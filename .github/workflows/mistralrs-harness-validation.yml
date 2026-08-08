@@ -4,12 +4,20 @@ on:
   push:
     branches:
       - agent/vwm-authoritative-revision-implementation
+      - agent/documentation-consolidation
     paths:
       - AGENTS.md
       - .gitignore
+      - docs/README.md
+      - docs/CURRENT_STATE.md
+      - docs/agent-execution/README.md
       - docs/agent-execution/MISTRALRS_LOCAL_AGENT.md
-      - docs/superpowers/specs/2026-08-07-mistralrs-local-agent-experiment-design.md
-      - docs/superpowers/plans/2026-08-07-mistralrs-local-agent-experiment.md
+      - docs/agent-execution/VWM_PROGRESS.md
+      - docs/agent-execution/CUDA_FOUNDATION_PROGRESS.md
+      - docs/superpowers/specs/2026-08-07-3dmk-world-class-quality-standard.md
+      - docs/superpowers/specs/2026-08-07-3dmk-cuda-first-system-design.md
+      - docs/superpowers/plans/2026-07-31-vwm-authoritative-revision-workflow.md
+      - docs/superpowers/plans/2026-08-07-3dmk-foundation-batch.md
       - scripts/setup-mistralrs-local-agent.ps1
       - scripts/run-mistralrs-vwm-task.ps1
       - scripts/mistralrs-agent/common.ps1
@@ -20,9 +28,16 @@ on:
     paths:
       - AGENTS.md
       - .gitignore
+      - docs/README.md
+      - docs/CURRENT_STATE.md
+      - docs/agent-execution/README.md
       - docs/agent-execution/MISTRALRS_LOCAL_AGENT.md
-      - docs/superpowers/specs/2026-08-07-mistralrs-local-agent-experiment-design.md
-      - docs/superpowers/plans/2026-08-07-mistralrs-local-agent-experiment.md
+      - docs/agent-execution/VWM_PROGRESS.md
+      - docs/agent-execution/CUDA_FOUNDATION_PROGRESS.md
+      - docs/superpowers/specs/2026-08-07-3dmk-world-class-quality-standard.md
+      - docs/superpowers/specs/2026-08-07-3dmk-cuda-first-system-design.md
+      - docs/superpowers/plans/2026-07-31-vwm-authoritative-revision-workflow.md
+      - docs/superpowers/plans/2026-08-07-3dmk-foundation-batch.md
       - scripts/setup-mistralrs-local-agent.ps1
       - scripts/run-mistralrs-vwm-task.ps1
       - scripts/mistralrs-agent/common.ps1

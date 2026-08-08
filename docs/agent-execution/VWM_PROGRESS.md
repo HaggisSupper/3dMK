@@ -1,71 +1,106 @@
-# VWM Authoritative Revision Workflow Progress
+# 3DMk Authoritative Revision Workflow Progress
 
 **Authoritative plan:** `docs/superpowers/plans/2026-07-31-vwm-authoritative-revision-workflow.md`  
+**Governing standards:** `docs/superpowers/specs/2026-08-07-3dmk-world-class-quality-standard.md`, `docs/superpowers/specs/2026-08-07-3dmk-cuda-first-system-design.md`  
 **Implementation branch:** `agent/vwm-authoritative-revision-implementation`  
 **State:** `NOT_STARTED`  
-**Last verified commit:** none  
-**Current blocker:** none
+**Last verified product-task commit:** none  
+**Next dependency-ready work:** Task 1  
+**Current external blocker:** none recorded; live Windows/CUDA execution has not yet been attempted
 
 ## State vocabulary
 
-- `NOT_STARTED`
-- `IN_PROGRESS`
-- `TASK_COMPLETE`
-- `BATCH_COMPLETE`
-- `SESSION_BOUNDARY`
-- `BLOCKED`
-- `PROJECT_COMPLETE`
+- `NOT_STARTED` — no task evidence exists.
+- `IN_PROGRESS` — bounded work has begun; independent gates have not passed.
+- `TASK_CANDIDATE` — a candidate commit exists; review, verification, or synchronization remains.
+- `TASK_COMPLETE` — task is reviewed, verified, recorded, and pushed.
+- `BATCH_COMPLETE` — a defined dependency batch is complete.
+- `SESSION_BOUNDARY` — safely resumable; program remains incomplete.
+- `BLOCKED` — external evidence identifies a required credential, licensed asset, CUDA/toolchain dependency, or unresolved architecture decision.
+- `PROJECT_COMPLETE` — every authoritative, CUDA-foundation, reliability, deployment, and evidence gate has passed freshly.
 
-## Task ledger
+## Dependency rule
 
-- [ ] **Task 1: Lock the Baseline and Add Failure-Reproducing Tests**
-- [ ] **Task 2: Add Atomic Operation, Analysis, and Revision Publishing**
-- [ ] **Task 3: Add Revision Read, Review, Accept, and Reject APIs**
-- [ ] **Task 4: Make Every Import Create and Load a Rust Project Session**
-- [ ] **Task 5: Introduce Stable Source IDs and Exact Selection Assets**
-- [ ] **Task 6: Persist Structure Analysis as a Project Analysis**
-- [ ] **Task 7: Implement Exact Cleanup Candidate Revisions**
-- [ ] **Task 8: Add the Revision Review UX and State Transparency**
-- [ ] **Task 9: Revision-Back Leveling and Smoothing**
-- [ ] **Task 10: Revision-Back Mesh/Point Conversion**
-- [ ] **Task 11: Revision-Back Reconstruction with Real Quality Gates**
-- [ ] **Task 12: Build Explicit Rust-Owned Export Products**
-- [ ] **Task 13: Persist Measurements and Remove Incomplete Browser Undo Claims**
-- [ ] **Task 14: Wire Real Perception, Object Records, and VLM Adjudication**
-- [ ] **Task 15: Modularize the Frontend and Retire Legacy Processing Paths**
-- [ ] **Task 16: Vendor Frontend Assets and Harden Tauri Delivery**
-- [ ] **Task 17: End-to-End Acceptance and Migration Closure**
+```text
+Tasks 1–5
+    ↓
+CUDA Foundation FB1–FB8
+    ↓
+Tasks 6–17
+```
+
+Task 6 may not begin until every item in `CUDA_FOUNDATION_PROGRESS.md` is independently reviewed, verified, recorded, and checked complete.
+
+## Authoritative task ledger
+
+- [ ] **Task 1: Lock the baseline and add failure-reproducing tests**
+- [ ] **Task 2: Add atomic operation, analysis, and revision publication**
+- [ ] **Task 3: Add revision read, compare, accept, and reject APIs**
+- [ ] **Task 4: Make every import create and load a Rust project session**
+- [ ] **Task 5: Introduce stable source IDs and exact selection assets**
+- [ ] **Task 6: Persist structure analysis as a project analysis**
+- [ ] **Task 7: Implement exact cleanup candidate revisions**
+- [ ] **Task 8: Add revision review UX and state transparency**
+- [ ] **Task 9: Revision-back leveling and smoothing**
+- [ ] **Task 10: Revision-back mesh/point conversion**
+- [ ] **Task 11: Revision-back reconstruction with measured quality gates**
+- [ ] **Task 12: Build explicit Rust-owned export products**
+- [ ] **Task 13: Persist measurements and remove incomplete browser undo claims**
+- [ ] **Task 14: Wire production perception, object records, source evidence, and advisory VLM adjudication**
+- [ ] **Task 15: Modularize the frontend and retire browser-owned production processing/export paths**
+- [ ] **Task 16: Vendor assets and harden offline Tauri installation, security, diagnostics, upgrade, and rollback**
+- [ ] **Task 17: End-to-end acceptance, fault matrix, performance, soak, clean-machine, and migration closure**
 
 ## Current task evidence
 
 ### Task
-Not started.
+
+Task 1 has not started.
 
 ### Acceptance conditions
-- Not recorded yet.
 
-### Red evidence
-- Not recorded yet.
+To be recorded from the current authoritative plan before implementation begins.
 
-### Green evidence
-- Not recorded yet.
+### Failure-reproducing evidence
 
-### Review gate
-- Not recorded yet.
+None.
 
-### Verification gate
-- Not recorded yet.
+### Implementation evidence
 
-### Files changed
-- None.
+None.
 
-### Commit
-- None.
+### Independent review
+
+Not run.
+
+### Independent verification
+
+Not run.
+
+### Files changed for the product task
+
+None.
+
+### Product-task commit
+
+None.
 
 ### Residual risks
-- None recorded.
+
+See `WORLD_CLASS_RISK_REGISTER.md`. No task-specific risk has yet been recorded.
+
+## Documentation maintenance record
+
+The 2026-08-07 documentation consolidation is governance maintenance, not evidence that any product task is complete. It:
+
+- records the actual implementation state;
+- removes superseded phase, prototype, OpenCode, and duplicate planning material;
+- establishes one authoritative document hierarchy;
+- adds the accepted quality, CUDA-foundation, reliability, risk, and acceptance documents;
+- preserves deleted history through Git.
 
 ## Session log
 
 | Timestamp | State | Task | Commit | Evidence summary |
 |---|---|---:|---|---|
+| 2026-08-07 | `SESSION_BOUNDARY` | Documentation governance | pending documentation PR | Current-state audit and authoritative documentation consolidation; no product-task completion claimed |
