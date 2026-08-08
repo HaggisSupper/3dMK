@@ -1,21 +1,49 @@
-# Build and Verification Status
+# VWM Verification Boundary
 
-## Completed in the packaging environment
+This file defines what constitutes current verification for `VWM-Repo-Implicit`. It is not a completion report.
 
-- Parsed every workspace `Cargo.toml` file.
-- Verified workspace membership, unique package names, and local path dependencies.
-- Checked Rust source delimiter balance and declared module files.
-- Checked required crate files and prohibited placeholder patterns.
-- Verified the final ZIP with CRC testing and source-to-extraction SHA-256 comparison.
+## Required local verification
 
-## Not executed in the packaging environment
-
-The packaging container does not include `cargo`, `rustc`, `rustfmt`, or Clippy, and it cannot resolve Cargo dependencies from crates.io. Consequently, this package does not claim a successful Rust compilation or test run in this environment.
-
-Run the following from the repository root on the development machine:
+From the workspace root:
 
 ```powershell
 .\scripts\check.ps1
 ```
 
-That script executes formatting validation, workspace compilation, tests, and Clippy with warnings denied.
+The script must execute, with zero failures:
+
+```powershell
+cargo fmt --all -- --check
+cargo check --workspace --all-targets --all-features
+cargo test --workspace --all-features
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+```
+
+## Evidence authority
+
+Fresh command output belongs in:
+
+- the relevant GitHub Actions run;
+- `../docs/agent-execution/VWM_PROGRESS.md` for authoritative product tasks;
+- `../docs/agent-execution/CUDA_FOUNDATION_PROGRESS.md` for accelerator-foundation work;
+- the final release evidence package.
+
+This document does not claim that the current commit passes those commands. Historical archive assembly, delimiter scans, manifest generation, or ZIP CRC checks are not substitutes for Rust compilation and tests.
+
+## CUDA verification
+
+Normal CI may validate contracts, fake inventories, CPU references, and dynamic-loading behavior without an NVIDIA device. Production CUDA status additionally requires the supported Windows/NVIDIA host and fresh evidence for:
+
+- driver/device inventory;
+- known-answer CUDA kernel;
+- product worker lifecycle;
+- GPU broker invariants and VRAM reserve;
+- Mistral.rs/product-worker coexistence;
+- differential correctness, deterministic ordering, cancellation, OOM, device-loss, memory-return, and end-to-end performance gates.
+
+## Status interpretation
+
+- A crate existing in the workspace means source is present.
+- A passing workspace check means that commit passes the listed Rust gates in that environment.
+- A passing CUDA acceptance suite means that backend passed its declared CUDA gates on the recorded device.
+- Product availability requires the root 3DMk workflow, revision, quality, UI, fault, and release gates in addition to crate verification.
