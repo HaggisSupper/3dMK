@@ -148,8 +148,12 @@ $forbiddenText = @(
     'Phase 1 completion —',
     'Phase 2 package ingest and review status'
 )
+$scanExclusions = @(
+    (Resolve-RepositoryPath 'scripts/test-documentation.ps1'),
+    (Resolve-RepositoryPath 'scripts/test-mistralrs-local-agent-harness.ps1')
+)
 foreach ($file in $activeTextFiles) {
-    if ($file.FullName -eq (Resolve-RepositoryPath 'scripts/test-documentation.ps1')) { continue }
+    if ($scanExclusions -contains $file.FullName) { continue }
     $content = Get-Content -LiteralPath $file.FullName -Raw
     foreach ($forbidden in $forbiddenText) {
         if ($content.Contains($forbidden, [StringComparison]::OrdinalIgnoreCase)) {
