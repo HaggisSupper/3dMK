@@ -16,6 +16,8 @@ The active executor experiment is the local Mistral.rs harness documented in:
 
 Mistral.rs runs a local model and shell loop against an isolated worktree. OpenCode files remain in the repository as inactive historical tooling; they are not required by, and must not be invoked during, this experiment.
 
+The local Mistral.rs executor must run with CUDA acceleration. A binary that is not compiled with CUDA, a host that does not expose an NVIDIA CUDA device, or a model server process that is not observed using the GPU is a hard blocker.
+
 Changing the executor does not change the product architecture, task order, evidence gates, branch rules, or completion criteria.
 
 ## Mandatory context order
@@ -38,7 +40,7 @@ Do not re-plan the product. Do not replace the plan with a smaller interpretatio
 - Tauri 2 is the desktop framework.
 - Axum remains the single browser/Tauri backend.
 - The existing Three.js UI is modularized incrementally; no framework rewrite in this lane.
-- CUDA is not part of the 3DMk product implementation plan. CUDA may accelerate the local Mistral.rs executor without becoming a 3DMk runtime dependency.
+- CUDA acceleration is mandatory for the local Mistral.rs executor. This executor constraint does not make CUDA a dependency of the 3DMk product runtime.
 - No Docker, Podman, WSL, Electron, or Python production backend.
 - No Apple-specific development chain.
 
@@ -90,7 +92,7 @@ Ask the user only when one of these is true:
 - three evidence-based fix attempts expose a genuine architecture conflict;
 - local-only files differ materially from GitHub and the correct source cannot be inferred.
 
-Do not ask for approval of ordinary code, test, refactor, model fallback, or branch decisions already governed by the plan and local-agent runbook.
+Do not ask for approval of ordinary code, test, refactor, CUDA-backed model fallback, or branch decisions already governed by the plan and local-agent runbook.
 
 ## Git discipline
 
