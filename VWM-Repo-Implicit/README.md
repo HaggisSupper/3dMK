@@ -1,41 +1,68 @@
 # VWM Workspace
 
-Self-contained Rust workspace for the 3DMk Vector World Model pipeline.
+`VWM-Repo-Implicit` is the canonical reusable Rust engine workspace consumed by 3DMk. It contains geometry, I/O, perception, and implicit-field components; it does not own Tauri, Axum routing, project persistence, revision review, product capability status, or operator decisions.
 
-## Crates
+## Current crates
 
-- `vwm-core` — canonical scene, datum, geometry provenance, and shared contracts.
-- `vwm-io` — mesh and point-cloud ingestion into `CanonicalScene`.
-- `vwm-geometry` — mesh adjacency, patch segmentation, plane fitting, relations, and intersections.
-- `vwm-perception` — image preprocessing, ONNX instance segmentation and classification, object mask-to-3D slicing, feature extraction, and optional VLM adjudication.
+- `vwm-core` — canonical scenes, units, transforms, datum, geometry origin, structural contracts, and reusable provenance types.
+- `vwm-io` — validated model conversion to and from canonical scenes.
+- `vwm-geometry` — adjacency, components, patch segmentation, plane fitting, structural relations, and reusable geometric analysis.
+- `vwm-perception` — image validation, deterministic region/shape fallback algorithms, current tract-based ONNX paths, projection/source-slicing contracts, and optional advisory VLM hooks.
+- `vwm-implicit-core` — implicit-field, grid, intersection, and generated-geometry contracts.
+- `vwm-implicit-poisson` — current pure-Rust/CPU Screened Poisson implementation.
+- `vwm-implicit-surface-nets` — sampled-field surface extraction.
+- `vwm-implicit` — consumer-facing implicit reconstruction facade.
 
-## Perception boundary
+## Product boundary
 
-The renderer supplies an RGBA frame and a same-size face-ID or point-ID buffer. The perception crate returns independent derived submeshes or point subsets with source IDs and classification provenance. It never edits measured geometry.
+The workspace returns deterministic geometry, analyses, source selections, mappings, quality evidence, and engine errors. The root 3DMk application owns:
 
-See `docs/perception-integration.md` and `models/examples/`.
+- projects, assets, revisions, operations, analyses, jobs, measurements, and packages;
+- expected-generation concurrency;
+- candidate compare/accept/reject;
+- accelerator admission, supervision, telemetry, and fault handling;
+- capability truth and UI presentation;
+- explicit export products and release policy.
 
-## Laptop verification
+A VWM result is not an accepted project mutation until the root application validates and publishes it through the authoritative transaction boundary.
 
-This package was assembled in an environment without a Rust toolchain, so compilation could not be executed here. Run:
+## CUDA direction
+
+The current reusable engines are predominantly Rust/CPU implementations and reference oracles. The accepted target adds focused crates for accelerator contracts, the GPU resource broker, CUDA runtime, CUDA geometry, CUDA implicit reconstruction, CUDA vision, verified WebGPU fallbacks, and CPU references.
+
+Until a CUDA backend passes differential correctness, deterministic ordering, cancellation, OOM, device-loss, worker-failure, memory, and end-to-end performance gates:
+
+- it is not a production-available capability;
+- the existing CPU implementation remains the reference and migration path;
+- a CUDA feature flag or crate alone is not acceptance evidence.
+
+## Source-evidence rule
+
+Perception, cleanup, resampling, reconstruction, and extracted objects must retain stable source point/vertex/face/primitive/instance evidence. Measured source geometry is immutable. Derived geometry is explicitly marked, mapped, quality-gated, and published only as a candidate until accepted by the product workflow.
+
+## Verification
+
+Run from this directory on Windows:
+
+```powershell
+.\scripts\check.ps1
+```
+
+Equivalent commands:
 
 ```powershell
 cargo fmt --all -- --check
-cargo check --workspace --all-targets
-cargo test --workspace
-cargo clippy --workspace --all-targets -- -D warnings
+cargo check --workspace --all-targets --all-features
+cargo test --workspace --all-features
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 ```
 
-The scripts under `scripts/` run the standard checks and packaging flow. See `BUILD_STATUS.md` for the precise verification boundary of this archive.
+Live CUDA acceptance requires the supported NVIDIA Windows host and the separate product acceptance workflow. Documentation does not assert a current successful build unless the corresponding progress ledger or CI run contains fresh command evidence.
 
+## Further documentation
 
-## Implicit geometry crates
-
-The repository now includes a concrete implicit reconstruction stack:
-
-- `vwm-implicit-core`: field contracts, analytical fields, sampled grids, ray zero-crossings, canonical outputs.
-- `vwm-implicit-poisson`: pure-Rust Screened Poisson reconstruction.
-- `vwm-implicit-surface-nets`: field-to-mesh extraction using `fast_surface_nets`.
-- `vwm-implicit`: facade crate for application consumers.
-
-See `docs/implicit-field-integration.md` for the data flow and recommended starting parameters.
+- `docs/perception-integration.md`
+- `docs/implicit-field-integration.md`
+- crate-level READMEs
+- root `../docs/CURRENT_STATE.md`
+- root CUDA and quality standards under `../docs/superpowers/specs/`
