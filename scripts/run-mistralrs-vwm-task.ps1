@@ -25,7 +25,6 @@ param(
     [ValidateRange(1, 5)]
     [int]$MaxRepairRounds = 3,
 
-    [switch]$AllowCpuFallback,
     [switch]$KeepServer,
     [switch]$SkipPush,
     [switch]$DryRun
@@ -58,7 +57,7 @@ $runDirectory = Join-Path $worktree ('.local-agent\task-{0:d2}' -f $Task)
 New-Item -ItemType Directory -Force -Path $runDirectory | Out-Null
 
 if ($DryRun) {
-    Write-Step "Dry-run passed. Worktree: $worktree"
+    Write-Step "CUDA-only dry-run passed. Worktree: $worktree"
     Write-Step "Mistral.rs: $mistralPath"
     Write-Step "Primary model: $Model; fallback model: $FallbackModel; quantization: $Quant-bit; context: $ContextLength"
     exit 0
@@ -80,8 +79,8 @@ try {
     }
     catch {
         if (-not $FallbackModel -or $FallbackModel -eq $Model) { throw }
-        Write-Warning "Primary model failed to start: $($_.Exception.Message)"
-        Write-Step "Retrying with fallback model '$FallbackModel'."
+        Write-Warning "Primary model failed to start with CUDA: $($_.Exception.Message)"
+        Write-Step "Retrying the smaller model '$FallbackModel' with the same mandatory CUDA gate."
         $listenPort = Get-FreeTcpPort
         $fallbackServerArguments = @{
             MistralPath = $mistralPath
@@ -178,12 +177,13 @@ TASK: $Task
 BASE: $baseCommit
 HEAD: $finalHead
 MODEL: $($server.Model)
+CUDA_RUNTIME: VERIFIED
 REVIEW: PASS
 VERIFICATION: PASS
 "@ | Set-Content -LiteralPath (Join-Path $runDirectory 'controller-summary.txt') -Encoding utf8
 
     Publish-VerifiedBranch -Worktree $worktree -RunDirectory $runDirectory -SelectedModel $server.Model
-    Write-Step "Task $Task has fresh local reviewer and verifier PASS evidence at commit $finalHead."
+    Write-Step "Task $Task has fresh CUDA runtime, reviewer, and verifier evidence at commit $finalHead."
 }
 finally {
     if ($server -and -not $KeepServer -and -not $server.Process.HasExited) {
@@ -191,6 +191,6 @@ finally {
         Stop-Process -Id $server.Process.Id -Force -ErrorAction SilentlyContinue
     }
     elseif ($server -and $KeepServer) {
-        Write-Step "Mistral.rs remains available at $($server.BaseUri)."
+        Write-Step "CUDA-backed Mistral.rs remains available at $($server.BaseUri)."
     }
 }
