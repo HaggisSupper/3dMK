@@ -1,6 +1,13 @@
 # Common functions for the 3DMk local Mistral.rs task controller.
 # Dot-source this file from scripts/run-mistralrs-vwm-task.ps1.
 
+if (-not (Get-Variable -Name Branch -Scope Script -ErrorAction SilentlyContinue)) {
+    $script:Branch = 'agent/vwm-authoritative-revision-implementation'
+}
+if (-not (Get-Variable -Name BaseBranch -Scope Script -ErrorAction SilentlyContinue)) {
+    $script:BaseBranch = 'main'
+}
+
 function Write-Step {
     param([Parameter(Mandatory)][string]$Message)
     Write-Host "[3DMk local agent] $Message"
