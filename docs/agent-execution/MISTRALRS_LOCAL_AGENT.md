@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This is the active autonomous development executor for 3DMk. It runs a local coding model through Mistral.rs against an isolated Git worktree and enforces dependency admission, separate implementation/review/verification sessions, bounded repairs, and gated publication.
+This is the active autonomous development executor for 3DMk. It runs a local coding model through Mistral.rs against an isolated Git worktree and enforces mainline admission, dependency admission, separate implementation/review/verification sessions, bounded repairs, and gated publication.
 
 It is not the product implementation itself. Product runtime integration of Mistral.rs, the GPU broker, and the supervised CUDA worker remains tracked in `../CURRENT_STATE.md` and the CUDA-foundation plan.
 
@@ -27,7 +27,18 @@ Model-driven product and foundation edits use an isolated linked worktree on:
 agent/vwm-authoritative-revision-implementation
 ```
 
-The controller refuses `main` or `master`, an unclean tracked worktree, a non-linked worktree, unmet task dependencies, force pushes, destructive resets, and repository cleaning.
+The controller refuses `main` or `master`, an unclean tracked worktree, a non-linked worktree, stale or diverged mainline state, unmet task dependencies, force pushes, destructive resets, and repository cleaning.
+
+## Mainline admission
+
+Before task dependency checks or Mistral.rs setup, the controller fetches both the active implementation branch and `origin/main`.
+
+- If `origin/main` is already an ancestor of the active branch, execution may continue.
+- If the active branch is strictly behind and has no unique commits, the controller fast-forwards the branch when it is strictly behind by using `pull --ff-only origin main`.
+- If the active branch and `origin/main` both contain unique commits, the controller blocks before model startup when the refs have diverged.
+- Divergence is reconciled through reviewed Git history outside the model harness. The controller does not rebase, force-push, or silently merge.
+
+This is an execution-time invariant. Documentation never claims that a moving branch is perpetually equal to current `main`.
 
 ## Setup
 
@@ -73,7 +84,7 @@ The controller selects the corresponding plan, ledger, task heading, report dire
 
 ## Dependency admission
 
-Dependency checks execute before Mistral.rs setup or model loading:
+Dependency checks execute after mainline admission and before Mistral.rs setup or model loading:
 
 - authoritative Task 1 has no predecessor;
 - authoritative Task N requires every authoritative Task 1 through N−1 checked complete;
@@ -109,7 +120,7 @@ pwsh -NoLogo -NoProfile `
 
 ## CUDA gates
 
-After dependency admission and before the implementer session:
+After mainline and dependency admission and before the implementer session:
 
 1. the installed executable must match the recorded source-build hash;
 2. Mistral.rs must report a CUDA-capable build;
@@ -149,7 +160,7 @@ Missing evidence is a hard blocker and prevents publication.
 
 - uses another separate model session;
 - reruns fresh selected-task and regression commands;
-- verifies predecessor ledgers and CUDA evidence;
+- verifies mainline ancestry, predecessor ledgers, and CUDA evidence;
 - records exact exit codes and decisive output;
 - cannot modify tracked files or HEAD.
 
@@ -180,6 +191,7 @@ The selected task ledger receives the durable command, exit-code, commit, accele
 After independent review and verification pass, the controller:
 
 - confirms the branch and tracked worktree are clean;
+- confirms the active branch contains the admitted `origin/main` commit;
 - confirms CUDA runtime evidence exists;
 - pushes the active implementation branch;
 - creates or finds the draft pull request through authenticated GitHub CLI;
@@ -190,6 +202,7 @@ After independent review and verification pass, the controller:
 
 The controller fails closed when:
 
+- the active implementation branch has diverged from `origin/main`;
 - a predecessor ledger entry is incomplete;
 - CUDA cannot be proven;
 - neither approved model profile can start on CUDA;
