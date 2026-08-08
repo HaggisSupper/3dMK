@@ -10,11 +10,7 @@
 /__pycache__/
 /.local-agent/
 /.worktrees/
-/.opencode/*
-!/.opencode/agents/
-!/.opencode/agents/*.md
-!/.opencode/commands/
-!/.opencode/commands/*.md
+/.opencode/
 /.playwright-mcp/
 /.swarm/
 
