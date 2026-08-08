@@ -1,79 +1,103 @@
-# Implicit Field Integration
+# Implicit Reconstruction Integration
 
-## Concrete boundaries
+## Purpose
 
-### Point cloud to continuous field
+The implicit workspace provides reusable field and surface-reconstruction contracts. The current implementation is a Rust/CPU reference and migration engine. Production 3DMk reconstruction additionally requires authoritative revisions, source mappings, brokered CUDA execution, quality gates, fault containment, and operator review.
+
+## Current reusable pipeline
 
 ```text
 OrientedPointSet
-    points: Vec<[f64; 3]>
-    normals: Vec<[f64; 3]>
-        |
-        v
+  points + normals
+        ↓
 PoissonReconstructor
-        |
-        v
+        ↓
 PoissonField: ImplicitField
+        ├── ray/curve zero crossings
+        ├── sampled DenseScalarGrid
+        ├── direct Poisson mesh
+        └── Surface Nets mesh from a sampled grid
+        ↓
+FieldMesh / FieldPointCloud
+        ↓
+CanonicalScene marked as generated geometry
 ```
 
-### Field to ray/curve intersections
+The source measured scene is not modified.
 
-`find_ray_intersections` evaluates `F(r(t)) - iso_value`, brackets sign changes, and applies bisection. Each hit includes position, field value, parameter `t`, and a normal from the field gradient.
+## Crate responsibilities
 
-### Field to sampled grid
-
-`sample_field_to_grid` evaluates any `ImplicitField` at a regular 3D lattice and returns `DenseScalarGrid` with world origin, nonuniform axis spacing, dimensions, values, and iso-value.
-
-### Grid to mesh
-
-`SurfaceNetsExtractor` passes the sampled signed-distance values to `fast_surface_nets`, then transforms lattice vertices and normals into VWM world coordinates.
-
-### Poisson direct mesh
-
-`PoissonField::reconstruct_mesh` uses the mesh buffers exposed by `poisson_reconstruction` and returns the same `FieldMesh` contract as Surface Nets.
-
-## Why there are four crates
-
-| Crate | Responsibility |
+| Crate | Current responsibility |
 |---|---|
-| `vwm-implicit-core` | Stable contracts, analytical fields, grids, ray intersections, mesh conversion |
-| `vwm-implicit-poisson` | Pure-Rust Screened Poisson reconstruction from oriented points |
-| `vwm-implicit-surface-nets` | Chunk-compatible isosurface extraction from sampled fields |
-| `vwm-implicit` | Consumer-facing facade and re-exports |
+| `vwm-implicit-core` | field contracts, analytical fields, grids, intersections, generated geometry conversion |
+| `vwm-implicit-poisson` | current pure-Rust/CPU Screened Poisson reconstruction |
+| `vwm-implicit-surface-nets` | sampled-field isosurface extraction |
+| `vwm-implicit` | application-facing facade and re-exports |
 
-The split permits later backends such as MLS, RBF, OpenVDB, CUDA sparse grids, Dual Contouring, or a learned residual field without changing the consumer contracts.
+The contracts permit future CUDA sparse fields, CUDA Poisson solving, chunked extraction, alternate implicit methods, and verified WebGPU fallbacks without exposing backend-specific types to product callers.
 
-## Example
+## Product input contract
 
-```rust
-use vwm_implicit::*;
+Production reconstruction consumes an accepted project revision and a prepared point set containing:
 
-let input = OrientedPointSet::new(points, normals)?;
-let field = PoissonReconstructor.reconstruct(&input, PoissonConfig::default())?;
+- positions in canonical units;
+- consistently oriented normals;
+- stable source point IDs;
+- optional colors and confidence;
+- declared datum/origin and local precision policy;
+- preparation parameters, deterministic seed, and input hashes.
 
-let hits = find_ray_intersections(
-    &field,
-    Ray3::new(camera_origin, camera_direction)?,
-    RayIntersectionConfig::default(),
-)?;
+Preparation itself is an authoritative, provenance-recorded operation. Ad-hoc browser PLY uploads are not the target production boundary.
 
-let grid = sample_field_to_grid(
-    &field,
-    GridSamplingConfig {
-        bounds: field.bounds(),
-        dimensions: [129, 129, 129],
-    },
-)?;
+## Product output contract
 
-let mesh = SurfaceNetsExtractor.extract(&grid, SurfaceNetsConfig::default())?;
-let scene = mesh.into_canonical_scene()?;
-```
+Reconstruction returns staged generated geometry plus:
 
-## Runtime guidance
+- source mapping and coverage;
+- attribute-transfer report;
+- residual and normal metrics;
+- component, degeneracy, boundary/manifold, and triangle statistics;
+- backend/device/kernel/precision/memory/transfer/timing evidence;
+- warnings and quality disposition.
 
-- Start at `65^3` or `129^3` for interactive tests.
-- Use Poisson `max_depth` 7 or 8 for ordinary scans before increasing it.
-- Preserve consistently oriented normals; inverted normals corrupt inside/outside sign.
-- Use the ray-intersection route when structured rays or curves already exist.
-- Use Surface Nets when a sampled field is required for reuse, chunking, or later GPU storage.
-- Keep measured geometry beside the implicit field for provenance and residual validation.
+The root application may publish this as a candidate revision only after deterministic validation. Generating triangles is not success, and the result is not active until operator acceptance.
+
+## CUDA target
+
+The accepted target is chunked, brokered CUDA-primary preparation, field solving, and extraction through the supervised product worker. The current CPU implementation remains:
+
+- the deterministic reference oracle;
+- the implementation used for small fixtures and differential testing;
+- a migration path while CUDA parity is incomplete.
+
+It is not the normal production fallback after CUDA acceptance.
+
+Datasets larger than a granted lease are chunked or processed out of core through the tiered NVMe/RAM/pinned/VRAM cache. Whole-scene VRAM residency is not required.
+
+## Quality and fault gates
+
+Required before production availability:
+
+- representative real fixtures;
+- CPU/CUDA differential tolerances;
+- deterministic seeded ordering/hashes;
+- source coverage and mapping verification;
+- residual, normal, component, degeneracy, and boundary/manifold gates;
+- attribute-transfer validation;
+- cancellation, OOM, device loss, worker death, stale generation, and publication-failure tests;
+- no partial revision on any failure;
+- end-to-end performance improvement after transfers and validation;
+- compare/accept/reject UI evidence;
+- package/reopen/export round-trip.
+
+## Current operational guidance
+
+For CPU/reference fixtures:
+
+- start at `65^3` or `129^3` sampled grids;
+- begin with Poisson `max_depth` 7 or 8;
+- validate normal orientation before reconstruction;
+- preserve measured geometry beside the generated field/mesh for residual checks;
+- record parameters and seed.
+
+These values are starting points, not production quality guarantees.
