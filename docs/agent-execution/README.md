@@ -1,6 +1,6 @@
 # 3DMk Agent Execution
 
-This directory contains the live execution runbook, task ledgers, acceptance matrix, and risk register for the current autonomous implementation program.
+This directory contains the active executor runbook, task ledgers, release acceptance matrix, and risk register for the autonomous implementation program.
 
 ## Active executor
 
@@ -24,14 +24,14 @@ Tracks Tasks 1–17 for project/revision authority, exact evidence, processing, 
 
 Tracks FB1–FB8 for transactional persistence, immutable asset publication, accelerator contracts, CUDA runtime verification, the GPU resource broker, supervised compute, atomic result publication, and recovery/telemetry.
 
-Authoritative Task 6 cannot begin until every CUDA-foundation item is independently reviewed, verified, and recorded complete.
+Task 6 cannot begin until Tasks 1–5 and every CUDA-foundation item are independently reviewed, verified, pushed, and checked complete.
 
 ## Quality and risk evidence
 
 - `WORLD_CLASS_ACCEPTANCE_MATRIX.md` — objective release gates and failure dispositions.
 - `WORLD_CLASS_RISK_REGISTER.md` — active risks, consequences, controls, and required evidence.
 
-## Standard task execution
+## Execute an authoritative task
 
 From the repository root on the supported Windows/NVIDIA host:
 
@@ -41,26 +41,48 @@ pwsh -NoLogo -NoProfile `
   -Task 1
 ```
 
-The controller:
+## Execute a CUDA-foundation task
+
+After authoritative Tasks 1–5 are complete:
+
+```powershell
+pwsh -NoLogo -NoProfile `
+  -File .\scripts\run-mistralrs-vwm-task.ps1 `
+  -FoundationTask FB1
+```
+
+Continue with `FB2` through `FB8` only after each predecessor is checked complete in `CUDA_FOUNDATION_PROGRESS.md`.
+
+## Controller behavior
+
+Before loading a model, the controller:
+
+1. creates or reuses the isolated implementation worktree;
+2. confirms the active implementation branch and clean tracked state;
+3. selects the authoritative or foundation plan and ledger;
+4. verifies every predecessor task in the ledgers;
+5. rejects Task 6+ until FB1–FB8 are complete.
+
+After dependency admission, it:
 
 1. validates the CUDA-enabled Mistral.rs installation;
 2. verifies the exact server process is using CUDA;
-3. creates or reuses the isolated implementation worktree;
-4. runs separate implementer, reviewer, and verifier sessions;
-5. performs bounded repair rounds;
-6. updates the appropriate ledger with actual evidence;
-7. pushes only after both independent gates pass;
-8. creates or updates a draft pull request;
-9. never merges the pull request.
+3. runs separate implementer, reviewer, and verifier sessions;
+4. performs bounded repair rounds;
+5. updates the selected ledger with actual evidence;
+6. pushes only after both independent gates pass;
+7. creates or updates a draft pull request;
+8. never merges the pull request.
 
 ## Evidence rule
 
-Only observed command output belongs in a progress ledger. A model response, code diff, route, capability flag, document, or passing static parser is not sufficient evidence that a product task or CUDA capability works.
+Only observed command output belongs in a progress ledger. A model response, code diff, route, capability flag, document, crate, feature flag, or passing static parser is not sufficient evidence that a product or CUDA-foundation task works.
 
 ## Stop conditions
 
 The controller reports `BLOCKED` rather than changing architecture or weakening requirements when:
 
+- a predecessor ledger entry is incomplete;
 - CUDA cannot be verified;
 - Mistral.rs cannot load an approved CUDA-backed model profile;
 - the implementation worktree is not clean and isolated;
