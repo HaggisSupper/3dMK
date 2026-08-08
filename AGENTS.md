@@ -123,7 +123,7 @@ For every task:
 12. Commit and push only after both independent gates pass.
 13. Stop at the task boundary; do not combine unrelated work.
 
-Reviewer and verifier sessions are read-only with respect to tracked files and HEAD.
+The implementer, reviewer, verifier, and repair roles use separate model sessions. Reviewer and verifier sessions are read-only with respect to tracked files and HEAD.
 
 ## Git discipline
 
