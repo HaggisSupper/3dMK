@@ -35,14 +35,17 @@ The active autonomous executor is the local Mistral.rs harness documented in:
 
 OpenCode is removed from the active repository workflow and must not be invoked. No OpenCode API key, action, agent, command, configuration, or runbook is part of the current execution path.
 
-The executor must prove all of the following before model-driven work begins:
+Before model-driven work begins, the controller must prove:
 
+- the implementation worktree is clean and linked;
+- current `origin/main` is an ancestor of the active implementation branch;
+- a branch that is strictly behind `origin/main` is safely fast-forwarded before model startup;
+- a branch that has diverged from `origin/main` is blocked for reviewed reconciliation;
+- all selected task predecessors are checked complete;
 - the Mistral.rs binary was built with CUDA;
 - the NVIDIA host and driver are usable;
 - the exact Mistral.rs process is observed as a CUDA compute process;
-- the model profile fits the approved VRAM budget;
-- the implementation branch is isolated in a linked worktree;
-- the tracked worktree is clean.
+- the model profile fits the approved VRAM budget.
 
 CPU LLM inference and cloud inference fallback are prohibited.
 
@@ -110,24 +113,28 @@ Do not begin authoritative Task 6 until every foundation task is independently r
 For every task:
 
 1. Read the current-state document, governing standards, current plan section, and both progress ledgers.
-2. Inspect the branch, base commit, relevant source, tests, and existing contracts.
-3. Restate concrete acceptance conditions in the appropriate ledger.
-4. Write the smallest failure-reproducing or contract test.
-5. Run it and prove that it fails for the intended reason.
-6. Implement the smallest coherent production change.
-7. Run focused tests, affected regression tests, and applicable CPU/CUDA differential tests.
-8. Run an independent reviewer session against requirements and the complete diff.
-9. Run an independent verifier session using fresh commands.
-10. Repair every blocking or important finding and repeat both gates.
-11. Record exact commands, exit codes, decisive output, files, commit, accelerator evidence, residual risks, and limitations.
-12. Commit and push only after both independent gates pass.
-13. Stop at the task boundary; do not combine unrelated work.
+2. Inspect the current `origin/main`, active branch, base commit, relevant source, tests, and existing contracts.
+3. Require `origin/main` ancestry or perform only a safe fast-forward; block on divergence.
+4. Restate concrete acceptance conditions in the appropriate ledger.
+5. Write the smallest failure-reproducing or contract test.
+6. Run it and prove that it fails for the intended reason.
+7. Implement the smallest coherent production change.
+8. Run focused tests, affected regression tests, and applicable CPU/CUDA differential tests.
+9. Run an independent reviewer session against requirements and the complete diff.
+10. Run an independent verifier session using fresh commands.
+11. Repair every blocking or important finding and repeat both gates.
+12. Record exact commands, exit codes, decisive output, files, commit, accelerator evidence, residual risks, and limitations.
+13. Commit and push only after both independent gates pass.
+14. Stop at the task boundary; do not combine unrelated work.
 
 The implementer, reviewer, verifier, and repair roles use separate model sessions. Reviewer and verifier sessions are read-only with respect to tracked files and HEAD.
 
 ## Git discipline
 
 - The active product implementation branch is `agent/vwm-authoritative-revision-implementation`.
+- Before model startup, `origin/main` must be an ancestor of the active implementation branch.
+- If the active branch is strictly behind main and has no unique commits, the controller may fast-forward it with `pull --ff-only`.
+- If main and the active branch have both advanced, report `BLOCKED`; reconcile through reviewed Git history rather than rebasing, force-pushing, or silently merging in the model harness.
 - Never implement on `main` or `master`.
 - Use a focused `agent/<description>` branch for separately scoped governance, documentation, or support work.
 - Use an isolated linked worktree for model-driven implementation.
@@ -159,7 +166,7 @@ Ordinary implementation, test, refactor, kernel, model-profile, memory-budget, d
 - `TASK_COMPLETE` — one task is reviewed, verified, recorded, and pushed.
 - `BATCH_COMPLETE` — a defined dependency batch is complete.
 - `SESSION_BOUNDARY` — work is safely resumable but the program remains incomplete.
-- `BLOCKED` — external evidence proves a credential, licensed asset, supported CUDA environment, missing toolchain, or unresolved architecture decision is required.
+- `BLOCKED` — external evidence proves a credential, licensed asset, supported CUDA environment, missing toolchain, stale/diverged mainline, or unresolved architecture decision is required.
 - `PROJECT_COMPLETE` — every authoritative, foundation, reliability, release, and evidence gate has passed freshly.
 
 Do not say “done,” “complete,” “finished,” or give a project percentage unless the state is `PROJECT_COMPLETE`.
