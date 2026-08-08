@@ -158,6 +158,7 @@ Assert-ContainsAll -Name 'Mistral.rs common module' -Content $common -Required @
     'Assert-CudaProcess',
     'cuda-runtime-evidence.json',
     '--query-compute-apps=pid,process_name,used_gpu_memory',
+    'CUDA startup failed; stopping Mistral.rs process',
     "'--host', '127.0.0.1'",
     "'--max-seq-len'",
     "'--max-tool-rounds'",
@@ -193,7 +194,9 @@ Assert-ContainsAll -Name 'Mistral.rs role module' -Content $roles -Required @(
     'VERDICT: FAIL',
     'Repair round',
     "'--draft'",
-    'Task 1, intended red tests are evidence'
+    'Task 1, intended red tests are evidence',
+    'cuda-runtime-evidence.json',
+    'confirm mandatory CUDA runtime evidence'
 )
 
 $scriptCorpus = @($setup, $runner, $common, $roles) -join [Environment]::NewLine
