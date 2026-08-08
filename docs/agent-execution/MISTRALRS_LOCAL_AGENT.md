@@ -202,7 +202,7 @@ The controller fails closed when:
 
 ## Security
 
-- bind only to loopback;
+- bind Mistral.rs only to `127.0.0.1`;
 - do not place secrets, credentials, personal data, proprietary third-party content, or unredacted support material in prompts;
 - do not grant the model access outside the dedicated worktree;
 - do not weaken repository or product requirements to accommodate model limitations;
