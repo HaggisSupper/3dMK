@@ -1,83 +1,74 @@
-# OpenCode VWM Execution Harness
+# 3DMk Agent Execution
 
-This directory records resumable execution state for the authoritative VWM implementation plan.
+This directory contains the live execution runbook, task ledgers, acceptance matrix, and risk register for the current autonomous implementation program.
 
-## Start on the Windows laptop
+## Active executor
 
-From the repository root:
+The active executor is the local, headless, CUDA-only Mistral.rs harness:
+
+`MISTRALRS_LOCAL_AGENT.md`
+
+OpenCode is not part of the current workflow. No OpenCode secret, GitHub Action, model, agent, command, or configuration is required or permitted.
+
+## Ledgers
+
+### Authoritative product workflow
+
+`VWM_PROGRESS.md`
+
+Tracks Tasks 1–17 for project/revision authority, exact evidence, processing, review UX, export, measurements, perception, frontend retirement, offline packaging, and final acceptance.
+
+### CUDA foundation
+
+`CUDA_FOUNDATION_PROGRESS.md`
+
+Tracks FB1–FB8 for transactional persistence, immutable asset publication, accelerator contracts, CUDA runtime verification, the GPU resource broker, supervised compute, atomic result publication, and recovery/telemetry.
+
+Authoritative Task 6 cannot begin until every CUDA-foundation item is independently reviewed, verified, and recorded complete.
+
+## Quality and risk evidence
+
+- `WORLD_CLASS_ACCEPTANCE_MATRIX.md` — objective release gates and failure dispositions.
+- `WORLD_CLASS_RISK_REGISTER.md` — active risks, consequences, controls, and required evidence.
+
+## Standard task execution
+
+From the repository root on the supported Windows/NVIDIA host:
 
 ```powershell
-.\scripts\start-opencode-vwm.ps1 -Mode Start
+pwsh -NoLogo -NoProfile `
+  -File .\scripts\run-mistralrs-vwm-task.ps1 `
+  -Task 1
 ```
 
-Resume the most recent OpenCode session:
+The controller:
 
-```powershell
-.\scripts\start-opencode-vwm.ps1 -Mode Continue -AllowDirty
-```
+1. validates the CUDA-enabled Mistral.rs installation;
+2. verifies the exact server process is using CUDA;
+3. creates or reuses the isolated implementation worktree;
+4. runs separate implementer, reviewer, and verifier sessions;
+5. performs bounded repair rounds;
+6. updates the appropriate ledger with actual evidence;
+7. pushes only after both independent gates pass;
+8. creates or updates a draft pull request;
+9. never merges the pull request.
 
-Run non-interactively:
+## Evidence rule
 
-```powershell
-.\scripts\start-opencode-vwm.ps1 -Mode Run
-```
+Only observed command output belongs in a progress ledger. A model response, code diff, route, capability flag, document, or passing static parser is not sufficient evidence that a product task or CUDA capability works.
 
-## Run through GitHub Actions
+## Stop conditions
 
-The repository workflow is:
+The controller reports `BLOCKED` rather than changing architecture or weakening requirements when:
 
-```text
-.github/workflows/opencode-big-pickle.yml
-```
+- CUDA cannot be verified;
+- Mistral.rs cannot load an approved CUDA-backed model profile;
+- the implementation worktree is not clean and isolated;
+- required credentials or licensed model assets are absent;
+- tests cannot execute because a required local toolchain is missing;
+- three bounded repair rounds fail;
+- the governing documents do not contain an irreversible product decision.
 
-It runs the committed `vwm-executor` agent with:
+## Historical material
 
-```text
-model: opencode/big-pickle
-share: false
-```
-
-### Required repository secret
-
-In **Settings → Secrets and variables → Actions**, add:
-
-```text
-OPENCODE_API_KEY
-```
-
-The value must be an OpenCode Zen API key with access to Big Pickle. The workflow fails closed when the secret is absent; it does not select another provider or model.
-
-### Trigger from an issue or pull request
-
-Only comments from the repository owner, members, or collaborators are accepted. Add a comment containing `/opencode` or `/oc`, for example:
-
-```text
-/opencode Execute the next dependency-ready task in the authoritative VWM plan. Follow AGENTS.md, use TDD, invoke vwm-reviewer and vwm-verifier, update VWM_PROGRESS.md with command evidence, and open or update a pull request.
-```
-
-### Trigger manually
-
-Open **Actions → OpenCode Big Pickle → Run workflow** and provide a prompt. The default prompt continues from the first dependency-ready incomplete task.
-
-The GitHub workflow uses the repository `GITHUB_TOKEN` with write access to contents, issues, and pull requests. It may create implementation branches and pull requests, but the repository OpenCode policy still blocks direct work on `main`, force pushes, merges, destructive resets, and secret reads.
-
-GitHub-hosted execution runs on Ubuntu because that is the supported OpenCode GitHub Action path. Windows-specific acceptance gates remain mandatory and must run through the Windows laptop harness or a separately approved Windows runner before `PROJECT_COMPLETE` can be reported.
-
-## What the launcher enforces
-
-- OpenCode, Git, Rust, Cargo, and PowerShell are available.
-- The authoritative plan and agent contract exist.
-- The live OpenCode model catalog contains Big Pickle.
-- Work occurs on `agent/vwm-authoritative-revision-implementation`, not `main`.
-- The OpenCode session uses the `vwm-executor` agent and Big Pickle explicitly.
-- Repository permissions deny direct main/master pushes, force pushes, destructive resets, Docker, Podman, WSL, and secret reads.
-
-## Execution control
-
-Use `/implement-vwm` inside OpenCode to start or resume the workflow.
-
-The progress ledger is `VWM_PROGRESS.md`. It must be updated only with actual command output and commit evidence.
-
-## Privacy
-
-OpenCode Zen documents Big Pickle as a free stealth model available for a limited period. During the free period, submitted data may be used to improve the model. Do not place credentials, personal data, proprietary third-party material, or secrets in prompts or repository files.
+Superseded OpenCode and experiment-specific documents have been deleted. Git history is the archive; the active tree contains only the current execution system.
