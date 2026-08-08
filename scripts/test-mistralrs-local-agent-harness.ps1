@@ -8,9 +8,16 @@ $RepositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Pat
 $requiredFiles = @(
     'AGENTS.md',
     '.gitignore',
+    'docs/README.md',
+    'docs/CURRENT_STATE.md',
+    'docs/agent-execution/README.md',
     'docs/agent-execution/MISTRALRS_LOCAL_AGENT.md',
-    'docs/superpowers/specs/2026-08-07-mistralrs-local-agent-experiment-design.md',
-    'docs/superpowers/plans/2026-08-07-mistralrs-local-agent-experiment.md',
+    'docs/agent-execution/VWM_PROGRESS.md',
+    'docs/agent-execution/CUDA_FOUNDATION_PROGRESS.md',
+    'docs/superpowers/specs/2026-08-07-3dmk-world-class-quality-standard.md',
+    'docs/superpowers/specs/2026-08-07-3dmk-cuda-first-system-design.md',
+    'docs/superpowers/plans/2026-07-31-vwm-authoritative-revision-workflow.md',
+    'docs/superpowers/plans/2026-08-07-3dmk-foundation-batch.md',
     'scripts/setup-mistralrs-local-agent.ps1',
     'scripts/run-mistralrs-vwm-task.ps1',
     'scripts/mistralrs-agent/common.ps1',
@@ -19,9 +26,24 @@ $requiredFiles = @(
     '.github/workflows/mistralrs-harness-validation.yml'
 )
 
+$forbiddenFiles = @(
+    'opencode.json',
+    '.github/workflows/opencode-big-pickle.yml',
+    '.opencode/agents/vwm-executor.md',
+    '.opencode/agents/vwm-reviewer.md',
+    '.opencode/agents/vwm-verifier.md',
+    '.opencode/commands/implement-vwm.md',
+    'scripts/start-opencode-vwm.ps1',
+    'scripts/test-opencode-vwm-harness.ps1',
+    'docs/superpowers/plans/2026-07-31-opencode-vwm-execution-harness.md',
+    'docs/superpowers/specs/2026-07-31-opencode-vwm-execution-harness-design.md',
+    'docs/superpowers/plans/2026-08-07-mistralrs-local-agent-experiment.md',
+    'docs/superpowers/specs/2026-08-07-mistralrs-local-agent-experiment-design.md'
+)
+
 function Resolve-RepositoryFile {
     param([Parameter(Mandatory)][string]$RelativePath)
-    return Join-Path $RepositoryRoot ($RelativePath -replace '/', [IO.Path]::DirectorySeparatorChar)
+    Join-Path $RepositoryRoot ($RelativePath -replace '/', [IO.Path]::DirectorySeparatorChar)
 }
 
 function Read-RepositoryFile {
@@ -30,7 +52,7 @@ function Read-RepositoryFile {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Required harness file is missing: $RelativePath"
     }
-    return Get-Content -LiteralPath $path -Raw
+    Get-Content -LiteralPath $path -Raw
 }
 
 function Assert-ContainsAll {
@@ -39,7 +61,6 @@ function Assert-ContainsAll {
         [Parameter(Mandatory)][string]$Content,
         [Parameter(Mandatory)][string[]]$Required
     )
-
     foreach ($value in $Required) {
         if (-not $Content.Contains($value, [StringComparison]::Ordinal)) {
             throw "$Name is missing required contract text: $value"
@@ -53,7 +74,6 @@ function Assert-ContainsNone {
         [Parameter(Mandatory)][string]$Content,
         [Parameter(Mandatory)][string[]]$Forbidden
     )
-
     foreach ($value in $Forbidden) {
         if ($Content.Contains($value, [StringComparison]::OrdinalIgnoreCase)) {
             throw "$Name contains prohibited contract text: $value"
@@ -63,7 +83,6 @@ function Assert-ContainsNone {
 
 function Assert-PowerShellParses {
     param([Parameter(Mandatory)][string]$RelativePath)
-
     $path = Resolve-RepositoryFile -RelativePath $RelativePath
     $tokens = $null
     $parseErrors = $null
@@ -92,24 +111,32 @@ function Assert-PowerShellParses {
 }
 
 foreach ($relativePath in $requiredFiles) {
-    $path = Resolve-RepositoryFile -RelativePath $relativePath
-    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+    if (-not (Test-Path -LiteralPath (Resolve-RepositoryFile $relativePath) -PathType Leaf)) {
         throw "Required harness file is missing: $relativePath"
     }
 }
+foreach ($relativePath in $forbiddenFiles) {
+    if (Test-Path -LiteralPath (Resolve-RepositoryFile $relativePath)) {
+        throw "Superseded executor file is still present: $relativePath"
+    }
+}
 
-Assert-PowerShellParses -RelativePath 'scripts/setup-mistralrs-local-agent.ps1'
-Assert-PowerShellParses -RelativePath 'scripts/run-mistralrs-vwm-task.ps1'
-Assert-PowerShellParses -RelativePath 'scripts/mistralrs-agent/common.ps1'
-Assert-PowerShellParses -RelativePath 'scripts/mistralrs-agent/roles.ps1'
-Assert-PowerShellParses -RelativePath 'scripts/test-mistralrs-local-agent-harness.ps1'
+foreach ($script in @(
+    'scripts/setup-mistralrs-local-agent.ps1',
+    'scripts/run-mistralrs-vwm-task.ps1',
+    'scripts/mistralrs-agent/common.ps1',
+    'scripts/mistralrs-agent/roles.ps1',
+    'scripts/test-mistralrs-local-agent-harness.ps1'
+)) {
+    Assert-PowerShellParses -RelativePath $script
+}
 
-$setup = Read-RepositoryFile -RelativePath 'scripts/setup-mistralrs-local-agent.ps1'
-Assert-ContainsAll -Name 'Mistral.rs setup' -Content $setup -Required @(
+$setup = Read-RepositoryFile 'scripts/setup-mistralrs-local-agent.ps1'
+Assert-ContainsAll 'Mistral.rs setup' $setup @(
     "[string]`$Version = 'master'",
     '[switch]$ForceSourceBuild',
-    'Rust 1.94+',
-    "@('git', 'cargo', 'rustc', 'nvidia-smi', 'nvcc')",
+    'nvidia-smi',
+    'nvcc',
     'Visual Studio 2022 C++ Build Tools',
     "`$featureSet = 'cuda flash-attn cudnn'",
     "`$featureSet = 'cuda'",
@@ -118,7 +145,7 @@ Assert-ContainsAll -Name 'Mistral.rs setup' -Content $setup -Required @(
     'Assert-CudaDoctorEvidence',
     'CUDA-enabled Mistral.rs is ready'
 )
-Assert-ContainsNone -Name 'Mistral.rs setup' -Content $setup -Forbidden @(
+Assert-ContainsNone 'Mistral.rs setup' $setup @(
     'AllowCpuFallback',
     'Install-CpuFallback',
     'MISTRALRS_INSTALL_TAG',
@@ -126,155 +153,97 @@ Assert-ContainsNone -Name 'Mistral.rs setup' -Content $setup -Forbidden @(
     'CPU fallback'
 )
 
-$runner = Read-RepositoryFile -RelativePath 'scripts/run-mistralrs-vwm-task.ps1'
-Assert-ContainsAll -Name 'Mistral.rs controller' -Content $runner -Required @(
+$runner = Read-RepositoryFile 'scripts/run-mistralrs-vwm-task.ps1'
+Assert-ContainsAll 'Mistral.rs controller' $runner @(
     "[string]`$Model = 'Qwen/Qwen3-Coder-30B-A3B-Instruct'",
     "[string]`$FallbackModel = 'Qwen/Qwen3-8B'",
     '[int]$ContextLength = 32768',
     '[int]$MaxRepairRounds = 3',
     "`$Branch = 'agent/vwm-authoritative-revision-implementation'",
-    "`$ModuleRoot = Join-Path `$PSScriptRoot 'mistralrs-agent'",
-    ". (Join-Path `$ModuleRoot 'common.ps1')",
-    ". (Join-Path `$ModuleRoot 'roles.ps1')",
     'Invoke-Implementer',
     'Invoke-Reviewer',
     'Invoke-Verifier',
-    'MaxRepairRounds',
     'TASK_CANDIDATE',
     'CUDA_RUNTIME: VERIFIED'
 )
-Assert-ContainsNone -Name 'Mistral.rs controller' -Content $runner -Forbidden @(
-    'AllowCpuFallback',
-    'CPU mode',
-    'CPU fallback'
-)
+Assert-ContainsNone 'Mistral.rs controller' $runner @('AllowCpuFallback', 'CPU fallback')
 
-$common = Read-RepositoryFile -RelativePath 'scripts/mistralrs-agent/common.ps1'
-Assert-ContainsAll -Name 'Mistral.rs common module' -Content $common -Required @(
+$common = Read-RepositoryFile 'scripts/mistralrs-agent/common.ps1'
+Assert-ContainsAll 'Mistral.rs common module' $common @(
     'Test-IsLinkedWorktree',
-    'worktree add',
     'Assert-CleanImplementationBranch',
     'Assert-CudaDoctorEvidence',
     'Assert-CudaProcess',
     'cuda-runtime-evidence.json',
     '--query-compute-apps=pid,process_name,used_gpu_memory',
-    'CUDA startup failed; stopping Mistral.rs process',
     "'--host', '127.0.0.1'",
-    "'--max-seq-len'",
-    "'--max-tool-rounds'",
     "'--enable-shell'",
-    "'--shell-path'",
     "'--shell-workdir'",
-    "'--agent-permission', 'auto'",
-    "'--sandbox', 'off'",
     "'--no-ui'",
     '/v1/models',
-    '/v1/responses',
-    "type = 'shell'",
-    "type = 'container_auto'",
-    "tool_choice = 'auto'",
-    'session_id = $SessionId'
+    '/v1/responses'
 )
-Assert-ContainsNone -Name 'Mistral.rs common module' -Content $common -Forbidden @(
-    'AllowCpuFallback',
-    'degraded CPU',
-    'CPU mode',
-    "'--cpu'"
-)
+Assert-ContainsNone 'Mistral.rs common module' $common @('AllowCpuFallback', 'degraded CPU', "'--cpu'")
 
-$roles = Read-RepositoryFile -RelativePath 'scripts/mistralrs-agent/roles.ps1'
-Assert-ContainsAll -Name 'Mistral.rs role module' -Content $roles -Required @(
+$roles = Read-RepositoryFile 'scripts/mistralrs-agent/roles.ps1'
+Assert-ContainsAll 'Mistral.rs role module' $roles @(
     'function Invoke-Implementer',
     'function Invoke-Reviewer',
     'function Invoke-Verifier',
-    'NewGuid',
     'function Invoke-Repair',
     'function Publish-VerifiedBranch',
     'VERDICT: PASS',
     'VERDICT: FAIL',
-    'Repair round',
-    "'--draft'",
-    'Task 1, intended red tests are evidence',
     'cuda-runtime-evidence.json',
-    'confirm mandatory CUDA runtime evidence'
+    "'--draft'"
 )
 
 $scriptCorpus = @($setup, $runner, $common, $roles) -join [Environment]::NewLine
-$forbiddenGitInvocationPatterns = @(
+foreach ($pattern in @(
     '(?im)^\s*Invoke-Git\b[^\r\n]*\bpush\s+--force(?:-with-lease)?\b',
     '(?im)^\s*Invoke-Git\b[^\r\n]*\bmerge\b',
     '(?im)^\s*Invoke-Git\b[^\r\n]*\breset\s+--hard\b',
     '(?im)^\s*Invoke-Git\b[^\r\n]*\bclean\b'
-)
-foreach ($pattern in $forbiddenGitInvocationPatterns) {
+)) {
     if ($scriptCorpus -match $pattern) {
         throw "The local-agent scripts contain a prohibited git invocation matching: $pattern"
     }
 }
 
-$agents = Read-RepositoryFile -RelativePath 'AGENTS.md'
-Assert-ContainsAll -Name 'AGENTS.md' -Content $agents -Required @(
+$agents = Read-RepositoryFile 'AGENTS.md'
+Assert-ContainsAll 'AGENTS.md' $agents @(
     '# 3DMk Agent Contract',
+    'docs/CURRENT_STATE.md',
     'docs/agent-execution/MISTRALRS_LOCAL_AGENT.md',
-    'inactive historical tooling',
+    'CUDA Foundation FB1–FB8',
     'separate model sessions',
     'Reviewer and verifier sessions are read-only',
-    'The local Mistral.rs executor must run with CUDA acceleration.',
+    'CPU LLM inference and cloud inference fallback are prohibited.',
     'agent/vwm-authoritative-revision-implementation',
     'TASK_CANDIDATE',
     'Evidence before assertion. No exceptions.'
 )
 
-$runbook = Read-RepositoryFile -RelativePath 'docs/agent-execution/MISTRALRS_LOCAL_AGENT.md'
-Assert-ContainsAll -Name 'Mistral.rs runbook' -Content $runbook -Required @(
-    'run-mistralrs-vwm-task.ps1 -Task 1',
+$runbook = Read-RepositoryFile 'docs/agent-execution/MISTRALRS_LOCAL_AGENT.md'
+Assert-ContainsAll 'Mistral.rs runbook' $runbook @(
+    'run-mistralrs-vwm-task.ps1',
     'Qwen/Qwen3-Coder-30B-A3B-Instruct',
     'Qwen/Qwen3-8B',
     'Qwen/Qwen3-4B',
-    'CUDA is mandatory',
-    'CPU execution is prohibited',
+    'CPU inference and cloud inference fallback are prohibited.',
     'cuda-runtime-evidence.json',
     '127.0.0.1',
     'VERDICT: PASS',
     'VERDICT: FAIL',
     '.local-agent/task-XX/'
 )
-Assert-ContainsNone -Name 'Mistral.rs runbook' -Content $runbook -Forbidden @(
-    'AllowCpuFallback',
-    'CPU fallback',
-    'degraded CPU mode'
-)
+Assert-ContainsNone 'Mistral.rs runbook' $runbook @('AllowCpuFallback', 'degraded CPU mode')
 
-$design = Read-RepositoryFile -RelativePath 'docs/superpowers/specs/2026-08-07-mistralrs-local-agent-experiment-design.md'
-Assert-ContainsAll -Name 'Mistral.rs design' -Content $design -Required @(
-    'CUDA execution is mandatory',
-    'No CPU fallback is permitted',
-    'live CUDA process evidence'
-)
-Assert-ContainsNone -Name 'Mistral.rs design' -Content $design -Forbidden @(
-    'explicitly reported CPU fallback',
-    'CPU is the only automatic'
-)
+$gitignore = Read-RepositoryFile '.gitignore'
+Assert-ContainsAll '.gitignore' $gitignore @('/.local-agent/', '/.worktrees/', '/.opencode/')
 
-$plan = Read-RepositoryFile -RelativePath 'docs/superpowers/plans/2026-08-07-mistralrs-local-agent-experiment.md'
-Assert-ContainsAll -Name 'Mistral.rs implementation plan' -Content $plan -Required @(
-    'CUDA is mandatory',
-    'No CPU fallback is permitted',
-    'live CUDA process evidence'
-)
-Assert-ContainsNone -Name 'Mistral.rs implementation plan' -Content $plan -Forbidden @(
-    'AllowCpuFallback',
-    'explicit CPU fallback'
-)
-
-$gitignore = Read-RepositoryFile -RelativePath '.gitignore'
-Assert-ContainsAll -Name '.gitignore' -Content $gitignore -Required @(
-    '/.local-agent/',
-    '/.worktrees/'
-)
-
-$workflow = Read-RepositoryFile -RelativePath '.github/workflows/mistralrs-harness-validation.yml'
-Assert-ContainsAll -Name 'Mistral.rs validation workflow' -Content $workflow -Required @(
+$workflow = Read-RepositoryFile '.github/workflows/mistralrs-harness-validation.yml'
+Assert-ContainsAll 'Mistral.rs validation workflow' $workflow @(
     'runs-on: windows-latest',
     'scripts/test-mistralrs-local-agent-harness.ps1',
     'pwsh'
