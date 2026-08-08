@@ -1,0 +1,50 @@
+name: Mistral.rs Local Agent Harness Validation
+
+on:
+  push:
+    branches:
+      - agent/vwm-authoritative-revision-implementation
+    paths:
+      - AGENTS.md
+      - .gitignore
+      - docs/agent-execution/MISTRALRS_LOCAL_AGENT.md
+      - docs/superpowers/specs/2026-08-07-mistralrs-local-agent-experiment-design.md
+      - docs/superpowers/plans/2026-08-07-mistralrs-local-agent-experiment.md
+      - scripts/setup-mistralrs-local-agent.ps1
+      - scripts/run-mistralrs-vwm-task.ps1
+      - scripts/mistralrs-agent/common.ps1
+      - scripts/mistralrs-agent/roles.ps1
+      - scripts/test-mistralrs-local-agent-harness.ps1
+      - .github/workflows/mistralrs-harness-validation.yml
+  pull_request:
+    paths:
+      - AGENTS.md
+      - .gitignore
+      - docs/agent-execution/MISTRALRS_LOCAL_AGENT.md
+      - docs/superpowers/specs/2026-08-07-mistralrs-local-agent-experiment-design.md
+      - docs/superpowers/plans/2026-08-07-mistralrs-local-agent-experiment.md
+      - scripts/setup-mistralrs-local-agent.ps1
+      - scripts/run-mistralrs-vwm-task.ps1
+      - scripts/mistralrs-agent/common.ps1
+      - scripts/mistralrs-agent/roles.ps1
+      - scripts/test-mistralrs-local-agent-harness.ps1
+      - .github/workflows/mistralrs-harness-validation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-validation:
+    name: PowerShell contract and safety checks
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Parse and validate the local-agent harness
+        shell: pwsh
+        run: |
+          pwsh -NoLogo -NoProfile -File scripts/test-mistralrs-local-agent-harness.ps1
