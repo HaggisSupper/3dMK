@@ -1,19 +1,23 @@
 [CmdletBinding()]
 param(
     [string]$Version = 'master',
-    [switch]$ForceSourceBuild,
-    [switch]$AllowCpuFallback
+    [switch]$ForceSourceBuild
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$InstallStateRoot = Join-Path $env:LOCALAPPDATA 'mistralrs-source'
+$InstallStateRoot = if ($env:LOCALAPPDATA) {
+    Join-Path $env:LOCALAPPDATA 'mistralrs-source'
+}
+else {
+    Join-Path $env:TEMP 'mistralrs-source'
+}
 $CudaMarkerPath = Join-Path $InstallStateRoot 'cuda-install.json'
 
 function Write-Step {
-    param([string]$Message)
+    param([Parameter(Mandatory)][string]$Message)
     Write-Host "[mistral.rs setup] $Message"
 }
 
@@ -29,6 +33,7 @@ function Invoke-Native {
         [Parameter(Mandatory)][string]$FilePath,
         [Parameter(ValueFromRemainingArguments)][string[]]$Arguments
     )
+
     & $FilePath @Arguments
     if ($LASTEXITCODE -ne 0) {
         throw "Command failed with exit code ${LASTEXITCODE}: $FilePath $($Arguments -join ' ')"
@@ -36,33 +41,83 @@ function Invoke-Native {
 }
 
 function Get-MistralDoctorText {
-    $mistral = Get-CommandPath 'mistralrs'
-    if (-not $mistral) { return '' }
-    return (& $mistral doctor 2>&1 | Out-String)
+    param([Parameter(Mandatory)][string]$MistralPath)
+    return (& $MistralPath doctor 2>&1 | Out-String)
+}
+
+function Assert-CudaDoctorEvidence {
+    param([Parameter(Mandatory)][string]$DoctorText)
+
+    if (-not $DoctorText.Trim()) {
+        throw 'mistralrs doctor returned no diagnostic output.'
+    }
+
+    $compiledForCuda = $DoctorText -match '(?im)^\s*(?:\[INFO\]\s*)?(?:build|compiled)\s+features\s*:[^\r\n]*\bcuda\b'
+    $cudaHardwareDetected = $DoctorText -match '(?im)^\s*(?:\[INFO\]\s*)?CUDA\s*:[^\r\n]+'
+
+    if (-not $compiledForCuda) {
+        throw 'mistralrs doctor does not report the CUDA build feature.'
+    }
+    if (-not $cudaHardwareDetected) {
+        throw 'mistralrs doctor does not report a detected CUDA toolkit and NVIDIA driver.'
+    }
+}
+
+function Assert-NvidiaGpuAvailable {
+    $nvidiaSmi = Get-CommandPath 'nvidia-smi'
+    if (-not $nvidiaSmi) {
+        throw 'nvidia-smi is required for the CUDA-only local executor.'
+    }
+
+    $gpuRows = & $nvidiaSmi --query-gpu=index,name,driver_version,memory.total --format=csv,noheader,nounits 2>&1
+    if ($LASTEXITCODE -ne 0 -or -not ($gpuRows | Out-String).Trim()) {
+        throw "nvidia-smi could not enumerate an NVIDIA GPU:`n$($gpuRows | Out-String)"
+    }
+    Write-Step "Detected NVIDIA GPU:`n$($gpuRows | Out-String)"
+}
+
+function Test-CudaMarker {
+    param([Parameter(Mandatory)][string]$MistralPath)
+
+    if (-not (Test-Path -LiteralPath $CudaMarkerPath)) { return $false }
+
+    try {
+        $marker = Get-Content -LiteralPath $CudaMarkerPath -Raw | ConvertFrom-Json
+        $resolvedBinary = (Resolve-Path -LiteralPath $MistralPath).Path
+        $binaryHash = (Get-FileHash -LiteralPath $resolvedBinary -Algorithm SHA256).Hash
+        return (
+            $marker.binary_path -eq $resolvedBinary -and
+            $marker.binary_sha256 -eq $binaryHash -and
+            [string]$marker.features -match '(^|\s)cuda($|\s)'
+        )
+    }
+    catch {
+        Write-Warning "Ignoring an invalid Mistral.rs CUDA marker: $($_.Exception.Message)"
+        return $false
+    }
 }
 
 function Test-CudaMistralRs {
-    $mistral = Get-CommandPath 'mistralrs'
-    if (-not $mistral) { return $false }
+    param([Parameter(Mandatory)][string]$MistralPath)
 
-    if (Test-Path -LiteralPath $CudaMarkerPath) {
-        try {
-            $marker = Get-Content -LiteralPath $CudaMarkerPath -Raw | ConvertFrom-Json
-            $resolvedBinary = (Resolve-Path -LiteralPath $mistral).Path
-            $binaryHash = (Get-FileHash -LiteralPath $resolvedBinary -Algorithm SHA256).Hash
-            if ($marker.binary_path -eq $resolvedBinary -and $marker.binary_sha256 -eq $binaryHash) {
-                Write-Step "Verified the CUDA source-build marker for $resolvedBinary."
-                return $true
-            }
+    try {
+        Assert-NvidiaGpuAvailable
+        $doctor = Get-MistralDoctorText -MistralPath $MistralPath
+        Write-Host $doctor.TrimEnd()
+        Assert-CudaDoctorEvidence -DoctorText $doctor
+
+        if (Test-CudaMarker -MistralPath $MistralPath) {
+            Write-Step "Verified the CUDA source-build marker for $MistralPath."
         }
-        catch {
-            Write-Warning "Ignoring an invalid Mistral.rs CUDA marker: $($_.Exception.Message)"
+        else {
+            Write-Step 'CUDA was confirmed by mistralrs doctor; no matching local source-build marker was found.'
         }
+        return $true
     }
-
-    $doctor = Get-MistralDoctorText
-    if ($doctor) { Write-Host $doctor.TrimEnd() }
-    return $doctor -match '(?im)(build features|accelerator|backend).{0,120}\bcuda\b'
+    catch {
+        Write-Warning $_.Exception.Message
+        return $false
+    }
 }
 
 function Write-CudaInstallMarker {
@@ -71,6 +126,7 @@ function Write-CudaInstallMarker {
         [Parameter(Mandatory)][string]$SourceCommit,
         [Parameter(Mandatory)][string]$FeatureSet
     )
+
     New-Item -ItemType Directory -Force -Path $InstallStateRoot | Out-Null
     $resolvedBinary = (Resolve-Path -LiteralPath $BinaryPath).Path
     [ordered]@{
@@ -86,6 +142,7 @@ function Write-CudaInstallMarker {
 function Get-RustVersion {
     $rustc = Get-CommandPath 'rustc'
     if (-not $rustc) { return $null }
+
     $text = (& $rustc --version 2>&1 | Out-String).Trim()
     if ($text -match 'rustc\s+(\d+)\.(\d+)\.(\d+)') {
         return [version]::new([int]$Matches[1], [int]$Matches[2], [int]$Matches[3])
@@ -98,46 +155,18 @@ function Test-VisualStudioBuildTools {
     foreach ($root in $roots) {
         $vswhere = Join-Path $root 'Microsoft Visual Studio\Installer\vswhere.exe'
         if (-not (Test-Path -LiteralPath $vswhere)) { continue }
+
         $installation = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
         if ($installation) { return $true }
     }
     return $false
 }
 
-function Install-CpuFallback {
-    Write-Step 'Installing the official Windows CPU binary as an explicitly allowed degraded fallback.'
-    if ($Version -and $Version -ne 'master') {
-        $env:MISTRALRS_INSTALL_TAG = $Version
-    }
-    try {
-        $installer = Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/EricLBuehler/mistral.rs/master/install.ps1'
-        Invoke-Expression $installer
-    }
-    finally {
-        Remove-Item Env:MISTRALRS_INSTALL_TAG -ErrorAction SilentlyContinue
-    }
-    $managedBin = Join-Path $env:USERPROFILE '.local\bin'
-    if (Test-Path -LiteralPath $managedBin) {
-        $env:PATH = "$managedBin;$env:PATH"
-    }
-    if (-not (Get-CommandPath 'mistralrs')) {
-        throw 'The official Mistral.rs installer completed without placing mistralrs on PATH.'
-    }
-    Remove-Item -LiteralPath $CudaMarkerPath -Force -ErrorAction SilentlyContinue
-    $doctor = Get-MistralDoctorText
-    if ($doctor) { Write-Host $doctor.TrimEnd() }
-    Write-Warning 'Mistral.rs is installed without CUDA. Local agent execution will be materially slower.'
-}
-
 $mistral = Get-CommandPath 'mistralrs'
 if ($mistral -and -not $ForceSourceBuild) {
     Write-Step "Existing binary found at $mistral."
-    if (Test-CudaMistralRs) {
-        Write-Step 'Existing installation is confirmed as the CUDA source build; no rebuild is required.'
-        exit 0
-    }
-    if ($AllowCpuFallback) {
-        Write-Warning 'Existing Mistral.rs installation is not CUDA-confirmed; retaining it because -AllowCpuFallback was supplied.'
+    if (Test-CudaMistralRs -MistralPath $mistral) {
+        Write-Step 'Existing Mistral.rs installation satisfies the mandatory CUDA contract.'
         exit 0
     }
     Write-Step 'Existing installation is not CUDA-confirmed; preparing a CUDA source build.'
@@ -160,20 +189,17 @@ elseif ($rustVersion -lt [version]'1.94.0') {
 }
 
 if ($missing.Count -gt 0) {
-    if ($AllowCpuFallback) {
-        Write-Warning ("CUDA source build prerequisites are missing: {0}" -f ($missing -join ', '))
-        Install-CpuFallback
-        exit 0
-    }
     $instructions = @(
         'A native Windows CUDA build cannot start because these prerequisites are missing:',
         ($missing | ForEach-Object { "  - $_" }),
         '',
         'Install Rust 1.94+, Visual Studio 2022 C++ Build Tools, the NVIDIA driver, and the CUDA toolkit.',
-        'Then rerun this script. Add -AllowCpuFallback only when CPU inference is deliberately acceptable.'
+        'The local 3DMk agent will not run without CUDA.'
     ) -join [Environment]::NewLine
     throw $instructions
 }
+
+Assert-NvidiaGpuAvailable
 
 $sourceRoot = Join-Path $InstallStateRoot ($Version -replace '[^A-Za-z0-9_.-]', '_')
 New-Item -ItemType Directory -Force -Path $InstallStateRoot | Out-Null
@@ -182,6 +208,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $sourceRoot '.git'))) {
     if (Test-Path -LiteralPath $sourceRoot) {
         throw "Refusing to replace non-git directory: $sourceRoot"
     }
+
     Write-Step "Cloning Mistral.rs ref $Version into $sourceRoot."
     try {
         Invoke-Native (Get-CommandPath 'git') clone --depth 1 --branch $Version https://github.com/EricLBuehler/mistral.rs.git $sourceRoot
@@ -238,12 +265,7 @@ if (-not $fullFeatureBuildPassed) {
         Invoke-Native $cargo install --path (Join-Path $sourceRoot 'mistralrs-cli') --locked --features $featureSet --force
     }
     catch {
-        if ($AllowCpuFallback) {
-            Write-Warning "The CUDA-only build also failed: $($_.Exception.Message)"
-            Install-CpuFallback
-            exit 0
-        }
-        throw 'Mistral.rs failed to compile with both the full CUDA feature set and the CUDA-only fallback.'
+        throw "Mistral.rs failed to compile with both mandatory CUDA feature sets: $($_.Exception.Message)"
     }
 }
 
@@ -255,8 +277,12 @@ $mistral = Get-CommandPath 'mistralrs'
 if (-not $mistral) {
     throw 'Cargo completed but mistralrs is not available on PATH.'
 }
+
 Write-CudaInstallMarker -BinaryPath $mistral -SourceCommit $sourceCommit -FeatureSet $featureSet
-if (-not (Test-CudaMistralRs)) {
+$doctor = Get-MistralDoctorText -MistralPath $mistral
+Write-Host $doctor.TrimEnd()
+Assert-CudaDoctorEvidence -DoctorText $doctor
+if (-not (Test-CudaMarker -MistralPath $mistral)) {
     throw 'The CUDA installation marker could not be verified against the installed Mistral.rs binary.'
 }
 
