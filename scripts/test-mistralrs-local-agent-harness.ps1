@@ -254,7 +254,7 @@ Assert-ContainsAll 'AGENTS.md' $agents @(
     'CUDA Foundation FB1–FB8',
     'separate model sessions',
     'Reviewer and verifier sessions are read-only',
-    'origin/main is an ancestor of the active implementation branch',
+    '- Before model startup, `origin/main` must be an ancestor of the active implementation branch.',
     'CPU LLM inference and cloud inference fallback are prohibited.',
     'agent/vwm-authoritative-revision-implementation',
     'TASK_CANDIDATE',
