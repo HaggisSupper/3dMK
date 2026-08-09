@@ -1,8 +1,8 @@
 # 3DMk Current Implementation State
 
 **Audit date:** 2026-08-07  
-**Audited runtime/product baseline:** source behavior through PR #10 at `e42cb081e0d940c686ed8c6309ad339e51f55e9d`; subsequent merged changes are documentation-only  
-**Branch alignment:** `agent/vwm-authoritative-revision-implementation` is synchronized with current `main`  
+**Audited runtime/product baseline:** source behavior through PR #10 at `e42cb081e0d940c686ed8c6309ad339e51f55e9d`; this baseline is commit-scoped and does not classify later changes  
+**Branch admission policy:** Before model startup, the controller fetches current `origin/main`, fast-forwards the branch when it is strictly behind, blocks on divergence, and admits work only after proving `origin/main` is an ancestor of the active implementation branch.  
 **Product state:** active implementation; not deployment-ready; `PROJECT_COMPLETE` has not been reached
 
 ## 1. What 3DMk is now
