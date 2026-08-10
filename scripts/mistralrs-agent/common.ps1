@@ -29,11 +29,18 @@ function Invoke-Git {
     $git = Get-CommandPath 'git'
     if (-not $git) { throw 'git is required.' }
 
-    $output = & $git -C $WorkingDirectory @Arguments 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "git $($Arguments -join ' ') failed:`n$($output | Out-String)"
+    $previousErrorAction = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $output = & $git -C $WorkingDirectory @Arguments 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "git $($Arguments -join ' ') failed:`n$($output | Out-String)"
+        }
+        return @($output)
     }
-    return @($output)
+    finally {
+        $ErrorActionPreference = $previousErrorAction
+    }
 }
 
 function Test-GitRef {

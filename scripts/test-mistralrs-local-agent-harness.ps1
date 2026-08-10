@@ -62,7 +62,7 @@ function Assert-ContainsAll {
         [Parameter(Mandatory)][string[]]$Required
     )
     foreach ($value in $Required) {
-        if (-not $Content.Contains($value, [StringComparison]::Ordinal)) {
+        if ($Content.IndexOf($value, [StringComparison]::Ordinal) -lt 0) {
             throw "$Name is missing required contract text: $value"
         }
     }
@@ -75,7 +75,7 @@ function Assert-ContainsNone {
         [Parameter(Mandatory)][string[]]$Forbidden
     )
     foreach ($value in $Forbidden) {
-        if ($Content.Contains($value, [StringComparison]::OrdinalIgnoreCase)) {
+        if ($Content.IndexOf($value, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
             throw "$Name contains prohibited contract text: $value"
         }
     }
@@ -115,11 +115,18 @@ function Invoke-NativeChecked {
         [Parameter(Mandatory)][string]$FilePath,
         [Parameter(ValueFromRemainingArguments)][string[]]$Arguments
     )
-    $output = & $FilePath @Arguments 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "$FilePath $($Arguments -join ' ') failed:`n$($output | Out-String)"
+    $previousErrorAction = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $output = & $FilePath @Arguments 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "$FilePath $($Arguments -join ' ') failed:`n$($output | Out-String)"
+        }
+        @($output)
     }
-    @($output)
+    finally {
+        $ErrorActionPreference = $previousErrorAction
+    }
 }
 
 foreach ($relativePath in $requiredFiles) {
