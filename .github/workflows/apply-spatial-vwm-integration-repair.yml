@@ -1,6 +1,13 @@
 name: Apply Spatial VWM Integration Repair
 
 on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
   push:
     branches:
       - agent/spatial-vwm-feature-integration
@@ -14,7 +21,7 @@ concurrency:
 
 jobs:
   repair:
-    if: ${{ !contains(github.event.head_commit.message, '[integration-repair-applied]') }}
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.ref == 'agent/spatial-vwm-feature-integration' }}
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
@@ -34,12 +41,13 @@ jobs:
         run: |
           pwsh -NoLogo -NoProfile -File scripts/repair-spatial-vwm-integration.ps1
 
-      - name: Commit repaired production files
+      - name: Commit repaired production files when required
         shell: pwsh
         run: |
           $changes = @(git status --porcelain)
           if ($changes.Count -eq 0) {
-            throw 'The repair workflow produced no tracked changes.'
+            Write-Host 'The bounded integration repair is already applied.'
+            exit 0
           }
           $allowed = @('src/api.rs', 'src/ai_vision.rs')
           $changedPaths = @($changes | ForEach-Object { $_.Substring(3).Replace('\', '/') })
