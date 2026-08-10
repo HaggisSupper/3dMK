@@ -1,6 +1,13 @@
 # Common functions for the 3DMk local Mistral.rs task controller.
 # Dot-source this file from scripts/run-mistralrs-vwm-task.ps1.
 
+if (-not (Get-Variable -Name Branch -Scope Script -ErrorAction SilentlyContinue)) {
+    $script:Branch = 'agent/vwm-authoritative-revision-implementation'
+}
+if (-not (Get-Variable -Name BaseBranch -Scope Script -ErrorAction SilentlyContinue)) {
+    $script:BaseBranch = 'main'
+}
+
 function Write-Step {
     param([Parameter(Mandatory)][string]$Message)
     Write-Host "[3DMk local agent] $Message"
@@ -38,6 +45,66 @@ function Test-GitRef {
     $git = Get-CommandPath 'git'
     & $git -C $WorkingDirectory show-ref --verify --quiet $Ref
     return $LASTEXITCODE -eq 0
+}
+
+function Test-GitAncestor {
+    param(
+        [Parameter(Mandatory)][string]$WorkingDirectory,
+        [Parameter(Mandatory)][string]$Ancestor,
+        [Parameter(Mandatory)][string]$Descendant
+    )
+
+    $git = Get-CommandPath 'git'
+    if (-not $git) { throw 'git is required.' }
+
+    & $git -C $WorkingDirectory merge-base --is-ancestor $Ancestor $Descendant
+    switch ($LASTEXITCODE) {
+        0 { return $true }
+        1 { return $false }
+        default {
+            throw "git merge-base --is-ancestor $Ancestor $Descendant failed with exit code $LASTEXITCODE."
+        }
+    }
+}
+
+function Sync-ImplementationBranchWithMain {
+    param([Parameter(Mandatory)][string]$Worktree)
+
+    Invoke-Git $Worktree fetch --prune origin $BaseBranch $Branch | Out-Null
+    $mainRef = "refs/remotes/origin/$BaseBranch"
+    if (-not (Test-GitRef -WorkingDirectory $Worktree -Ref $mainRef)) {
+        throw "BLOCKED: required mainline ref is unavailable: $mainRef"
+    }
+
+    $headSha = (Invoke-Git $Worktree rev-parse HEAD | Select-Object -First 1).Trim()
+    $mainSha = (Invoke-Git $Worktree rev-parse $mainRef | Select-Object -First 1).Trim()
+
+    if (Test-GitAncestor -WorkingDirectory $Worktree -Ancestor $mainRef -Descendant HEAD) {
+        Write-Step "Mainline admission passed: origin/$BaseBranch ($mainSha) is an ancestor of $Branch ($headSha)."
+        return [pscustomobject]@{
+            State = 'CurrentOrAhead'
+            HeadSha = $headSha
+            MainSha = $mainSha
+        }
+    }
+
+    if (Test-GitAncestor -WorkingDirectory $Worktree -Ancestor HEAD -Descendant $mainRef) {
+        Assert-CleanWorktree -Worktree $Worktree -Purpose 'Fast-forwarding the implementation branch to current main'
+        Write-Step "The implementation branch is strictly behind origin/$BaseBranch; fast-forwarding before model startup."
+        Invoke-Git $Worktree pull --ff-only origin $BaseBranch | Out-Null
+        $updatedHead = (Invoke-Git $Worktree rev-parse HEAD | Select-Object -First 1).Trim()
+        if ($updatedHead -ne $mainSha) {
+            throw "Mainline fast-forward completed at unexpected SHA $updatedHead; expected $mainSha."
+        }
+        Write-Step "Mainline admission passed after safe fast-forward to $updatedHead."
+        return [pscustomobject]@{
+            State = 'FastForwarded'
+            HeadSha = $updatedHead
+            MainSha = $mainSha
+        }
+    }
+
+    throw "BLOCKED: implementation branch has diverged from origin/$BaseBranch (HEAD $headSha; origin/$BaseBranch $mainSha). Reconcile through reviewed Git history before local model execution."
 }
 
 function Test-IsLinkedWorktree {
@@ -117,8 +184,8 @@ function Assert-CleanWorktree {
 function Resolve-AgentWorktree {
     param([Parameter(Mandatory)][string]$RepositoryRoot)
 
-    Write-Step 'Fetching the implementation branch from GitHub.'
-    Invoke-Git $RepositoryRoot fetch --prune origin | Out-Null
+    Write-Step 'Fetching the implementation branch and current mainline from GitHub.'
+    Invoke-Git $RepositoryRoot fetch --prune origin $BaseBranch $Branch | Out-Null
 
     $existing = Get-ExistingBranchWorktree -RepositoryRoot $RepositoryRoot -BranchName $Branch
     if ($existing) {
@@ -129,6 +196,7 @@ function Resolve-AgentWorktree {
             if (Test-IsLinkedWorktree -WorkingDirectory $resolvedRoot) {
                 Write-Step "The controller is already running from the isolated implementation worktree: $resolvedRoot"
                 Invoke-Git $resolvedRoot pull --ff-only origin $Branch | Out-Null
+                Sync-ImplementationBranchWithMain -Worktree $resolvedRoot | Out-Null
                 return $resolvedRoot
             }
 
@@ -141,6 +209,7 @@ function Resolve-AgentWorktree {
         else {
             Write-Step "Using existing implementation worktree: $resolvedExisting"
             Invoke-Git $resolvedExisting pull --ff-only origin $Branch | Out-Null
+            Sync-ImplementationBranchWithMain -Worktree $resolvedExisting | Out-Null
             return $resolvedExisting
         }
     }
@@ -168,7 +237,10 @@ function Resolve-AgentWorktree {
         Invoke-Git $RepositoryRoot worktree add -b $Branch $worktreePath "origin/$BaseBranch" | Out-Null
     }
 
-    Invoke-Git $worktreePath pull --ff-only origin $Branch | Out-Null
+    if (Test-GitRef $worktreePath "refs/remotes/origin/$Branch") {
+        Invoke-Git $worktreePath pull --ff-only origin $Branch | Out-Null
+    }
+    Sync-ImplementationBranchWithMain -Worktree $worktreePath | Out-Null
     Write-Step "Created isolated implementation worktree: $worktreePath"
     return (Resolve-Path -LiteralPath $worktreePath).Path
 }
