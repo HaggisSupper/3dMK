@@ -158,7 +158,7 @@ fn local_vlm_completion_url(endpoint: &str) -> Result<String> {
             "VLM endpoint must be a loopback server origin or chat-completions endpoint"
         ),
     }
-    Ok(url)
+    Ok(url.to_string())
 }
 
 pub async fn detect_objects_vlm(
