@@ -74,11 +74,6 @@ jobs:
             "    Ok(url)`n}`n`npub async fn detect_objects_vlm(",
             "    Ok(url.to_string())`n}`n`npub async fn detect_objects_vlm("
           )
-          $patched = [regex]::Replace(
-            $patched,
-            '(?s)\r?\nPush-Location \$RepositoryRoot\r?\ntry \{.*\z',
-            "`nPush-Location `$RepositoryRoot`ntry {`n    cargo fmt --all`n    if (`$LASTEXITCODE -ne 0) { throw \"Root rustfmt failed with exit code `$LASTEXITCODE\" }`n} finally {`n    Pop-Location`n}`n`nWrite-Host '3DMK_SPATIAL_VWM_INTEGRATION_REPAIR_OK'`n"
-          )
           if ($patched -eq $original) {
             throw 'Could not apply the bounded compatibility patches to the repair script.'
           }
@@ -97,11 +92,6 @@ jobs:
             $qualityOriginal,
             '(?s)\r?\n\$workflowPath = ''.github/workflows/advanced-feature-integration.yml''.*?Write-SourceFile \$workflowPath \$workflow\r?\n',
             "`n"
-          )
-          $qualityPatched = [regex]::Replace(
-            $qualityPatched,
-            '(?s)\r?\nPush-Location \$RepositoryRoot\r?\ntry \{.*\z',
-            "`nPush-Location `$RepositoryRoot`ntry {`n    cargo fmt --all`n    if (`$LASTEXITCODE -ne 0) { throw \"Root rustfmt failed with exit code `$LASTEXITCODE\" }`n} finally {`n    Pop-Location`n}`n`nWrite-Host '3DMK_SPATIAL_VWM_QUALITY_REPAIR_OK'`n"
           )
           if ($qualityPatched -eq $qualityOriginal) {
             throw 'Could not prepare the bounded quality repair script.'
