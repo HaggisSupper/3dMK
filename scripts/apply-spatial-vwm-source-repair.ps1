@@ -51,15 +51,6 @@ $integration = $integration.Replace(
 )
 $integrationTail = @'
 
-Push-Location $RepositoryRoot
-try {
-    cargo fmt --all
-    if ($LASTEXITCODE -ne 0) { throw "Root rustfmt failed with exit code $LASTEXITCODE" }
-}
-finally {
-    Pop-Location
-}
-
 Write-Host '3DMK_SPATIAL_VWM_INTEGRATION_REPAIR_OK'
 '@
 $integration = [regex]::Replace(
