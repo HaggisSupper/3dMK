@@ -49,8 +49,7 @@ fn all_operational_vwm_controls_are_exposed_and_wired() {
         "floatingExtentRatio",
         "floatingSeparationRatio",
         "vwmPerceptionMode",
-        "vlmEndpoint",
-        "vlmModel",
+        "vlmRuntimeStatus",
         "vlmConfidence",
     ] {
         assert!(html.contains(&format!("id=\"{id}\"")), "missing {id}");
@@ -63,6 +62,12 @@ fn all_operational_vwm_controls_are_exposed_and_wired() {
     assert!(html.contains("structured-ray extraction require corresponding capture data"));
     assert!(html.contains("form.append('floating_mesh_settings'"));
     assert!(html.contains("form.append('vlm_options'"));
+    assert!(html
+        .contains("Local VLM connection, model, and credentials are managed by the 3DMk runtime."));
+    assert!(!html.contains("id=\"vlmEndpoint\""));
+    assert!(!html.contains("id=\"vlmModel\""));
+    assert!(!html.contains("id=\"vlmApiKey\""));
+    assert!(!html.contains("api_key: $('vlmApiKey').value"));
     assert!(html.contains("vlm-object-detection"));
     assert!(html.contains("uniform float uDensity"));
     assert!(html.contains("id=\"strideInput\" min=\"1\" max=\"100\" step=\"1\" value=\"100\""));

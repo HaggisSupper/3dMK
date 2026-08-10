@@ -469,9 +469,7 @@
                                     <div class="control-group" aria-labelledby="vwmPerceptionHeading">
                                         <label id="vwmPerceptionHeading" for="vwmPerceptionImageInput">Advanced VWM perception</label>
                                         <select id="vwmPerceptionMode" aria-label="Perception engine"><option value="vlm">VLM object detection</option><option value="auto">VLM with deterministic fallback</option><option value="deterministic">Deterministic color regions</option></select>
-                                        <input id="vlmEndpoint" type="url" value="http://127.0.0.1:8080" placeholder="OpenAI-compatible endpoint" aria-label="VLM endpoint">
-                                        <input id="vlmModel" type="text" value="pixtral" placeholder="Vision model" aria-label="VLM model">
-                                        <input id="vlmApiKey" type="password" value="" autocomplete="off" placeholder="API key (optional for local VLM)" aria-label="VLM API key">
+                                        <div id="vlmRuntimeStatus" class="inline-note">Local VLM connection, model, and credentials are managed by the 3DMk runtime.</div>
                                         <input id="vlmCandidateLabels" type="text" value="door, window, chair, table, sofa, bed, cabinet, appliance" aria-label="Preferred object classes">
                                         <div class="control-group"><label for="vlmConfidence">Minimum confidence <span id="vlmConfidenceLabel">35%</span></label><input id="vlmConfidence" type="range" min="0" max="1" step="0.05" value="0.35"></div>
                                         <input id="vwmPerceptionImageInput" type="file" accept="image/png,image/jpeg">
@@ -3861,14 +3859,14 @@
         }
         function updateVlmControls() {
             const vlmEnabled = $('vwmPerceptionMode').value !== 'deterministic';
-            ['vlmEndpoint', 'vlmModel', 'vlmApiKey', 'vlmCandidateLabels', 'vlmConfidence'].forEach(id => { $(id).disabled = !vlmEnabled; });
+            ['vlmCandidateLabels', 'vlmConfidence'].forEach(id => { $(id).disabled = !vlmEnabled; });
+            $('vlmRuntimeStatus').textContent = vlmEnabled
+                ? 'Local VLM connection, model, and credentials are managed by the 3DMk runtime.'
+                : 'Deterministic perception selected; the managed local VLM will not be invoked.';
             $('vlmConfidenceLabel').textContent = `${Math.round(Number($('vlmConfidence').value) * 100)}%`;
         }
         function vlmDetectionOptionsFromUi() {
             return {
-                endpoint: $('vlmEndpoint').value.trim(),
-                model: $('vlmModel').value.trim(),
-                api_key: $('vlmApiKey').value,
                 candidate_labels: $('vlmCandidateLabels').value.split(',').map(label => label.trim()).filter(Boolean),
                 confidence_threshold: Number($('vlmConfidence').value)
             };

@@ -746,11 +746,34 @@ fn extract_json(content: &str) -> Option<&str> {
     (end >= start).then(|| &content[start..=end])
 }
 
+fn local_mistral_origin(endpoint: &str) -> Option<String> {
+    let mut url = reqwest::Url::parse(endpoint.trim().trim_end_matches('/')).ok()?;
+    if url.scheme() != "http" {
+        return None;
+    }
+    if !matches!(
+        url.host_str().unwrap_or_default(),
+        "127.0.0.1" | "localhost" | "::1"
+    ) {
+        return None;
+    }
+    if !url.username().is_empty()
+        || url.password().is_some()
+        || url.query().is_some()
+        || url.fragment().is_some()
+        || !matches!(url.path(), "" | "/")
+    {
+        return None;
+    }
+    url.set_path("");
+    Some(url.to_string().trim_end_matches('/').to_string())
+}
+
 fn mistral_endpoint() -> String {
     std::env::var("MISTRAL_ENDPOINT")
-        .unwrap_or_else(|_| "http://127.0.0.1:8080".to_string())
-        .trim_end_matches('/')
-        .to_string()
+        .ok()
+        .and_then(|endpoint| local_mistral_origin(&endpoint))
+        .unwrap_or_else(|| "http://127.0.0.1:8080".to_string())
 }
 
 fn base64_encode(data: &[u8]) -> String {
@@ -779,6 +802,27 @@ fn base64_encode(data: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mistral_endpoint_origin_is_loopback_only() {
+        for endpoint in [
+            "http://127.0.0.1:8080",
+            "http://localhost:8080",
+            "http://[::1]:8080/",
+        ] {
+            assert!(local_mistral_origin(endpoint).is_some(), "{endpoint}");
+        }
+        for endpoint in [
+            "https://127.0.0.1:8080",
+            "http://example.com:8080",
+            "http://user:password@127.0.0.1:8080",
+            "http://127.0.0.1:8080/proxy",
+            "http://127.0.0.1:8080?target=remote",
+            "file:///tmp/model",
+        ] {
+            assert!(local_mistral_origin(endpoint).is_none(), "{endpoint}");
+        }
+    }
 
     #[test]
     fn vlm_endpoint_is_loopback_only() {

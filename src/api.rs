@@ -43,6 +43,8 @@ const MAX_CALIBRATED_MANIFEST_BYTES: usize = 512 * 1024;
 const MAX_CALIBRATED_PROVENANCE_BYTES: usize = 16 * 1024;
 const MAX_CALIBRATED_OPTIONS_BYTES: usize = 64 * 1024;
 const MAX_CALIBRATED_COMPRESSED_IMAGE_BYTES: usize = 192 * 1024 * 1024;
+const MAX_VWM_PERCEPTION_ROUTE_BODY_BYTES: usize =
+    perception::MAX_VWM_PERCEPTION_IMAGE_BYTES + 512 * 1024;
 
 pub fn create_router(
     output_dir: PathBuf,
@@ -107,7 +109,11 @@ pub fn create_router(
             "/api/vwm-geometry-analyze",
             post(handle_vwm_geometry_analysis).layer(DefaultBodyLimit::max(256 * 1024 * 1024)),
         )
-        .route("/api/vwm-perception", post(handle_vwm_perception))
+        .route(
+            "/api/vwm-perception",
+            post(handle_vwm_perception)
+                .layer(DefaultBodyLimit::max(MAX_VWM_PERCEPTION_ROUTE_BODY_BYTES)),
+        )
         .route(
             "/api/flat-surface-correct",
             post(handle_flat_surface_correction),
