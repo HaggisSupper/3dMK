@@ -74,6 +74,11 @@ jobs:
             "    Ok(url)`n}`n`npub async fn detect_objects_vlm(",
             "    Ok(url.to_string())`n}`n`npub async fn detect_objects_vlm("
           )
+          $patched = [regex]::Replace(
+            $patched,
+            '(?s)\r?\nPush-Location \$RepositoryRoot\r?\ntry \{.*\z',
+            "`nPush-Location `$RepositoryRoot`ntry {`n    cargo fmt --all`n    if (`$LASTEXITCODE -ne 0) { throw \"Root rustfmt failed with exit code `$LASTEXITCODE\" }`n} finally {`n    Pop-Location`n}`n`nWrite-Host '3DMK_SPATIAL_VWM_INTEGRATION_REPAIR_OK'`n"
+          )
           if ($patched -eq $original) {
             throw 'Could not apply the bounded compatibility patches to the repair script.'
           }
@@ -86,8 +91,29 @@ jobs:
             Set-Content -LiteralPath $scriptPath -Value $original -Encoding utf8 -NoNewline
           }
 
-          pwsh -NoLogo -NoProfile -File scripts/repair-spatial-vwm-quality.ps1
-          if ($LASTEXITCODE -ne 0) { throw "Quality repair failed with exit code $LASTEXITCODE" }
+          $qualityPath = 'scripts/repair-spatial-vwm-quality.ps1'
+          $qualityOriginal = Get-Content -LiteralPath $qualityPath -Raw
+          $qualityPatched = [regex]::Replace(
+            $qualityOriginal,
+            '(?s)\r?\n\$workflowPath = ''.github/workflows/advanced-feature-integration.yml''.*?Write-SourceFile \$workflowPath \$workflow\r?\n',
+            "`n"
+          )
+          $qualityPatched = [regex]::Replace(
+            $qualityPatched,
+            '(?s)\r?\nPush-Location \$RepositoryRoot\r?\ntry \{.*\z',
+            "`nPush-Location `$RepositoryRoot`ntry {`n    cargo fmt --all`n    if (`$LASTEXITCODE -ne 0) { throw \"Root rustfmt failed with exit code `$LASTEXITCODE\" }`n} finally {`n    Pop-Location`n}`n`nWrite-Host '3DMK_SPATIAL_VWM_QUALITY_REPAIR_OK'`n"
+          )
+          if ($qualityPatched -eq $qualityOriginal) {
+            throw 'Could not prepare the bounded quality repair script.'
+          }
+          try {
+            Set-Content -LiteralPath $qualityPath -Value $qualityPatched -Encoding utf8 -NoNewline
+            pwsh -NoLogo -NoProfile -File $qualityPath
+            if ($LASTEXITCODE -ne 0) { throw "Quality repair failed with exit code $LASTEXITCODE" }
+          }
+          finally {
+            Set-Content -LiteralPath $qualityPath -Value $qualityOriginal -Encoding utf8 -NoNewline
+          }
 
       - name: Commit bounded repairs when required
         shell: pwsh
@@ -98,7 +124,6 @@ jobs:
             exit 0
           }
           $allowed = @(
-            '.github/workflows/advanced-feature-integration.yml',
             'src/api.rs',
             'src/ai_vision.rs',
             'src/packages.rs',
