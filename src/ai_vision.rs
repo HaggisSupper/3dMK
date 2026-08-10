@@ -52,11 +52,26 @@ pub struct FloorplanLayout {
     pub source: String,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+fn configured_vlm_endpoint() -> String {
+    std::env::var("THREEDMK_VLM_ENDPOINT").unwrap_or_else(|_| mistral_endpoint())
+}
+
+fn configured_vlm_model() -> String {
+    std::env::var("THREEDMK_VLM_MODEL").unwrap_or_else(|_| "pixtral".to_string())
+}
+
+fn configured_vlm_api_key() -> String {
+    std::env::var("THREEDMK_VLM_API_KEY").unwrap_or_default()
+}
+
+#[derive(Clone, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct VlmObjectDetectionOptions {
+    #[serde(skip_deserializing, default = "configured_vlm_endpoint")]
     pub endpoint: String,
+    #[serde(skip_deserializing, default = "configured_vlm_model")]
     pub model: String,
+    #[serde(skip_deserializing, default = "configured_vlm_api_key")]
     pub api_key: String,
     pub candidate_labels: Vec<String>,
     pub confidence_threshold: f64,
@@ -65,9 +80,9 @@ pub struct VlmObjectDetectionOptions {
 impl Default for VlmObjectDetectionOptions {
     fn default() -> Self {
         Self {
-            endpoint: std::env::var("THREEDMK_VLM_ENDPOINT").unwrap_or_else(|_| mistral_endpoint()),
-            model: std::env::var("THREEDMK_VLM_MODEL").unwrap_or_else(|_| "pixtral".to_string()),
-            api_key: std::env::var("THREEDMK_VLM_API_KEY").unwrap_or_default(),
+            endpoint: configured_vlm_endpoint(),
+            model: configured_vlm_model(),
+            api_key: configured_vlm_api_key(),
             candidate_labels: vec![
                 "door".to_string(),
                 "window".to_string(),
@@ -119,16 +134,45 @@ fn default_detection_confidence() -> f64 {
     0.5
 }
 
+fn local_vlm_completion_url(endpoint: &str) -> Result<String> {
+    let mut url = reqwest::Url::parse(endpoint.trim().trim_end_matches('/'))
+        .context("VLM endpoint is not a valid URL")?;
+    if url.scheme() != "http" {
+        anyhow::bail!("VLM endpoint must use loopback HTTP");
+    }
+    let host = url.host_str().unwrap_or_default();
+    if !matches!(host, "127.0.0.1" | "localhost" | "::1") {
+        anyhow::bail!("VLM endpoint must use a loopback host");
+    }
+    if !url.username().is_empty() || url.password().is_some() {
+        anyhow::bail!("VLM endpoint must not contain URL credentials");
+    }
+    if url.query().is_some() || url.fragment().is_some() {
+        anyhow::bail!("VLM endpoint must not contain a query or fragment");
+    }
+    let normalized_path = url.path().trim_end_matches('/').to_owned();
+    match normalized_path.as_str() {
+        "" | "/" => url.set_path("/v1/chat/completions"),
+        "/v1/chat/completions" | "/chat/completions" => {}
+        _ => anyhow::bail!(
+            "VLM endpoint must be a loopback server origin or chat-completions endpoint"
+        ),
+    }
+    Ok(url)
+}
+
 pub async fn detect_objects_vlm(
     source_id: &str,
     image_bytes: &[u8],
     mut options: VlmObjectDetectionOptions,
 ) -> Result<VlmObjectDetectionBatch> {
-    options.endpoint = options.endpoint.trim().trim_end_matches('/').to_string();
-    options.model = options.model.trim().to_string();
-    if !options.endpoint.starts_with("http://") && !options.endpoint.starts_with("https://") {
-        anyhow::bail!("VLM endpoint must use http:// or https://");
-    }
+    options.endpoint = configured_vlm_endpoint()
+        .trim()
+        .trim_end_matches('/')
+        .to_string();
+    options.model = configured_vlm_model().trim().to_string();
+    options.api_key = configured_vlm_api_key();
+    let completion_url = local_vlm_completion_url(&options.endpoint)?;
     if options.model.is_empty() {
         anyhow::bail!("VLM model name is required");
     }
@@ -176,11 +220,7 @@ pub async fn detect_objects_vlm(
         "temperature": 0.0,
         "max_tokens": 1800
     });
-    let completion_url = if options.endpoint.ends_with("/chat/completions") {
-        options.endpoint.clone()
-    } else {
-        format!("{}/v1/chat/completions", options.endpoint)
-    };
+
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
         .build()?;
@@ -739,6 +779,42 @@ fn base64_encode(data: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn vlm_endpoint_is_loopback_only() {
+        for endpoint in [
+            "http://127.0.0.1:8080",
+            "http://localhost:8080/v1/chat/completions",
+            "http://[::1]:8080/chat/completions",
+        ] {
+            assert!(local_vlm_completion_url(endpoint).is_ok(), "{endpoint}");
+        }
+        for endpoint in [
+            "https://127.0.0.1:8080",
+            "http://example.com:8080",
+            "http://user:password@127.0.0.1:8080",
+            "http://127.0.0.1:8080/proxy",
+            "file:///tmp/model",
+        ] {
+            assert!(local_vlm_completion_url(endpoint).is_err(), "{endpoint}");
+        }
+    }
+
+    #[test]
+    fn request_payload_cannot_override_vlm_connection_or_credentials() {
+        let options: VlmObjectDetectionOptions = serde_json::from_value(serde_json::json!({
+            "endpoint": "http://example.com:9000",
+            "model": "remote-model",
+            "api_key": "request-secret",
+            "candidate_labels": ["door"],
+            "confidence_threshold": 0.4
+        }))
+        .unwrap();
+        assert_eq!(options.endpoint, configured_vlm_endpoint());
+        assert_eq!(options.model, configured_vlm_model());
+        assert_eq!(options.api_key, configured_vlm_api_key());
+        assert_ne!(options.api_key, "request-secret");
+    }
 
     #[test]
     fn base64_encode_known() {

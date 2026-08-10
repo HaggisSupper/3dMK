@@ -288,14 +288,15 @@ pub type CloudAnalysis = SceneAnalysisContext;
 impl SceneAnalysisContext {
     /// Points in clusters classified as removable artifacts are excluded from reconstruction.
     pub fn reconstruction_keep_mask(&self) -> Vec<bool> {
+        let removable_cluster_ids = self
+            .clusters
+            .iter()
+            .filter(|cluster| cluster.disposition == GeometryDisposition::Remove)
+            .map(|cluster| cluster.id)
+            .collect::<HashSet<_>>();
         self.cluster_by_point
             .iter()
-            .map(|cluster_id| {
-                self.clusters
-                    .iter()
-                    .find(|cluster| cluster.id == *cluster_id)
-                    .is_none_or(|cluster| cluster.disposition != GeometryDisposition::Remove)
-            })
+            .map(|cluster_id| !removable_cluster_ids.contains(cluster_id))
             .collect()
     }
 }

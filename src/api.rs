@@ -344,11 +344,11 @@ async fn handle_import_project(
                     .and_then(|value| value.to_str())
                     .map(str::to_ascii_lowercase)
                     .unwrap_or_default();
-                if !matches!(extension.as_str(), "glb" | "ply" | "obj") {
+                if !direct_model_extension_supported(&extension) {
                     return Err(ApiErrorResponse::new(
                         StatusCode::UNSUPPORTED_MEDIA_TYPE,
                         "unsupported_model_format",
-                        "Phase 1 import accepts GLB, PLY, or OBJ. Use a package for dependent files.",
+                        "Phase 1 import accepts GLB, GLTF, PLY, OBJ, STL, FBX, DAE, 3DS, 3MF, OFF, U3D, and X3D. Use a package for dependent files.",
                         false,
                     ));
                 }
@@ -396,7 +396,7 @@ async fn handle_import_project(
         ApiErrorResponse::new(
             StatusCode::BAD_REQUEST,
             "missing_model",
-            "Choose a GLB, PLY, or OBJ model to import.",
+            "Choose a GLB, GLTF, PLY, OBJ, STL, FBX, DAE, 3DS, 3MF, OFF, U3D, or X3D model to import.",
             false,
         )
     })?;
@@ -1070,11 +1070,28 @@ fn archive_too_large_api_error() -> ApiErrorResponse {
     )
 }
 
+const DIRECT_MODEL_EXTENSIONS: &[&str] = &[
+    "3ds", "3mf", "dae", "fbx", "glb", "gltf", "off", "obj", "ply", "stl", "u3d", "x3d",
+];
+
+fn direct_model_extension_supported(extension: &str) -> bool {
+    DIRECT_MODEL_EXTENSIONS.contains(&extension.to_ascii_lowercase().as_str())
+}
+
 fn model_media_type(extension: &str) -> &'static str {
     match extension {
+        "3ds" => "application/x-3ds",
+        "3mf" => "model/3mf",
+        "dae" => "model/vnd.collada+xml",
+        "fbx" => "model/fbx",
         "glb" => "model/gltf-binary",
-        "ply" => "application/ply",
+        "gltf" => "model/gltf+json",
+        "off" => "model/off",
         "obj" => "model/obj",
+        "ply" => "application/ply",
+        "stl" => "model/stl",
+        "u3d" => "model/u3d",
+        "x3d" => "model/x3d+xml",
         _ => "application/octet-stream",
     }
 }
@@ -1091,7 +1108,7 @@ fn validated_import_units(
         return Err(ApiErrorResponse::new(
             StatusCode::BAD_REQUEST,
             "missing_units",
-            "PLY, OBJ, STL, and LAS imports require explicit source units.",
+            "GLTF, PLY, OBJ, STL, FBX, DAE, 3DS, 3MF, OFF, U3D, X3D, and LAS imports require explicit source units.",
             false,
         ));
     };
@@ -1379,7 +1396,7 @@ fn build_capabilities(vision: bool, pdal: bool) -> Vec<CapabilityDescriptor> {
         CapabilityDescriptor {
             id: "non_destructive_cleanup",
             status: unavailable,
-            reason: "Exact component masks and reviewed immutable revision semantics are not implemented.",
+            reason: "Transient exact component masks are implemented for review, but reviewed immutable revision publication is not yet implemented.",
             engine_version: None,
             dependencies: vec![],
             supported_scene_kinds: &["point_cloud", "mesh"],
@@ -2336,15 +2353,18 @@ fn bind_calibrated_photos(
     let mut errors = Vec::new();
     for upload in uploads {
         let key = upload.filename.to_ascii_lowercase();
-        if uploads_by_name.contains_key(&key) {
-            errors.push(UnmatchedCalibratedPhoto {
-                filename: upload.filename,
-                camera_id: String::new(),
-                source_path: String::new(),
-                reason: "duplicate_upload_filename",
-            });
-        } else {
-            uploads_by_name.insert(key, upload);
+        match uploads_by_name.entry(key) {
+            std::collections::hash_map::Entry::Occupied(_) => {
+                errors.push(UnmatchedCalibratedPhoto {
+                    filename: upload.filename,
+                    camera_id: String::new(),
+                    source_path: String::new(),
+                    reason: "duplicate_upload_filename",
+                });
+            }
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                entry.insert(upload);
+            }
         }
     }
     if !errors.is_empty() {
@@ -3294,6 +3314,21 @@ mod tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[test]
+    fn direct_model_import_contract_preserves_supported_formats() {
+        for extension in DIRECT_MODEL_EXTENSIONS {
+            assert!(
+                direct_model_extension_supported(extension),
+                "missing direct import support for {extension}"
+            );
+            assert_ne!(model_media_type(extension), "application/octet-stream");
+        }
+        for extension in ["exe", "html", "js", "zip"] {
+            assert!(!direct_model_extension_supported(extension));
+        }
+        assert!(direct_model_extension_supported("GLB"));
     }
 
     #[test]

@@ -80,31 +80,21 @@ pub fn run_pdal_pipeline(input_path: &Path, output_path: &Path) -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum VwmReconstructionBackend {
+    #[default]
     Auto,
     Pdal,
     Vwm,
 }
 
-impl Default for VwmReconstructionBackend {
-    fn default() -> Self {
-        Self::Auto
-    }
-}
-
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum VwmSurfaceExtraction {
+    #[default]
     Poisson,
     SurfaceNets,
-}
-
-impl Default for VwmSurfaceExtraction {
-    fn default() -> Self {
-        Self::Poisson
-    }
 }
 
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
@@ -1450,10 +1440,7 @@ fn extend_polyline(
         hash_2d(polyline[0])
     };
 
-    loop {
-        let Some(connections) = point_map.get(&cursor) else {
-            break;
-        };
+    while let Some(connections) = point_map.get(&cursor) {
         let Some(connection) = connections.iter().find(|connection| !used[connection.idx]) else {
             break;
         };

@@ -1408,7 +1408,7 @@ fn adapter_candidates(
             reason: "One or more supported model files are present.".to_owned(),
         });
     }
-    candidates.sort_by(|left, right| right.confidence.cmp(&left.confidence));
+    candidates.sort_by_key(|candidate| std::cmp::Reverse(candidate.confidence));
     candidates
 }
 
