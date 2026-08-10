@@ -9,15 +9,20 @@ use std::{
 };
 
 use crate::ai_vision::{FloorplanLayout, FloorplanRoom};
-use crate::scene::{build_analysis_context, infer_geometry_mode, level_scene};
+use crate::scene::{
+    build_analysis_context, build_analysis_context_with_settings, infer_geometry_mode, level_scene,
+};
 pub use crate::scene::{
-    CloudAnalysis, CoordinateSystemMetadata, FlatSurfaceResult, GeometryMode, MaterialBinding,
-    Point, PointCloud, ScenePackageMetadata, TextureBinding,
+    CloudAnalysis, CoordinateSystemMetadata, FlatSurfaceResult, FloatingMeshSettings, GeometryMode,
+    MaterialBinding, Point, PointCloud, ScenePackageMetadata, TextureBinding,
 };
 use vwm_core::{CanonicalScene, GeometryAnalysis};
 use vwm_geometry::{analyze_scene as analyze_vwm_scene, GeometryConfig};
 use vwm_io::load_scene as load_vwm_scene;
-use vwm_implicit::{OrientedPointSet, PoissonConfig, PoissonReconstructor};
+use vwm_implicit::{
+    sample_field_to_grid, GridSamplingConfig, ImplicitField, OrientedPointSet, PoissonConfig,
+    PoissonReconstructor, SurfaceNetsConfig, SurfaceNetsExtractor,
+};
 
 const MAX_POINTS: usize = 2_000_000;
 
@@ -75,15 +80,108 @@ pub fn run_pdal_pipeline(input_path: &Path, output_path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Pure-Rust fallback for machines without PDAL. It samples the cloud, estimates
-/// local normals, and runs the screened-Poisson engine already shipped in VWM.
-pub fn run_implicit_pipeline(input_path: &Path, output_path: &Path) -> Result<()> {
-    let cloud = read_ascii_point_cloud(input_path)?;
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum VwmReconstructionBackend {
+    Auto,
+    Pdal,
+    Vwm,
+}
+
+impl Default for VwmReconstructionBackend {
+    fn default() -> Self {
+        Self::Auto
+    }
+}
+
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum VwmSurfaceExtraction {
+    Poisson,
+    SurfaceNets,
+}
+
+impl Default for VwmSurfaceExtraction {
+    fn default() -> Self {
+        Self::Poisson
+    }
+}
+
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct VwmReconstructionOptions {
+    pub backend: VwmReconstructionBackend,
+    pub extraction: VwmSurfaceExtraction,
+    pub sample_limit: usize,
+    pub screening: f64,
+    pub density_estimation_depth: usize,
+    pub max_depth: usize,
+    pub max_relaxation_iterations: usize,
+    pub surface_nets_resolution: u32,
+}
+
+impl Default for VwmReconstructionOptions {
+    fn default() -> Self {
+        Self {
+            backend: VwmReconstructionBackend::Auto,
+            extraction: VwmSurfaceExtraction::Poisson,
+            sample_limit: 120_000,
+            screening: 1.0,
+            density_estimation_depth: 5,
+            max_depth: 8,
+            max_relaxation_iterations: 10,
+            surface_nets_resolution: 64,
+        }
+    }
+}
+
+impl VwmReconstructionOptions {
+    pub fn validate(self) -> Result<Self> {
+        if !(4..=500_000).contains(&self.sample_limit) {
+            bail!("VWM sample_limit must be between 4 and 500000");
+        }
+        if !(2..=12).contains(&self.max_depth)
+            || self.density_estimation_depth > self.max_depth
+            || self.max_relaxation_iterations == 0
+            || self.max_relaxation_iterations > 100
+            || !self.screening.is_finite()
+            || !(0.0..=100.0).contains(&self.screening)
+        {
+            bail!("Invalid VWM Screened Poisson controls");
+        }
+        if !(16..=128).contains(&self.surface_nets_resolution) {
+            bail!("VWM Surface Nets resolution must be between 16 and 128");
+        }
+        Ok(self)
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct VwmReconstructionReport {
+    pub backend: &'static str,
+    pub extraction: &'static str,
+    pub source_points: usize,
+    pub sampled_points: usize,
+    pub output_vertices: usize,
+    pub output_triangles: usize,
+    pub options: VwmReconstructionOptions,
+}
+
+/// Pure-Rust fallback for machines without PDAL using the complete VWM controls.
+pub fn run_implicit_pipeline_with_options(
+    input_path: &Path,
+    output_path: &Path,
+    options: VwmReconstructionOptions,
+) -> Result<VwmReconstructionReport> {
+    let options = options.validate()?;
+    let cloud = cleaned_reconstruction_cloud(input_path)?;
     if cloud.points.len() < 4 {
         bail!("Point-cloud reconstruction requires at least four points");
     }
-    let sample = sample_reconstruction_points(&cloud.points, 120_000);
+    let source_points = cloud.points.len();
+    let sample = sample_reconstruction_points(&cloud.points, options.sample_limit);
     let (sample, normals) = estimate_local_normals(&sample)?;
+    let sampled_points = sample.len();
     let oriented = OrientedPointSet::new(
         sample
             .iter()
@@ -96,18 +194,37 @@ pub fn run_implicit_pipeline(input_path: &Path, output_path: &Path) -> Result<()
         .reconstruct(
             &oriented,
             PoissonConfig {
-                max_depth: 8,
-                density_estimation_depth: 5,
-                ..PoissonConfig::default()
+                screening: options.screening,
+                max_depth: options.max_depth,
+                density_estimation_depth: options.density_estimation_depth,
+                max_relaxation_iterations: options.max_relaxation_iterations,
             },
         )
         .map_err(|error| anyhow!("Rust Poisson reconstruction failed: {error}"))?;
-    let mesh = field
-        .reconstruct_mesh()
-        .map_err(|error| anyhow!("Rust Poisson mesh extraction failed: {error}"))?;
+    let mesh = match options.extraction {
+        VwmSurfaceExtraction::Poisson => field
+            .reconstruct_mesh()
+            .map_err(|error| anyhow!("Rust Poisson mesh extraction failed: {error}"))?,
+        VwmSurfaceExtraction::SurfaceNets => {
+            let resolution = options.surface_nets_resolution;
+            let grid = sample_field_to_grid(
+                &field,
+                GridSamplingConfig {
+                    bounds: field.bounds(),
+                    dimensions: [resolution, resolution, resolution],
+                },
+            )
+            .map_err(|error| anyhow!("VWM field sampling failed: {error}"))?;
+            SurfaceNetsExtractor
+                .extract(&grid, SurfaceNetsConfig::default())
+                .map_err(|error| anyhow!("VWM Surface Nets extraction failed: {error}"))?
+        }
+    };
     if mesh.positions.is_empty() || mesh.triangles.is_empty() {
         bail!("Rust Poisson reconstruction produced no triangles");
     }
+    let output_vertices = mesh.positions.len();
+    let output_triangles = mesh.triangles.len();
     let result = PointCloud {
         points: mesh
             .positions
@@ -125,7 +242,109 @@ pub fn run_implicit_pipeline(input_path: &Path, output_path: &Path) -> Result<()
             .collect(),
     };
     write_ascii_ply(output_path, &result)?;
-    Ok(())
+    Ok(VwmReconstructionReport {
+        backend: "vwm-implicit",
+        extraction: match options.extraction {
+            VwmSurfaceExtraction::Poisson => "screened_poisson",
+            VwmSurfaceExtraction::SurfaceNets => "surface_nets",
+        },
+        source_points,
+        sampled_points,
+        output_vertices,
+        output_triangles,
+        options,
+    })
+}
+
+pub fn run_implicit_pipeline(input_path: &Path, output_path: &Path) -> Result<()> {
+    run_implicit_pipeline_with_options(input_path, output_path, VwmReconstructionOptions::default())
+        .map(|_| ())
+}
+
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct VwmGeometryOptions {
+    pub patch_normal_angle_threshold_degrees: f64,
+    pub min_faces_per_patch: usize,
+    pub plane_min_vertices: usize,
+    pub parallel_angle_threshold_degrees: f64,
+    pub perpendicular_angle_threshold_degrees: f64,
+    pub adjacency_centroid_distance: f64,
+    pub coplanar_offset_threshold: f64,
+}
+
+impl Default for VwmGeometryOptions {
+    fn default() -> Self {
+        let defaults = GeometryConfig::default();
+        Self {
+            patch_normal_angle_threshold_degrees: defaults.patch_normal_angle_threshold_degrees,
+            min_faces_per_patch: defaults.min_faces_per_patch,
+            plane_min_vertices: defaults.plane_min_vertices,
+            parallel_angle_threshold_degrees: defaults.parallel_angle_threshold_degrees,
+            perpendicular_angle_threshold_degrees: defaults.perpendicular_angle_threshold_degrees,
+            adjacency_centroid_distance: defaults.adjacency_centroid_distance,
+            coplanar_offset_threshold: defaults.coplanar_offset_threshold,
+        }
+    }
+}
+
+impl VwmGeometryOptions {
+    fn geometry_config(self) -> Result<GeometryConfig> {
+        let angles = [
+            self.patch_normal_angle_threshold_degrees,
+            self.parallel_angle_threshold_degrees,
+            self.perpendicular_angle_threshold_degrees,
+        ];
+        if angles.iter().any(|value| !value.is_finite() || !(0.1..=90.0).contains(value))
+            || self.min_faces_per_patch == 0
+            || self.plane_min_vertices < 3
+            || !self.adjacency_centroid_distance.is_finite()
+            || self.adjacency_centroid_distance <= 0.0
+            || !self.coplanar_offset_threshold.is_finite()
+            || self.coplanar_offset_threshold < 0.0
+        {
+            bail!("Invalid VWM geometry-analysis controls");
+        }
+        Ok(GeometryConfig {
+            patch_normal_angle_threshold_degrees: self.patch_normal_angle_threshold_degrees,
+            min_faces_per_patch: self.min_faces_per_patch,
+            plane_min_vertices: self.plane_min_vertices,
+            parallel_angle_threshold_degrees: self.parallel_angle_threshold_degrees,
+            perpendicular_angle_threshold_degrees: self.perpendicular_angle_threshold_degrees,
+            adjacency_centroid_distance: self.adjacency_centroid_distance,
+            coplanar_offset_threshold: self.coplanar_offset_threshold,
+        })
+    }
+}
+
+pub fn analyze_vwm_geometry_file(
+    input_path: &Path,
+    options: VwmGeometryOptions,
+) -> Result<vwm_core::GeometryAnalysis> {
+    let scene = load_vwm_scene(input_path)?;
+    analyze_vwm_scene(&scene, options.geometry_config()?)
+}
+
+/// Removes only clusters already classified as floating artifacts.
+pub fn cleaned_reconstruction_cloud(input_path: &Path) -> Result<PointCloud> {
+    let cloud = read_ascii_point_cloud(input_path)?;
+    let analysis = build_analysis_context(&cloud, ScenePackageMetadata::default())?;
+    let keep = analysis.reconstruction_keep_mask();
+    let points = cloud
+        .points
+        .into_iter()
+        .zip(keep)
+        .filter_map(|(point, keep)| keep.then_some(point))
+        .collect::<Vec<_>>();
+    if points.len() < 4 {
+        bail!("Artifact cleanup left fewer than four reconstruction points");
+    }
+    Ok(PointCloud { points, faces: Vec::new() })
+}
+
+pub fn write_clean_reconstruction_input(input_path: &Path, output_path: &Path) -> Result<()> {
+    let cloud = cleaned_reconstruction_cloud(input_path)?;
+    write_ascii_ply(output_path, &cloud)
 }
 
 fn sample_reconstruction_points(points: &[Point], limit: usize) -> Vec<Point> {
@@ -244,9 +463,17 @@ pub fn analyze_file_with_metadata(
     input_path: &Path,
     package: Option<ScenePackageMetadata>,
 ) -> Result<CloudAnalysis> {
+    analyze_file_with_metadata_and_settings(input_path, package, FloatingMeshSettings::default())
+}
+
+pub fn analyze_file_with_metadata_and_settings(
+    input_path: &Path,
+    package: Option<ScenePackageMetadata>,
+    settings: FloatingMeshSettings,
+) -> Result<CloudAnalysis> {
     let (cloud, geometry_analysis) = load_scene_point_cloud(input_path)?;
     let package = default_scene_package(input_path, &cloud, package);
-    let mut analysis = build_analysis_context(&cloud, package)?;
+    let mut analysis = build_analysis_context_with_settings(&cloud, package, settings)?;
     analysis.vwm_geometry_analysis = geometry_analysis;
     Ok(analysis)
 }
@@ -523,7 +750,88 @@ fn parse_xyz(text: &str) -> Result<PointCloud> {
     Ok(cloud)
 }
 
+#[derive(Debug, Clone, Copy)]
+enum PlyFaceProperty {
+    Scalar,
+    List { vertex_indices: bool },
+}
+
+fn triangulate_ply_face(vertices: &[usize], points: &[Point]) -> Result<Vec<[usize; 3]>> {
+    const AREA_EPSILON: f64 = 1e-12;
+
+    if vertices.len() < 3 {
+        bail!("PLY faces must contain at least three vertices");
+    }
+    let unique = vertices
+        .iter()
+        .copied()
+        .collect::<std::collections::HashSet<_>>();
+    if unique.len() != vertices.len() {
+        bail!("PLY face contains duplicate vertex indices");
+    }
+
+    let mut normal = [0.0f64; 3];
+    for index in 0..vertices.len() {
+        let current = &points[vertices[index]];
+        let next = &points[vertices[(index + 1) % vertices.len()]];
+        normal[0] += (current.y - next.y) * (current.z + next.z);
+        normal[1] += (current.z - next.z) * (current.x + next.x);
+        normal[2] += (current.x - next.x) * (current.y + next.y);
+    }
+    let dominant_axis = normal
+        .iter()
+        .enumerate()
+        .max_by(|(_, left), (_, right)| {
+            left.abs()
+                .partial_cmp(&right.abs())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(axis, _)| axis)
+        .unwrap_or(2);
+    if normal[dominant_axis].abs() <= AREA_EPSILON {
+        bail!("PLY face is degenerate");
+    }
+
+    let projected = vertices
+        .iter()
+        .map(|vertex| {
+            let point = &points[*vertex];
+            match dominant_axis {
+                0 => [point.y, point.z],
+                1 => [point.x, point.z],
+                _ => [point.x, point.y],
+            }
+        })
+        .collect::<Vec<_>>();
+    let mut orientation = 0.0f64;
+    for index in 0..projected.len() {
+        let previous = projected[(index + projected.len() - 1) % projected.len()];
+        let current = projected[index];
+        let next = projected[(index + 1) % projected.len()];
+        let cross = (current[0] - previous[0]) * (next[1] - current[1])
+            - (current[1] - previous[1]) * (next[0] - current[0]);
+        if cross.abs() <= AREA_EPSILON {
+            continue;
+        }
+        if orientation == 0.0 {
+            orientation = cross.signum();
+        } else if cross.signum() != orientation {
+            bail!("Non-convex PLY polygon faces are not supported safely");
+        }
+    }
+    if orientation == 0.0 {
+        bail!("PLY face is degenerate");
+    }
+
+    Ok((1..vertices.len() - 1)
+        .map(|index| [vertices[0], vertices[index], vertices[index + 1]])
+        .collect())
+}
+
 fn parse_ascii_ply(text: &str) -> Result<PointCloud> {
+    const MAX_FACE_VERTICES: usize = 4_096;
+    const MAX_TRIANGLES: usize = MAX_POINTS * 8;
+
     let mut lines = text.lines();
     if lines.next().map(str::trim) != Some("ply") {
         bail!("PLY file must start with 'ply'");
@@ -536,10 +844,13 @@ fn parse_ascii_ply(text: &str) -> Result<PointCloud> {
     let mut x_index = None;
     let mut y_index = None;
     let mut z_index = None;
+    let mut face_properties = Vec::<PlyFaceProperty>::new();
+    let mut header_finished = false;
 
     for line in lines.by_ref() {
         let fields = line.split_whitespace().collect::<Vec<_>>();
         if fields.first() == Some(&"end_header") {
+            header_finished = true;
             break;
         }
         match fields.as_slice() {
@@ -552,7 +863,9 @@ fn parse_ascii_ply(text: &str) -> Result<PointCloud> {
             ["element", "face", count] => {
                 section = "face";
                 face_count = count.parse::<usize>().context("Invalid PLY face count")?;
+                face_properties.clear();
             }
+            ["element", _, _] => section = "unsupported",
             ["property", _, name] if section == "vertex" => {
                 match *name {
                     "x" => x_index = Some(property_count),
@@ -562,8 +875,22 @@ fn parse_ascii_ply(text: &str) -> Result<PointCloud> {
                 }
                 property_count += 1;
             }
+            ["property", "list", ..] if section == "vertex" => {
+                bail!("PLY list properties on vertices are not supported")
+            }
+            ["property", "list", _, _, name] if section == "face" => {
+                face_properties.push(PlyFaceProperty::List {
+                    vertex_indices: matches!(*name, "vertex_indices" | "vertex_index"),
+                });
+            }
+            ["property", _, _] if section == "face" => {
+                face_properties.push(PlyFaceProperty::Scalar);
+            }
             _ => {}
         }
+    }
+    if !header_finished {
+        bail!("PLY header is missing end_header");
     }
     if !ascii {
         bail!("Only ASCII PLY is supported for structural analysis");
@@ -574,6 +901,23 @@ fn parse_ascii_ply(text: &str) -> Result<PointCloud> {
             "Point cloud exceeds the {} point analysis limit",
             MAX_POINTS
         );
+    }
+    if face_count > MAX_TRIANGLES {
+        bail!("PLY exceeds the {} face analysis limit", MAX_TRIANGLES);
+    }
+    let vertex_index_lists = face_properties
+        .iter()
+        .filter(|property| {
+            matches!(
+                property,
+                PlyFaceProperty::List {
+                    vertex_indices: true
+                }
+            )
+        })
+        .count();
+    if face_count > 0 && vertex_index_lists != 1 {
+        bail!("PLY face element must define exactly one vertex_indices list");
     }
     let (x_index, y_index, z_index) = (
         x_index.context("PLY vertex property x is missing")?,
@@ -608,32 +952,146 @@ fn parse_ascii_ply(text: &str) -> Result<PointCloud> {
             z: values[z_index],
         });
     }
-    for _ in 0..face_count {
+    for face_number in 0..face_count {
         let line = lines
             .next()
             .context("PLY ended before all faces were read")?;
-        let indices = line
-            .split_whitespace()
-            .map(str::parse::<usize>)
-            .collect::<std::result::Result<Vec<_>, _>>()
-            .context("Invalid PLY face")?;
-        if indices.is_empty() || indices[0] + 1 > indices.len() {
-            bail!("Invalid PLY face index list");
+        let tokens = line.split_whitespace().collect::<Vec<_>>();
+        let mut cursor = 0usize;
+        let mut vertices = None::<Vec<usize>>;
+        for property in &face_properties {
+            match property {
+                PlyFaceProperty::Scalar => {
+                    let token = tokens
+                        .get(cursor)
+                        .with_context(|| format!("PLY face {} is missing a scalar property", face_number + 1))?;
+                    token
+                        .parse::<f64>()
+                        .with_context(|| format!("Invalid scalar property on PLY face {}", face_number + 1))?;
+                    cursor += 1;
+                }
+                PlyFaceProperty::List { vertex_indices } => {
+                    let count = tokens
+                        .get(cursor)
+                        .with_context(|| format!("PLY face {} is missing a list count", face_number + 1))?
+                        .parse::<usize>()
+                        .with_context(|| format!("Invalid list count on PLY face {}", face_number + 1))?;
+                    if count > MAX_FACE_VERTICES {
+                        bail!(
+                            "PLY face {} exceeds the {} vertex limit",
+                            face_number + 1,
+                            MAX_FACE_VERTICES
+                        );
+                    }
+                    let list_start = cursor
+                        .checked_add(1)
+                        .context("PLY face list offset overflow")?;
+                    let list_end = list_start
+                        .checked_add(count)
+                        .context("PLY face list length overflow")?;
+                    let list = tokens.get(list_start..list_end).with_context(|| {
+                        format!("PLY face {} list is shorter than declared", face_number + 1)
+                    })?;
+                    if *vertex_indices {
+                        let parsed = list
+                            .iter()
+                            .map(|value| value.parse::<usize>())
+                            .collect::<std::result::Result<Vec<_>, _>>()
+                            .with_context(|| {
+                                format!("Invalid vertex index on PLY face {}", face_number + 1)
+                            })?;
+                        vertices = Some(parsed);
+                    } else {
+                        for value in list {
+                            value.parse::<f64>().with_context(|| {
+                                format!("Invalid list property on PLY face {}", face_number + 1)
+                            })?;
+                        }
+                    }
+                    cursor = list_end;
+                }
+            }
         }
-        let vertices = &indices[1..];
+        if cursor != tokens.len() {
+            bail!("PLY face {} has undeclared trailing data", face_number + 1);
+        }
+        let vertices = vertices.context("PLY face vertex_indices list is missing")?;
         if vertices.iter().any(|index| *index >= vertex_count) {
             bail!("PLY face references a missing vertex");
         }
-        for index in 1..vertices.len().saturating_sub(1) {
-            cloud
-                .faces
-                .push([vertices[0], vertices[index], vertices[index + 1]]);
+        let triangles = triangulate_ply_face(&vertices, &cloud.points)?;
+        if cloud.faces.len().saturating_add(triangles.len()) > MAX_TRIANGLES {
+            bail!("PLY exceeds the {} triangle analysis limit", MAX_TRIANGLES);
         }
+        cloud.faces.extend(triangles);
     }
     if cloud.points.len() < 3 {
         bail!("At least three points are required");
     }
     Ok(cloud)
+}
+
+#[cfg(test)]
+mod adversarial_ply_parser_tests {
+    use super::parse_ascii_ply;
+
+    fn ply(vertices: &str, face_properties: &str, face: &str, vertex_count: usize) -> String {
+        format!(
+            "ply\nformat ascii 1.0\nelement vertex {vertex_count}\nproperty float x\nproperty float y\nproperty float z\nelement face 1\n{face_properties}\nend_header\n{vertices}{face}\n"
+        )
+    }
+
+    #[test]
+    fn face_scalar_properties_are_not_treated_as_indices() {
+        let input = ply(
+            "0 0 0\n1 0 0\n0 1 0\n",
+            "property list uchar int vertex_indices\nproperty uchar material_id",
+            "3 0 1 2 7",
+            3,
+        );
+        let cloud = parse_ascii_ply(&input).expect("valid face with a trailing scalar property");
+        assert_eq!(cloud.faces, vec![[0, 1, 2]]);
+    }
+
+    #[test]
+    fn undeclared_face_tokens_are_rejected() {
+        let input = ply(
+            "0 0 0\n1 0 0\n0 1 0\n",
+            "property list uchar int vertex_indices",
+            "3 0 1 2 7",
+            3,
+        );
+        assert!(parse_ascii_ply(&input)
+            .expect_err("trailing data must not become a vertex index")
+            .to_string()
+            .contains("undeclared trailing data"));
+    }
+
+    #[test]
+    fn convex_quads_are_triangulated_without_reading_other_properties() {
+        let input = ply(
+            "0 0 0\n1 0 0\n1 1 0\n0 1 0\n",
+            "property uchar material_id\nproperty list uchar int vertex_indices",
+            "4 4 0 1 2 3",
+            4,
+        );
+        let cloud = parse_ascii_ply(&input).expect("convex quad should triangulate");
+        assert_eq!(cloud.faces, vec![[0, 1, 2], [0, 2, 3]]);
+    }
+
+    #[test]
+    fn non_convex_polygons_are_rejected_instead_of_fan_triangulated() {
+        let input = ply(
+            "0 0 0\n2 0 0\n1 0.5 0\n2 2 0\n0 2 0\n",
+            "property list uchar int vertex_indices",
+            "5 0 1 2 3 4",
+            5,
+        );
+        assert!(parse_ascii_ply(&input)
+            .expect_err("unsafe non-convex fan triangulation must be rejected")
+            .to_string()
+            .contains("Non-convex"));
+    }
 }
 
 fn write_ascii_ply(output_path: &Path, cloud: &PointCloud) -> Result<()> {
@@ -669,25 +1127,41 @@ fn extract_floorplan_layout(cloud: &PointCloud, cut_height: f64) -> Result<Floor
     let (minimum, maximum) = point_bounds(&cloud.points);
     let span_y = (maximum[1] - minimum[1]).max(1e-4);
     let epsilon = span_y * 0.005;
-    let candidate_offsets = [-0.03, -0.015, 0.0, 0.015, 0.03];
-    let mut best = None;
+    let candidate_offsets = [
+        -0.18, -0.15, -0.12, -0.09, -0.06, -0.03, 0.0, 0.03, 0.06, 0.09, 0.12,
+        0.15, 0.18,
+    ];
+    let mut candidates = Vec::new();
 
     for offset in candidate_offsets {
         let sample_height =
             (cut_height + span_y * offset).clamp(minimum[1] + epsilon, maximum[1] - epsilon);
-        let Some(polylines) = extract_floorplan_polylines(cloud, sample_height) else {
+        let Some(mut polylines) = extract_floorplan_polylines(cloud, sample_height) else {
             continue;
         };
-        let score = polyline_metric(&polylines[0]) + polylines.len() as f64;
-        match best {
-            Some((best_score, _)) if best_score >= score => {}
-            _ => best = Some((score, polylines)),
-        }
+        polylines.sort_by(|left, right| {
+            polyline_metric(right)
+                .partial_cmp(&polyline_metric(left))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        candidates.push(polylines);
     }
 
-    let mut polylines = best
-        .map(|(_, polylines)| polylines)
+    let best_index = (0..candidates.len())
+        .max_by(|left, right| {
+            floorplan_candidate_score(*left, &candidates)
+                .partial_cmp(&floorplan_candidate_score(*right, &candidates))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
         .context("No floorplan slice could be extracted at the requested cut height")?;
+    let mut polylines = candidates[best_index].clone();
+    let required_room_support = if candidates.len() >= 8 {
+        3
+    } else if candidates.len() >= 3 {
+        2
+    } else {
+        1
+    };
     polylines.sort_by(|left, right| {
         polyline_metric(right)
             .partial_cmp(&polyline_metric(left))
@@ -700,6 +1174,18 @@ fn extract_floorplan_layout(cloud: &PointCloud, cut_height: f64) -> Result<Floor
         .iter()
         .skip(1)
         .filter(|polyline| polyline.len() >= 3)
+        .filter(|polyline| {
+            candidates
+                .iter()
+                .filter(|candidate| {
+                    candidate
+                        .iter()
+                        .skip(1)
+                        .any(|other| floorplan_polyline_similarity(polyline, other) >= 0.62)
+                })
+                .count()
+                >= required_room_support
+        })
         .enumerate()
         .map(|(index, polyline)| FloorplanRoom {
             name: format!("Room {}", index + 1),
@@ -716,10 +1202,80 @@ fn extract_floorplan_layout(cloud: &PointCloud, cut_height: f64) -> Result<Floor
         outer_walls: Vec::new(),
         outer_corners: Vec::new(),
         rooms,
-        source: "model_slice_rust_best_fit_axes".to_string(),
+        source: "model_multislice_consensus_regularized".to_string(),
     };
     layout.enrich_features();
     Ok(layout)
+}
+
+fn floorplan_candidate_score(index: usize, candidates: &[Vec<Vec<[f64; 2]>>]) -> f64 {
+    let outer = &candidates[index][0];
+    let consensus = candidates
+        .iter()
+        .enumerate()
+        .filter(|(other_index, _)| *other_index != index)
+        .map(|(_, candidate)| floorplan_polyline_similarity(outer, &candidate[0]))
+        .sum::<f64>();
+    let closure = if outer.len() >= 3
+        && distance_2d(outer[0], *outer.last().unwrap())
+            <= floorplan_polyline_scale(outer) * 0.025
+    {
+        1.0
+    } else {
+        0.0
+    };
+    consensus * 10.0
+        + closure * 2.0
+        + polyline_metric(outer).max(1e-6).ln_1p()
+        + candidates[index].len().min(12) as f64 * 0.1
+}
+
+fn floorplan_polyline_similarity(left: &[[f64; 2]], right: &[[f64; 2]]) -> f64 {
+    let left_area = polygon_area(left).abs();
+    let right_area = polygon_area(right).abs();
+    let area_ratio = left_area.min(right_area) / left_area.max(right_area).max(1e-6);
+    let left_perimeter = floorplan_polyline_perimeter(left);
+    let right_perimeter = floorplan_polyline_perimeter(right);
+    let perimeter_ratio =
+        left_perimeter.min(right_perimeter) / left_perimeter.max(right_perimeter).max(1e-6);
+    let center_distance = distance_2d(
+        floorplan_polyline_centroid(left),
+        floorplan_polyline_centroid(right),
+    );
+    let center_score =
+        (1.0 - center_distance / floorplan_polyline_scale(left).max(1e-6)).clamp(0.0, 1.0);
+    area_ratio * 0.45 + perimeter_ratio * 0.25 + center_score * 0.30
+}
+
+fn floorplan_polyline_perimeter(polyline: &[[f64; 2]]) -> f64 {
+    if polyline.len() < 2 {
+        return 0.0;
+    }
+    (0..polyline.len())
+        .map(|index| distance_2d(polyline[index], polyline[(index + 1) % polyline.len()]))
+        .sum()
+}
+
+fn floorplan_polyline_centroid(polyline: &[[f64; 2]]) -> [f64; 2] {
+    let count = polyline.len().max(1) as f64;
+    let sum = polyline.iter().fold([0.0, 0.0], |mut sum, point| {
+        sum[0] += point[0];
+        sum[1] += point[1];
+        sum
+    });
+    [sum[0] / count, sum[1] / count]
+}
+
+fn floorplan_polyline_scale(polyline: &[[f64; 2]]) -> f64 {
+    let mut minimum = [f64::INFINITY; 2];
+    let mut maximum = [f64::NEG_INFINITY; 2];
+    for point in polyline {
+        minimum[0] = minimum[0].min(point[0]);
+        minimum[1] = minimum[1].min(point[1]);
+        maximum[0] = maximum[0].max(point[0]);
+        maximum[1] = maximum[1].max(point[1]);
+    }
+    distance_2d(minimum, maximum).max(1e-6)
 }
 
 fn extract_floorplan_polylines(cloud: &PointCloud, cut_height: f64) -> Option<Vec<Vec<[f64; 2]>>> {
@@ -1149,7 +1705,10 @@ mod tests {
             .outer_walls
             .iter()
             .all(|wall| wall.confidence.is_finite() && wall.confidence > 0.0));
-        assert_eq!(result.layout.source, "model_slice_rust_best_fit_axes");
+        assert_eq!(
+            result.layout.source,
+            "model_multislice_consensus_regularized"
+        );
         std::fs::remove_file(input).ok();
     }
 }

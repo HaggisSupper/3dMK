@@ -100,6 +100,67 @@ pub enum GeometryDisposition {
     Uncertain,
 }
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(default, deny_unknown_fields)]
+pub struct FloatingMeshSettings {
+    pub connection_scale: f64,
+    pub maximum_scene_point_ratio: f64,
+    pub maximum_primary_point_ratio: f64,
+    pub maximum_extent_ratio: f64,
+    pub minimum_separation_ratio: f64,
+}
+
+impl Default for FloatingMeshSettings {
+    fn default() -> Self {
+        Self {
+            connection_scale: 1.0,
+            maximum_scene_point_ratio: 0.0125,
+            maximum_primary_point_ratio: 0.08,
+            maximum_extent_ratio: 0.22,
+            minimum_separation_ratio: 0.12,
+        }
+    }
+}
+
+impl FloatingMeshSettings {
+    pub fn validate(self) -> Result<Self> {
+        for (name, value, minimum, maximum) in [
+            ("connection_scale", self.connection_scale, 0.25, 4.0),
+            (
+                "maximum_scene_point_ratio",
+                self.maximum_scene_point_ratio,
+                0.001,
+                0.25,
+            ),
+            (
+                "maximum_primary_point_ratio",
+                self.maximum_primary_point_ratio,
+                0.01,
+                0.5,
+            ),
+            (
+                "maximum_extent_ratio",
+                self.maximum_extent_ratio,
+                0.01,
+                1.0,
+            ),
+            (
+                "minimum_separation_ratio",
+                self.minimum_separation_ratio,
+                0.0,
+                1.0,
+            ),
+        ] {
+            if !value.is_finite() || value < minimum || value > maximum {
+                bail!(
+                    "Floating-mesh {name} must be between {minimum} and {maximum}"
+                );
+            }
+        }
+        Ok(self)
+    }
+}
+
 #[derive(Clone, Debug, Serialize, PartialEq)]
 pub struct ThresholdValue {
     pub name: String,
@@ -210,6 +271,7 @@ pub struct SceneAnalysisContext {
     pub face_count: usize,
     pub geometry_mode: GeometryMode,
     pub package: ScenePackageMetadata,
+    pub floating_mesh_settings: FloatingMeshSettings,
     pub clusters: Vec<ClusterSummary>,
     pub artifact_summary: ArtifactSummary,
     pub planes: Vec<PlaneDetection>,
@@ -229,6 +291,21 @@ pub struct SceneAnalysisContext {
 }
 
 pub type CloudAnalysis = SceneAnalysisContext;
+
+impl SceneAnalysisContext {
+    /// Points in clusters classified as removable artifacts are excluded from reconstruction.
+    pub fn reconstruction_keep_mask(&self) -> Vec<bool> {
+        self.cluster_by_point
+            .iter()
+            .map(|cluster_id| {
+                self.clusters
+                    .iter()
+                    .find(|cluster| cluster.id == *cluster_id)
+                    .is_none_or(|cluster| cluster.disposition != GeometryDisposition::Remove)
+            })
+            .collect()
+    }
+}
 
 #[derive(Clone, Debug, Serialize, PartialEq)]
 pub struct FlatSurfaceResult {
@@ -280,8 +357,17 @@ pub fn infer_geometry_mode(cloud: &PointCloud) -> GeometryMode {
 
 pub fn build_analysis_context(
     cloud: &PointCloud,
-    mut package: ScenePackageMetadata,
+    package: ScenePackageMetadata,
 ) -> Result<SceneAnalysisContext> {
+    build_analysis_context_with_settings(cloud, package, FloatingMeshSettings::default())
+}
+
+pub fn build_analysis_context_with_settings(
+    cloud: &PointCloud,
+    mut package: ScenePackageMetadata,
+    floating_mesh_settings: FloatingMeshSettings,
+) -> Result<SceneAnalysisContext> {
+    let floating_mesh_settings = floating_mesh_settings.validate()?;
     if cloud.points.len() < 3 {
         bail!("At least three points are required for scene analysis");
     }
@@ -291,9 +377,14 @@ pub fn build_analysis_context(
         package.base_name = "model".to_string();
     }
 
-    let components = detect_components(&cloud.points)?;
+    let components = detect_components(&cloud.points, floating_mesh_settings.connection_scale)?;
     let primary_id = select_primary_cluster(&components).context("No structural cluster found")?;
-    let clusters = classify_clusters(&components, primary_id, cloud.points.len());
+    let clusters = classify_clusters(
+        &components,
+        primary_id,
+        cloud.points.len(),
+        floating_mesh_settings,
+    );
     let artifact_summary = build_artifact_summary(&clusters);
     let cluster_by_point = build_cluster_index(cloud.points.len(), &components);
     let stable_indices = stable_indices(&clusters, &components);
@@ -351,6 +442,7 @@ pub fn build_analysis_context(
         face_count: cloud.faces.len(),
         geometry_mode: package.geometry_mode.clone(),
         package,
+        floating_mesh_settings,
         clusters,
         artifact_summary,
         planes,
@@ -434,9 +526,9 @@ pub fn level_scene(cloud: &PointCloud, package: ScenePackageMetadata) -> Result<
     })
 }
 
-fn detect_components(points: &[Point]) -> Result<Vec<ClusterComponent>> {
+fn detect_components(points: &[Point], connection_scale: f64) -> Result<Vec<ClusterComponent>> {
     let (_, _, diagonal) = point_bounds(points);
-    let voxel = component_voxel_size(diagonal, points.len());
+    let voxel = component_voxel_size(diagonal, points.len()) * connection_scale;
     let mut bins: HashMap<(i32, i32, i32), Vec<usize>> = HashMap::new();
     for (index, point) in points.iter().enumerate() {
         bins.entry(voxel_key(*point, voxel))
@@ -537,12 +629,14 @@ fn classify_clusters(
     components: &[ClusterComponent],
     primary_id: usize,
     total_points: usize,
+    settings: FloatingMeshSettings,
 ) -> Vec<ClusterSummary> {
     let primary = &components[primary_id];
     let primary_count = primary.point_indices.len() as f64;
     let primary_diagonal = cluster_diagonal(primary).max(1e-6);
     let primary_density = primary.density.max(1e-6);
-    let remove_limit = (total_points as f64 / 80.0).max(8.0);
+    let remove_limit =
+        (total_points as f64 * settings.maximum_scene_point_ratio).max(8.0);
     let keep_limit = (total_points as f64 / 16.0).max(24.0);
 
     components
@@ -558,8 +652,20 @@ fn classify_clusters(
             let density_ratio = (component.density / primary_density).min(1.0);
             let thresholds = vec![
                 ThresholdValue {
+                    name: "connection_scale".to_string(),
+                    value: settings.connection_scale,
+                },
+                ThresholdValue {
                     name: "remove_limit_points".to_string(),
                     value: remove_limit,
+                },
+                ThresholdValue {
+                    name: "remove_scene_point_ratio".to_string(),
+                    value: settings.maximum_scene_point_ratio,
+                },
+                ThresholdValue {
+                    name: "remove_primary_point_ratio".to_string(),
+                    value: settings.maximum_primary_point_ratio,
                 },
                 ThresholdValue {
                     name: "keep_limit_points".to_string(),
@@ -567,11 +673,11 @@ fn classify_clusters(
                 },
                 ThresholdValue {
                     name: "remove_extent_ratio".to_string(),
-                    value: 0.22,
+                    value: settings.maximum_extent_ratio,
                 },
                 ThresholdValue {
                     name: "remove_centroid_gap".to_string(),
-                    value: 0.12,
+                    value: settings.minimum_separation_ratio,
                 },
             ];
 
@@ -593,15 +699,16 @@ fn classify_clusters(
             }
 
             let (disposition, score, confidence, reason) = if point_count as f64 <= remove_limit
-                && point_ratio < 0.08
-                && extent_ratio < 0.22
-                && centroid_gap > 0.12
+                && point_ratio < settings.maximum_primary_point_ratio
+                && extent_ratio < settings.maximum_extent_ratio
+                && centroid_gap > settings.minimum_separation_ratio
             {
                 (
                     GeometryDisposition::Remove,
                     (1.0 - point_ratio * 2.0 - extent_ratio * 1.5).clamp(0.0, 1.0),
                     (0.65 + centroid_gap * 0.35).clamp(0.0, 1.0),
-                    "Small detached cluster behaves like a floating scan artifact.".to_string(),
+                    "Detached cluster meets the configured floating-mesh sensitivity thresholds."
+                        .to_string(),
                 )
             } else if point_count as f64 >= keep_limit
                 || point_ratio >= 0.22

@@ -211,6 +211,11 @@ pub struct CanonicalCamera {
 
 impl CanonicalCamera {
     pub fn project_world(&self, point: [f64; 3]) -> Option<[f64; 2]> {
+        self.project_world_with_depth(point)
+            .map(|(pixel, _depth)| pixel)
+    }
+
+    pub fn project_world_with_depth(&self, point: [f64; 3]) -> Option<([f64; 2], f64)> {
         if !self.calibration_valid || point.iter().any(|value| !value.is_finite()) {
             return None;
         }
@@ -230,10 +235,13 @@ impl CanonicalCamera {
         if depth <= 1e-9 {
             return None;
         }
-        Some([
-            self.focal_pixels[0] * camera_x / depth + self.principal_point_pixels[0],
-            self.focal_pixels[1] * -camera_y / depth + self.principal_point_pixels[1],
-        ])
+        Some((
+            [
+                self.focal_pixels[0] * camera_x / depth + self.principal_point_pixels[0],
+                self.focal_pixels[1] * -camera_y / depth + self.principal_point_pixels[1],
+            ],
+            depth,
+        ))
     }
 }
 
@@ -255,6 +263,307 @@ pub struct IphoneCaptureReport {
     pub calibration_valid: bool,
     pub cameras: Vec<CanonicalCamera>,
     pub warnings: Vec<CaptureWarning>,
+}
+
+const MAX_CALIBRATED_CAMERAS: usize = 4096;
+const RIGID_TRANSFORM_TOLERANCE: f64 = 5.0e-3;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CameraBindingError {
+    InvalidSourcePath,
+    CameraIdNotFound,
+    DuplicateCameraId,
+    SourcePathMismatch,
+    CameraUnavailable,
+}
+
+impl CameraBindingError {
+    pub fn reason(self) -> &'static str {
+        match self {
+            Self::InvalidSourcePath => "invalid_source_path",
+            Self::CameraIdNotFound => "camera_id_not_found",
+            Self::DuplicateCameraId => "duplicate_camera_id",
+            Self::SourcePathMismatch => "camera_source_path_mismatch",
+            Self::CameraUnavailable => "camera_pair_unavailable",
+        }
+    }
+}
+
+pub fn normalized_package_path(value: &str) -> Option<String> {
+    normalize_entry_path(value.as_bytes(), ArchiveLimits::default())
+        .ok()
+        .map(|path| path.to_ascii_lowercase())
+}
+
+pub fn camera_calibration_is_valid(camera: &CanonicalCamera) -> bool {
+    let [width, height] = camera.dimensions;
+    if width == 0
+        || height == 0
+        || width > 100_000
+        || height > 100_000
+        || u64::from(width) * u64::from(height) > 100_000_000
+        || !valid_camera(
+            camera.dimensions,
+            camera.focal_pixels,
+            camera.principal_point_pixels,
+            &camera.world_from_camera,
+        )
+    {
+        return false;
+    }
+
+    let rotation = [
+        [
+            camera.world_from_camera[0][0],
+            camera.world_from_camera[1][0],
+            camera.world_from_camera[2][0],
+        ],
+        [
+            camera.world_from_camera[0][1],
+            camera.world_from_camera[1][1],
+            camera.world_from_camera[2][1],
+        ],
+        [
+            camera.world_from_camera[0][2],
+            camera.world_from_camera[1][2],
+            camera.world_from_camera[2][2],
+        ],
+    ];
+    let dot = |left: [f64; 3], right: [f64; 3]| {
+        left[0] * right[0] + left[1] * right[1] + left[2] * right[2]
+    };
+    let columns_are_orthonormal = rotation
+        .iter()
+        .all(|column| (dot(*column, *column) - 1.0).abs() <= RIGID_TRANSFORM_TOLERANCE)
+        && dot(rotation[0], rotation[1]).abs() <= RIGID_TRANSFORM_TOLERANCE
+        && dot(rotation[0], rotation[2]).abs() <= RIGID_TRANSFORM_TOLERANCE
+        && dot(rotation[1], rotation[2]).abs() <= RIGID_TRANSFORM_TOLERANCE;
+    let determinant = rotation[0][0]
+        * (rotation[1][1] * rotation[2][2] - rotation[1][2] * rotation[2][1])
+        - rotation[1][0]
+            * (rotation[0][1] * rotation[2][2] - rotation[0][2] * rotation[2][1])
+        + rotation[2][0]
+            * (rotation[0][1] * rotation[1][2] - rotation[0][2] * rotation[1][1]);
+    let affine_row = camera.world_from_camera[3];
+
+    columns_are_orthonormal
+        && (determinant - 1.0).abs() <= RIGID_TRANSFORM_TOLERANCE * 2.0
+        && affine_row[0].abs() <= RIGID_TRANSFORM_TOLERANCE
+        && affine_row[1].abs() <= RIGID_TRANSFORM_TOLERANCE
+        && affine_row[2].abs() <= RIGID_TRANSFORM_TOLERANCE
+        && (affine_row[3] - 1.0).abs() <= RIGID_TRANSFORM_TOLERANCE
+}
+
+pub fn validate_iphone_capture_report(
+    report: &IphoneCaptureReport,
+) -> std::result::Result<(), &'static str> {
+    if report.schema_version != 1 {
+        return Err("unsupported camera report schema");
+    }
+    if report.capture_id.trim().is_empty() {
+        return Err("camera report capture_id is required");
+    }
+    if report.cameras.is_empty() || report.cameras.len() > MAX_CALIBRATED_CAMERAS {
+        return Err("camera report has an invalid camera count");
+    }
+    if report.descriptor_records != report.cameras.len() {
+        return Err("camera report descriptor count is inconsistent");
+    }
+    if normalized_package_path(&report.primary_model_path).is_none() {
+        return Err("camera report primary model path is unsafe");
+    }
+    if [
+        report.camera_convention.transform.as_str(),
+        report.camera_convention.local_axes.as_str(),
+        report.camera_convention.image_origin.as_str(),
+        report.camera_convention.intrinsic_units.as_str(),
+        report.camera_convention.projection.as_str(),
+    ]
+    .iter()
+    .any(|value| value.trim().is_empty())
+    {
+        return Err("camera convention is incomplete");
+    }
+
+    let mut camera_ids = HashSet::with_capacity(report.cameras.len());
+    let mut camera_indices = HashSet::with_capacity(report.cameras.len());
+    let mut image_paths = HashSet::with_capacity(report.cameras.len());
+    let mut camera_json_paths = HashSet::with_capacity(report.cameras.len());
+    for camera in &report.cameras {
+        if camera.id.trim().is_empty()
+            || !camera_ids.insert(camera.id.to_ascii_lowercase())
+            || !camera_indices.insert(camera.index)
+        {
+            return Err("camera report contains duplicate or empty camera identity");
+        }
+        let image_path = normalized_package_path(&camera.image_path)
+            .ok_or("camera report contains an unsafe image path")?;
+        let camera_json_path = normalized_package_path(&camera.camera_json_path)
+            .ok_or("camera report contains an unsafe camera JSON path")?;
+        if !image_paths.insert(image_path.clone()) || !camera_json_paths.insert(camera_json_path.clone()) {
+            return Err("camera report contains duplicate camera paths");
+        }
+        let expected_camera_json = image_path
+            .rsplit_once('.')
+            .map_or_else(|| format!("{image_path}.json"), |(stem, _)| format!("{stem}.json"));
+        if camera_json_path != expected_camera_json {
+            return Err("camera JSON path does not correspond to its image path");
+        }
+        if !camera.calibration_valid || !camera_calibration_is_valid(camera) {
+            return Err("camera report contains invalid intrinsics or a non-rigid transform");
+        }
+    }
+
+    let valid_image_pairs = report
+        .cameras
+        .iter()
+        .filter(|camera| camera.image_present && camera.camera_json_present)
+        .count();
+    if !report.calibration_valid
+        || valid_image_pairs == 0
+        || report.valid_image_pairs != valid_image_pairs
+        || report.observed_images < valid_image_pairs
+        || report.observed_camera_json < valid_image_pairs
+    {
+        return Err("camera report validity counts are inconsistent");
+    }
+    Ok(())
+}
+
+pub fn camera_for_explicit_binding<'a>(
+    cameras: &'a [CanonicalCamera],
+    camera_id: &str,
+    source_path: &str,
+) -> std::result::Result<&'a CanonicalCamera, CameraBindingError> {
+    let normalized_source =
+        normalized_package_path(source_path).ok_or(CameraBindingError::InvalidSourcePath)?;
+    let mut id_matches = cameras
+        .iter()
+        .filter(|camera| camera.id == camera_id);
+    let camera = id_matches
+        .next()
+        .ok_or(CameraBindingError::CameraIdNotFound)?;
+    if id_matches.next().is_some() {
+        return Err(CameraBindingError::DuplicateCameraId);
+    }
+    if normalized_package_path(&camera.image_path).as_deref() != Some(&normalized_source) {
+        return Err(CameraBindingError::SourcePathMismatch);
+    }
+    if !camera.image_present
+        || !camera.camera_json_present
+        || !camera.calibration_valid
+        || !camera_calibration_is_valid(camera)
+    {
+        return Err(CameraBindingError::CameraUnavailable);
+    }
+    Ok(camera)
+}
+
+#[cfg(test)]
+mod calibrated_camera_contract_tests {
+    use super::*;
+
+    fn camera(id: &str, index: u64, image_path: &str) -> CanonicalCamera {
+        let camera_json_path = image_path
+            .rsplit_once('.')
+            .map_or_else(|| format!("{image_path}.json"), |(stem, _)| format!("{stem}.json"));
+        CanonicalCamera {
+            id: id.to_owned(),
+            index,
+            image_path: image_path.to_owned(),
+            camera_json_path,
+            dimensions: [128, 128],
+            focal_pixels: [96.0, 96.0],
+            principal_point_pixels: [64.0, 64.0],
+            world_from_camera: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ],
+            image_present: true,
+            camera_json_present: true,
+            calibration_valid: true,
+        }
+    }
+
+    fn report(cameras: Vec<CanonicalCamera>) -> IphoneCaptureReport {
+        IphoneCaptureReport {
+            schema_version: 1,
+            capture_id: "capture-1".to_owned(),
+            name: "Capture".to_owned(),
+            primary_model_path: "Refined-Mesh-1.glb".to_owned(),
+            expected_image_records: cameras.len(),
+            descriptor_records: cameras.len(),
+            observed_images: cameras.len(),
+            observed_camera_json: cameras.len(),
+            valid_image_pairs: cameras.len(),
+            missing_records: vec![],
+            raw_points: None,
+            cloud_points: None,
+            camera_convention: CameraConvention {
+                transform: "world_from_camera".to_owned(),
+                local_axes: "+x right, +y up, -z forward".to_owned(),
+                image_origin: "top_left".to_owned(),
+                intrinsic_units: "pixels".to_owned(),
+                projection: "pinhole".to_owned(),
+            },
+            calibration_valid: true,
+            cameras,
+            warnings: vec![],
+        }
+    }
+
+    #[test]
+    fn calibrated_camera_report_rejects_empty_duplicates_and_non_rigid_transforms() {
+        let valid = report(vec![camera("camera-a", 1, "RawImages/a.jpg")]);
+        assert!(validate_iphone_capture_report(&valid).is_ok());
+
+        let mut empty = report(vec![]);
+        empty.calibration_valid = false;
+        assert!(validate_iphone_capture_report(&empty).is_err());
+
+        let first = camera("camera-a", 1, "RawImages/a.jpg");
+        let mut duplicate_id = camera("camera-a", 2, "RawImages/b.jpg");
+        let duplicate_report = report(vec![first.clone(), duplicate_id.clone()]);
+        assert!(validate_iphone_capture_report(&duplicate_report).is_err());
+
+        duplicate_id.id = "camera-b".to_owned();
+        duplicate_id.index = 1;
+        assert!(validate_iphone_capture_report(&report(vec![first.clone(), duplicate_id.clone()])).is_err());
+
+        duplicate_id.index = 2;
+        duplicate_id.image_path = first.image_path.clone();
+        duplicate_id.camera_json_path = first.camera_json_path.clone();
+        assert!(validate_iphone_capture_report(&report(vec![first.clone(), duplicate_id])).is_err());
+
+        let mut non_rigid = first;
+        non_rigid.world_from_camera[0][0] = 1.25;
+        assert!(validate_iphone_capture_report(&report(vec![non_rigid])).is_err());
+    }
+
+    #[test]
+    fn calibrated_camera_binding_requires_both_id_and_normalized_exact_source_path() {
+        let cameras = vec![
+            camera("camera-a", 1, "RawImages/room/a.jpg"),
+            camera("camera-b", 2, "RawImages/other/a.jpg"),
+        ];
+        let matched = camera_for_explicit_binding(
+            &cameras,
+            "camera-a",
+            r"RawImages\room\a.jpg",
+        )
+        .unwrap();
+        assert_eq!(matched.index, 1);
+        assert_eq!(
+            camera_for_explicit_binding(&cameras, "camera-b", "RawImages/room/a.jpg"),
+            Err(CameraBindingError::SourcePathMismatch)
+        );
+        assert_eq!(
+            camera_for_explicit_binding(&cameras, "camera-a", "../RawImages/room/a.jpg"),
+            Err(CameraBindingError::InvalidSourcePath)
+        );
+    }
 }
 
 #[derive(Deserialize)]

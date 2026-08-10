@@ -1,0 +1,78 @@
+name: Advanced Feature Integration
+
+on:
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'public/**'
+      - 'tests/**'
+      - 'VWM-Repo-Implicit/**'
+      - '.github/workflows/advanced-feature-integration.yml'
+  push:
+    branches:
+      - agent/spatial-vwm-feature-integration
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: advanced-feature-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust-and-tauri-contracts:
+    name: Rust, VWM, frontend, and Tauri contracts
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            VWM-Repo-Implicit -> VWM-Repo-Implicit/target
+            src-tauri -> src-tauri/target
+
+      - name: Verify formatting
+        shell: pwsh
+        run: cargo fmt --all -- --check
+
+      - name: Compile root application and all targets
+        shell: pwsh
+        run: cargo check --all-targets --locked
+
+      - name: Run root unit, contract, integration, and regression tests
+        shell: pwsh
+        run: cargo test --all-targets --locked -- --nocapture
+
+      - name: Run strict root lint
+        shell: pwsh
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: Compile canonical VWM workspace
+        shell: pwsh
+        run: cargo check --workspace --all-targets --locked --manifest-path VWM-Repo-Implicit/Cargo.toml
+
+      - name: Run canonical VWM workspace tests
+        shell: pwsh
+        run: cargo test --workspace --all-targets --locked --manifest-path VWM-Repo-Implicit/Cargo.toml -- --nocapture
+
+      - name: Run strict VWM lint
+        shell: pwsh
+        run: cargo clippy --workspace --all-targets --locked --manifest-path VWM-Repo-Implicit/Cargo.toml -- -D warnings
+
+      - name: Compile Tauri desktop application
+        shell: pwsh
+        run: cargo check --locked --manifest-path src-tauri/Cargo.toml
