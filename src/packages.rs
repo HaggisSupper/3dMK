@@ -340,10 +340,8 @@ pub fn camera_calibration_is_valid(camera: &CanonicalCamera) -> bool {
         && dot(rotation[1], rotation[2]).abs() <= RIGID_TRANSFORM_TOLERANCE;
     let determinant = rotation[0][0]
         * (rotation[1][1] * rotation[2][2] - rotation[1][2] * rotation[2][1])
-        - rotation[1][0]
-            * (rotation[0][1] * rotation[2][2] - rotation[0][2] * rotation[2][1])
-        + rotation[2][0]
-            * (rotation[0][1] * rotation[1][2] - rotation[0][2] * rotation[1][1]);
+        - rotation[1][0] * (rotation[0][1] * rotation[2][2] - rotation[0][2] * rotation[2][1])
+        + rotation[2][0] * (rotation[0][1] * rotation[1][2] - rotation[0][2] * rotation[1][1]);
     let affine_row = camera.world_from_camera[3];
 
     columns_are_orthonormal
@@ -400,12 +398,15 @@ pub fn validate_iphone_capture_report(
             .ok_or("camera report contains an unsafe image path")?;
         let camera_json_path = normalized_package_path(&camera.camera_json_path)
             .ok_or("camera report contains an unsafe camera JSON path")?;
-        if !image_paths.insert(image_path.clone()) || !camera_json_paths.insert(camera_json_path.clone()) {
+        if !image_paths.insert(image_path.clone())
+            || !camera_json_paths.insert(camera_json_path.clone())
+        {
             return Err("camera report contains duplicate camera paths");
         }
-        let expected_camera_json = image_path
-            .rsplit_once('.')
-            .map_or_else(|| format!("{image_path}.json"), |(stem, _)| format!("{stem}.json"));
+        let expected_camera_json = image_path.rsplit_once('.').map_or_else(
+            || format!("{image_path}.json"),
+            |(stem, _)| format!("{stem}.json"),
+        );
         if camera_json_path != expected_camera_json {
             return Err("camera JSON path does not correspond to its image path");
         }
@@ -437,9 +438,7 @@ pub fn camera_for_explicit_binding<'a>(
 ) -> std::result::Result<&'a CanonicalCamera, CameraBindingError> {
     let normalized_source =
         normalized_package_path(source_path).ok_or(CameraBindingError::InvalidSourcePath)?;
-    let mut id_matches = cameras
-        .iter()
-        .filter(|camera| camera.id == camera_id);
+    let mut id_matches = cameras.iter().filter(|camera| camera.id == camera_id);
     let camera = id_matches
         .next()
         .ok_or(CameraBindingError::CameraIdNotFound)?;
@@ -464,9 +463,10 @@ mod calibrated_camera_contract_tests {
     use super::*;
 
     fn camera(id: &str, index: u64, image_path: &str) -> CanonicalCamera {
-        let camera_json_path = image_path
-            .rsplit_once('.')
-            .map_or_else(|| format!("{image_path}.json"), |(stem, _)| format!("{stem}.json"));
+        let camera_json_path = image_path.rsplit_once('.').map_or_else(
+            || format!("{image_path}.json"),
+            |(stem, _)| format!("{stem}.json"),
+        );
         CanonicalCamera {
             id: id.to_owned(),
             index,
@@ -530,12 +530,17 @@ mod calibrated_camera_contract_tests {
 
         duplicate_id.id = "camera-b".to_owned();
         duplicate_id.index = 1;
-        assert!(validate_iphone_capture_report(&report(vec![first.clone(), duplicate_id.clone()])).is_err());
+        assert!(
+            validate_iphone_capture_report(&report(vec![first.clone(), duplicate_id.clone()]))
+                .is_err()
+        );
 
         duplicate_id.index = 2;
         duplicate_id.image_path = first.image_path.clone();
         duplicate_id.camera_json_path = first.camera_json_path.clone();
-        assert!(validate_iphone_capture_report(&report(vec![first.clone(), duplicate_id])).is_err());
+        assert!(
+            validate_iphone_capture_report(&report(vec![first.clone(), duplicate_id])).is_err()
+        );
 
         let mut non_rigid = first;
         non_rigid.world_from_camera[0][0] = 1.25;
@@ -548,12 +553,8 @@ mod calibrated_camera_contract_tests {
             camera("camera-a", 1, "RawImages/room/a.jpg"),
             camera("camera-b", 2, "RawImages/other/a.jpg"),
         ];
-        let matched = camera_for_explicit_binding(
-            &cameras,
-            "camera-a",
-            r"RawImages\room\a.jpg",
-        )
-        .unwrap();
+        let matched =
+            camera_for_explicit_binding(&cameras, "camera-a", r"RawImages\room\a.jpg").unwrap();
         assert_eq!(matched.index, 1);
         assert_eq!(
             camera_for_explicit_binding(&cameras, "camera-b", "RawImages/room/a.jpg"),

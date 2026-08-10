@@ -1,6 +1,4 @@
-use agentic_cad_backend::point_cloud::{
-    VwmReconstructionOptions, VwmSurfaceExtraction,
-};
+use agentic_cad_backend::point_cloud::{VwmReconstructionOptions, VwmSurfaceExtraction};
 
 #[test]
 fn slide_outs_follow_the_unzoomed_live_viewport_height() {

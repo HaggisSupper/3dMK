@@ -26,8 +26,7 @@ use crate::{
     ai_vision, cad_engine, image_refinement,
     jobs::{JobError, JobRegistry},
     packages::{self, ArchiveInventory, ArchiveLimits, PackageError},
-    perception,
-    point_cloud,
+    perception, point_cloud,
     projects::{
         Asset, AssetRole, AttributeContract, JobRecord, PackageAssetImport, PackageSceneImport,
         Project, ProjectError, ProjectStore, ProjectWarning, Revision, RootSceneImport, SceneKind,
@@ -106,8 +105,7 @@ pub fn create_router(
         )
         .route(
             "/api/vwm-geometry-analyze",
-            post(handle_vwm_geometry_analysis)
-                .layer(DefaultBodyLimit::max(256 * 1024 * 1024)),
+            post(handle_vwm_geometry_analysis).layer(DefaultBodyLimit::max(256 * 1024 * 1024)),
         )
         .route("/api/vwm-perception", post(handle_vwm_perception))
         .route(
@@ -1645,7 +1643,9 @@ async fn handle_vwm_perception(mut multipart: Multipart) -> impl IntoResponse {
                     Err(error) => {
                         return (
                             StatusCode::BAD_REQUEST,
-                            Json(json!({"error": format!("Invalid VWM perception controls: {error}")})),
+                            Json(
+                                json!({"error": format!("Invalid VWM perception controls: {error}")}),
+                            ),
                         )
                     }
                 },
@@ -1750,10 +1750,11 @@ async fn handle_point_cloud_analysis(
     State(state): State<AppState>,
     multipart: Multipart,
 ) -> impl IntoResponse {
-    let (input_path, _filename, metadata, floating_mesh_settings) = match save_ascii_cloud_upload(&state, multipart).await {
-        Ok(upload) => upload,
-        Err(response) => return response,
-    };
+    let (input_path, _filename, metadata, floating_mesh_settings) =
+        match save_ascii_cloud_upload(&state, multipart).await {
+            Ok(upload) => upload,
+            Err(response) => return response,
+        };
     let run_input = input_path.clone();
     let result = tokio::task::spawn_blocking(move || {
         point_cloud::analyze_file_with_metadata_and_settings(
@@ -1810,7 +1811,9 @@ async fn handle_vwm_geometry_analysis(
                     Err(error) => {
                         return (
                             StatusCode::BAD_REQUEST,
-                            Json(json!({"error": format!("Invalid VWM geometry controls: {error}")})),
+                            Json(
+                                json!({"error": format!("Invalid VWM geometry controls: {error}")}),
+                            ),
                         )
                     }
                 },
@@ -1823,7 +1826,9 @@ async fn handle_vwm_geometry_analysis(
                 Err(error) => {
                     return (
                         StatusCode::BAD_REQUEST,
-                        Json(json!({"error": format!("Failed to read VWM geometry controls: {error}")})),
+                        Json(
+                            json!({"error": format!("Failed to read VWM geometry controls: {error}")}),
+                        ),
                     )
                 }
             },
@@ -1858,7 +1863,9 @@ async fn handle_vwm_geometry_analysis(
     match result.unwrap_or_else(|error| Err(anyhow::anyhow!(error))) {
         Ok(analysis) => (
             StatusCode::OK,
-            Json(json!({"status": "ok", "engine": "vwm-geometry", "options": options, "analysis": analysis})),
+            Json(
+                json!({"status": "ok", "engine": "vwm-geometry", "options": options, "analysis": analysis}),
+            ),
         ),
         Err(error) => (
             StatusCode::BAD_REQUEST,
@@ -1871,10 +1878,11 @@ async fn handle_flat_surface_correction(
     State(state): State<AppState>,
     multipart: Multipart,
 ) -> impl IntoResponse {
-    let (input_path, _filename, metadata, _floating_mesh_settings) = match save_ascii_cloud_upload(&state, multipart).await {
-        Ok(upload) => upload,
-        Err(response) => return response,
-    };
+    let (input_path, _filename, metadata, _floating_mesh_settings) =
+        match save_ascii_cloud_upload(&state, multipart).await {
+            Ok(upload) => upload,
+            Err(response) => return response,
+        };
     let output_name = format!("flat_corrected_{}.ply", chrono_simple_id());
     let output_path = state.output_dir.join(&output_name);
     let run_input = input_path.clone();
@@ -2240,9 +2248,7 @@ async fn read_calibrated_projection_field(
     Ok(bytes)
 }
 
-fn validate_ascii_ply_input(
-    bytes: &[u8],
-) -> std::result::Result<AsciiPlySummary, &'static str> {
+fn validate_ascii_ply_input(bytes: &[u8]) -> std::result::Result<AsciiPlySummary, &'static str> {
     if bytes.is_empty() || !bytes.is_ascii() {
         return Err("Projection input must be an ASCII PLY file.");
     }
@@ -2399,12 +2405,16 @@ fn bind_calibrated_photos(
     }
     let mut unbound_uploads = uploads_by_name.into_values().collect::<Vec<_>>();
     unbound_uploads.sort_by(|left, right| left.filename.cmp(&right.filename));
-    errors.extend(unbound_uploads.into_iter().map(|upload| UnmatchedCalibratedPhoto {
-        filename: upload.filename,
-        camera_id: String::new(),
-        source_path: String::new(),
-        reason: "upload_missing_explicit_manifest_binding",
-    }));
+    errors.extend(
+        unbound_uploads
+            .into_iter()
+            .map(|upload| UnmatchedCalibratedPhoto {
+                filename: upload.filename,
+                camera_id: String::new(),
+                source_path: String::new(),
+                reason: "upload_missing_explicit_manifest_binding",
+            }),
+    );
     if errors.is_empty() && !calibrated_photos.is_empty() {
         Ok(calibrated_photos)
     } else {
@@ -2465,7 +2475,10 @@ async fn handle_calibrated_photo_project(
         match field_name.as_str() {
             "cloud" => {
                 if cloud.is_some() {
-                    return projection_json_error(StatusCode::BAD_REQUEST, "Duplicate cloud field.");
+                    return projection_json_error(
+                        StatusCode::BAD_REQUEST,
+                        "Duplicate cloud field.",
+                    );
                 }
                 let filename = safe_filename(field.file_name().unwrap_or("input.ply"));
                 if !is_ply_filename(&filename) {
@@ -2934,7 +2947,9 @@ async fn handle_poisson(
                     Err(error) => {
                         return (
                             StatusCode::BAD_REQUEST,
-                            Json(json!({"error": format!("Invalid VWM reconstruction controls: {error}")})),
+                            Json(
+                                json!({"error": format!("Invalid VWM reconstruction controls: {error}")}),
+                            ),
                         )
                     }
                 },
@@ -3017,15 +3032,16 @@ async fn handle_poisson(
         );
     }
     let result = tokio::task::spawn_blocking(move || {
-        let reconstruction_input = match point_cloud::write_clean_reconstruction_input(&run_input, &run_cleaned) {
-            Ok(()) => run_cleaned,
-            Err(error) if use_pdal => {
-                // PDAL can ingest binary LAS/LAZ that the Rust artifact pass cannot parse.
-                let _ = error;
-                run_input.clone()
-            }
-            Err(error) => return Err(error),
-        };
+        let reconstruction_input =
+            match point_cloud::write_clean_reconstruction_input(&run_input, &run_cleaned) {
+                Ok(()) => run_cleaned,
+                Err(error) if use_pdal => {
+                    // PDAL can ingest binary LAS/LAZ that the Rust artifact pass cannot parse.
+                    let _ = error;
+                    run_input.clone()
+                }
+                Err(error) => return Err(error),
+            };
         if use_pdal {
             point_cloud::run_pdal_pipeline(&reconstruction_input, &run_output).map(|_| None)
         } else {
@@ -3078,13 +3094,12 @@ fn safe_filename(filename: &str) -> String {
         .unwrap_or_default();
     let mut sanitized = String::new();
     for character in basename.chars() {
-        let safe_character = if character.is_ascii_alphanumeric()
-            || matches!(character, '-' | '_' | '.' | ' ')
-        {
-            character
-        } else {
-            '_'
-        };
+        let safe_character =
+            if character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.' | ' ') {
+                character
+            } else {
+                '_'
+            };
         if sanitized.len() + safe_character.len_utf8() > MAX_SAFE_FILENAME_BYTES {
             break;
         }
@@ -3341,14 +3356,7 @@ mod tests {
             Err(ProjectionUploadLimitError::Multipart)
         );
         assert_eq!(
-            checked_projection_upload_size(
-                0,
-                0,
-                MAX_CALIBRATED_COMPRESSED_IMAGE_BYTES,
-                1,
-                2,
-                true,
-            ),
+            checked_projection_upload_size(0, 0, MAX_CALIBRATED_COMPRESSED_IMAGE_BYTES, 1, 2, true,),
             Err(ProjectionUploadLimitError::CompressedImages)
         );
     }
@@ -3362,9 +3370,10 @@ mod tests {
             id: id.to_owned(),
             index,
             image_path: image_path.to_owned(),
-            camera_json_path: image_path
-                .rsplit_once('.')
-                .map_or_else(|| format!("{image_path}.json"), |(stem, _)| format!("{stem}.json")),
+            camera_json_path: image_path.rsplit_once('.').map_or_else(
+                || format!("{image_path}.json"),
+                |(stem, _)| format!("{stem}.json"),
+            ),
             dimensions: [128, 128],
             focal_pixels: [96.0, 96.0],
             principal_point_pixels: [64.0, 64.0],

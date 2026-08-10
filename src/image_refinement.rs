@@ -138,8 +138,12 @@ pub fn project_photos_to_geometry(
     }
     let options = options.normalized();
     let photos_received = photos.len();
-    let scene = vwm_io::load_scene(input_path)
-        .with_context(|| format!("Could not load projection geometry: {}", input_path.display()))?;
+    let scene = vwm_io::load_scene(input_path).with_context(|| {
+        format!(
+            "Could not load projection geometry: {}",
+            input_path.display()
+        )
+    })?;
     if scene.vertices.is_empty() {
         bail!("Projection geometry contains no vertices");
     }
@@ -198,7 +202,10 @@ pub fn project_photos_to_geometry(
             continue;
         };
         if image.dimensions() != dimensions {
-            rejected_photos.push(photo_rejection(&photo, "image_dimensions_changed_during_decode"));
+            rejected_photos.push(photo_rejection(
+                &photo,
+                "image_dimensions_changed_during_decode",
+            ));
             continue;
         }
         let evidence = score_image(&photo.image.filename, &image);
@@ -251,32 +258,32 @@ pub fn project_photos_to_geometry(
     for photo in decoded {
         let (grid_width, grid_height) =
             occlusion_grid_dimensions(photo.image.width(), photo.image.height());
-        let nearest_depth = if let Some(indices) = scene.indices.as_deref().filter(|v| !v.is_empty()) {
-            triangle_rasterized_depth(
-                &scene,
-                indices,
-                &photo.camera,
-                &photo.image,
-                grid_width,
-                grid_height,
-                &mut work_units,
-            )?
-        } else {
-            point_bucket_depth(
-                &scene,
-                &photo.camera,
-                &photo.image,
-                grid_width,
-                grid_height,
-                &mut work_units,
-            )?
-        };
+        let nearest_depth =
+            if let Some(indices) = scene.indices.as_deref().filter(|v| !v.is_empty()) {
+                triangle_rasterized_depth(
+                    &scene,
+                    indices,
+                    &photo.camera,
+                    &photo.image,
+                    grid_width,
+                    grid_height,
+                    &mut work_units,
+                )?
+            } else {
+                point_bucket_depth(
+                    &scene,
+                    &photo.camera,
+                    &photo.image,
+                    grid_width,
+                    grid_height,
+                    &mut work_units,
+                )?
+            };
 
         let mut accepted_samples = 0_usize;
         consume_projection_work(&mut work_units, scene.vertices.len() as u64)?;
         for (index, vertex) in scene.vertices.iter().enumerate() {
-            let Some((pixel, depth)) =
-                projected_image_sample(&photo.camera, *vertex, &photo.image)
+            let Some((pixel, depth)) = projected_image_sample(&photo.camera, *vertex, &photo.image)
             else {
                 continue;
             };
@@ -292,21 +299,26 @@ pub fn project_photos_to_geometry(
             {
                 continue;
             }
-            let x = pixel[0].round().clamp(0.0, photo.image.width() as f64 - 1.0) as u32;
-            let y = pixel[1].round().clamp(0.0, photo.image.height() as f64 - 1.0) as u32;
+            let x = pixel[0]
+                .round()
+                .clamp(0.0, photo.image.width() as f64 - 1.0) as u32;
+            let y = pixel[1]
+                .round()
+                .clamp(0.0, photo.image.height() as f64 - 1.0) as u32;
             let pixel_color = photo.image.get_pixel(x, y).0;
             let angle_weight = if let Some(normals) = mesh_normals.as_ref() {
-                let Some(weight) = signed_mesh_view_angle_weight(
-                    &normals[index],
-                    *vertex,
-                    &photo.camera,
-                ) else {
+                let Some(weight) =
+                    signed_mesh_view_angle_weight(&normals[index], *vertex, &photo.camera)
+                else {
                     continue;
                 };
                 weight
             } else {
                 point_cloud_view_angle_weight(
-                    scene.normals.as_ref().and_then(|normals| normals.get(index)),
+                    scene
+                        .normals
+                        .as_ref()
+                        .and_then(|normals| normals.get(index)),
                     *vertex,
                     &photo.camera,
                 )
@@ -442,8 +454,7 @@ fn projected_image_coordinates(
     vertex: [f32; 3],
 ) -> Option<([f64; 2], f64)> {
     let (pixel, depth) = camera.project_world_with_depth(vertex.map(f64::from))?;
-    (pixel[0].is_finite() && pixel[1].is_finite() && depth.is_finite())
-        .then_some((pixel, depth))
+    (pixel[0].is_finite() && pixel[1].is_finite() && depth.is_finite()).then_some((pixel, depth))
 }
 
 fn occlusion_grid_dimensions(width: u32, height: u32) -> (usize, usize) {
@@ -490,15 +501,12 @@ fn point_cloud_view_angle_weight(
         camera_center[2] - vertex[2] as f64,
     ];
     let view_length = (view[0] * view[0] + view[1] * view[1] + view[2] * view[2]).sqrt();
-    let normal_length = ((normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2])
-        as f64)
-        .sqrt();
+    let normal_length =
+        ((normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]) as f64).sqrt();
     if view_length <= 1e-9 || normal_length <= 1e-9 {
         return 1.0;
     }
-    ((normal[0] as f64 * view[0]
-        + normal[1] as f64 * view[1]
-        + normal[2] as f64 * view[2])
+    ((normal[0] as f64 * view[0] + normal[1] as f64 * view[1] + normal[2] as f64 * view[2])
         / (normal_length * view_length))
         .abs()
         .clamp(0.1, 1.0)
@@ -538,18 +546,26 @@ fn mesh_projection_normals(scene: &CanonicalScene) -> Result<Vec<[f64; 3]>> {
     {
         let converted = normals
             .iter()
-            .map(|normal| [f64::from(normal[0]), f64::from(normal[1]), f64::from(normal[2])])
+            .map(|normal| {
+                [
+                    f64::from(normal[0]),
+                    f64::from(normal[1]),
+                    f64::from(normal[2]),
+                ]
+            })
             .collect::<Vec<_>>();
         if converted.iter().all(|normal| {
             normal.iter().all(|value| value.is_finite())
-                && (normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2])
-                    > 1.0e-18
+                && (normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]) > 1.0e-18
         }) {
             return Ok(converted);
         }
     }
 
-    let indices = scene.indices.as_ref().context("Mesh has no triangle indices")?;
+    let indices = scene
+        .indices
+        .as_ref()
+        .context("Mesh has no triangle indices")?;
     let mut normals = vec![[0.0_f64; 3]; scene.vertices.len()];
     for face in indices {
         let a = *scene
@@ -666,12 +682,18 @@ fn triangle_rasterized_depth(
         if !area.is_finite() || area.abs() <= 1.0e-12 {
             continue;
         }
-        let raw_min_x = points.iter().map(|point| point[0]).fold(f64::INFINITY, f64::min);
+        let raw_min_x = points
+            .iter()
+            .map(|point| point[0])
+            .fold(f64::INFINITY, f64::min);
         let raw_max_x = points
             .iter()
             .map(|point| point[0])
             .fold(f64::NEG_INFINITY, f64::max);
-        let raw_min_y = points.iter().map(|point| point[1]).fold(f64::INFINITY, f64::min);
+        let raw_min_y = points
+            .iter()
+            .map(|point| point[1])
+            .fold(f64::INFINITY, f64::min);
         let raw_max_y = points
             .iter()
             .map(|point| point[1])
@@ -684,13 +706,9 @@ fn triangle_rasterized_depth(
             continue;
         }
         let min_x = raw_min_x.floor().max(0.0) as usize;
-        let max_x = raw_max_x
-            .ceil()
-            .min(grid_width.saturating_sub(1) as f64) as usize;
+        let max_x = raw_max_x.ceil().min(grid_width.saturating_sub(1) as f64) as usize;
         let min_y = raw_min_y.floor().max(0.0) as usize;
-        let max_y = raw_max_y
-            .ceil()
-            .min(grid_height.saturating_sub(1) as f64) as usize;
+        let max_y = raw_max_y.ceil().min(grid_height.saturating_sub(1) as f64) as usize;
         let raster_work = (max_x - min_x + 1) as u64 * (max_y - min_y + 1) as u64;
         consume_projection_work(work_units, raster_work)?;
         for y in min_y..=max_y {
@@ -719,8 +737,7 @@ fn triangle_rasterized_depth(
 }
 
 fn edge_function(left: [f64; 2], right: [f64; 2], point: [f64; 2]) -> f64 {
-    (point[0] - left[0]) * (right[1] - left[1])
-        - (point[1] - left[1]) * (right[0] - left[0])
+    (point[0] - left[0]) * (right[1] - left[1]) - (point[1] - left[1]) * (right[0] - left[0])
 }
 
 fn consume_projection_work(current: &mut u64, amount: u64) -> Result<()> {
@@ -784,9 +801,7 @@ fn write_colored_ply(
             let normal = normals[index];
             write!(writer, " {} {} {}", normal[0], normal[1], normal[2])?;
         }
-        let color = colors[index].map(|channel| {
-            (channel.clamp(0.0, 1.0) * 255.0).round() as u8
-        });
+        let color = colors[index].map(|channel| (channel.clamp(0.0, 1.0) * 255.0).round() as u8);
         write!(writer, " {} {} {}", color[0], color[1], color[2])?;
         if let Some(uvs) = uvs {
             write!(writer, " {} {}", uvs[index][0], uvs[index][1])?;
@@ -1059,14 +1074,18 @@ mod tests {
         assert_eq!(report.photos_used, 1);
         assert_eq!(report.visibility_method, "triangle_rasterized_depth");
         assert_eq!(report.normal_weighting, "signed_front_face");
-        assert!(colors.iter().all(|color| color[0] > 0.45 && color[1] < 0.05 && color[2] < 0.05));
+        assert!(colors
+            .iter()
+            .all(|color| color[0] > 0.45 && color[1] < 0.05 && color[2] < 0.05));
         std::fs::remove_dir_all(output_dir).unwrap();
     }
 
     #[test]
     fn calibrated_photo_occlusion_rejects_farther_vertex_at_same_pixel() {
-        let output_dir =
-            std::env::temp_dir().join(format!("3dmk-photo-project-occlusion-{}", std::process::id()));
+        let output_dir = std::env::temp_dir().join(format!(
+            "3dmk-photo-project-occlusion-{}",
+            std::process::id()
+        ));
         std::fs::create_dir_all(&output_dir).unwrap();
         let input = output_dir.join("input.ply");
         let output = output_dir.join("output.ply");

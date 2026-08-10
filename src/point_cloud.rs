@@ -18,11 +18,11 @@ pub use crate::scene::{
 };
 use vwm_core::{CanonicalScene, GeometryAnalysis};
 use vwm_geometry::{analyze_scene as analyze_vwm_scene, GeometryConfig};
-use vwm_io::load_scene as load_vwm_scene;
 use vwm_implicit::{
     sample_field_to_grid, GridSamplingConfig, ImplicitField, OrientedPointSet, PoissonConfig,
     PoissonReconstructor, SurfaceNetsConfig, SurfaceNetsExtractor,
 };
+use vwm_io::load_scene as load_vwm_scene;
 
 const MAX_POINTS: usize = 2_000_000;
 
@@ -295,7 +295,9 @@ impl VwmGeometryOptions {
             self.parallel_angle_threshold_degrees,
             self.perpendicular_angle_threshold_degrees,
         ];
-        if angles.iter().any(|value| !value.is_finite() || !(0.1..=90.0).contains(value))
+        if angles
+            .iter()
+            .any(|value| !value.is_finite() || !(0.1..=90.0).contains(value))
             || self.min_faces_per_patch == 0
             || self.plane_min_vertices < 3
             || !self.adjacency_centroid_distance.is_finite()
@@ -339,7 +341,10 @@ pub fn cleaned_reconstruction_cloud(input_path: &Path) -> Result<PointCloud> {
     if points.len() < 4 {
         bail!("Artifact cleanup left fewer than four reconstruction points");
     }
-    Ok(PointCloud { points, faces: Vec::new() })
+    Ok(PointCloud {
+        points,
+        faces: Vec::new(),
+    })
 }
 
 pub fn write_clean_reconstruction_input(input_path: &Path, output_path: &Path) -> Result<()> {
@@ -393,12 +398,17 @@ fn estimate_local_normals(points: &[Point]) -> Result<(Vec<Point>, Vec<[f64; 3]>
                     for dz in -radius..=radius {
                         if let Some(candidates) = bins.get(&(key.0 + dx, key.1 + dy, key.2 + dz)) {
                             for candidate_index in candidates {
-                                if index == *candidate_index { continue; }
+                                if index == *candidate_index {
+                                    continue;
+                                }
                                 let distance = squared_distance(*point, points[*candidate_index]);
                                 if distance < nearest[0].0 {
-                                    nearest[2] = nearest[1]; nearest[1] = nearest[0]; nearest[0] = (distance, *candidate_index);
+                                    nearest[2] = nearest[1];
+                                    nearest[1] = nearest[0];
+                                    nearest[0] = (distance, *candidate_index);
                                 } else if distance < nearest[1].0 {
-                                    nearest[2] = nearest[1]; nearest[1] = (distance, *candidate_index);
+                                    nearest[2] = nearest[1];
+                                    nearest[1] = (distance, *candidate_index);
                                 } else if distance < nearest[2].0 {
                                     nearest[2] = (distance, *candidate_index);
                                 }
@@ -407,10 +417,14 @@ fn estimate_local_normals(points: &[Point]) -> Result<(Vec<Point>, Vec<[f64; 3]>
                     }
                 }
             }
-            if nearest[2].0.is_finite() { break; }
+            if nearest[2].0.is_finite() {
+                break;
+            }
         }
         // ponytail: isolated scan returns are discarded; upgrade to density-weighted confidence when cleanup needs to retain them.
-        if !nearest[2].0.is_finite() { continue; }
+        if !nearest[2].0.is_finite() {
+            continue;
+        }
         let a = points[nearest[0].1];
         let b = points[nearest[1].1];
         let ab = [b.x - a.x, b.y - a.y, b.z - a.z];
@@ -429,9 +443,15 @@ fn estimate_local_normals(points: &[Point]) -> Result<(Vec<Point>, Vec<[f64; 3]>
             continue;
         }
         normal.iter_mut().for_each(|component| *component /= length);
-        let outward = [point.x - centroid[0], point.y - centroid[1], point.z - centroid[2]];
+        let outward = [
+            point.x - centroid[0],
+            point.y - centroid[1],
+            point.z - centroid[2],
+        ];
         if normal[0] * outward[0] + normal[1] * outward[1] + normal[2] * outward[2] < 0.0 {
-            normal.iter_mut().for_each(|component| *component = -*component);
+            normal
+                .iter_mut()
+                .for_each(|component| *component = -*component);
         }
         oriented_points.push(*point);
         normals.push(normal);
@@ -962,20 +982,24 @@ fn parse_ascii_ply(text: &str) -> Result<PointCloud> {
         for property in &face_properties {
             match property {
                 PlyFaceProperty::Scalar => {
-                    let token = tokens
-                        .get(cursor)
-                        .with_context(|| format!("PLY face {} is missing a scalar property", face_number + 1))?;
-                    token
-                        .parse::<f64>()
-                        .with_context(|| format!("Invalid scalar property on PLY face {}", face_number + 1))?;
+                    let token = tokens.get(cursor).with_context(|| {
+                        format!("PLY face {} is missing a scalar property", face_number + 1)
+                    })?;
+                    token.parse::<f64>().with_context(|| {
+                        format!("Invalid scalar property on PLY face {}", face_number + 1)
+                    })?;
                     cursor += 1;
                 }
                 PlyFaceProperty::List { vertex_indices } => {
                     let count = tokens
                         .get(cursor)
-                        .with_context(|| format!("PLY face {} is missing a list count", face_number + 1))?
+                        .with_context(|| {
+                            format!("PLY face {} is missing a list count", face_number + 1)
+                        })?
                         .parse::<usize>()
-                        .with_context(|| format!("Invalid list count on PLY face {}", face_number + 1))?;
+                        .with_context(|| {
+                            format!("Invalid list count on PLY face {}", face_number + 1)
+                        })?;
                     if count > MAX_FACE_VERTICES {
                         bail!(
                             "PLY face {} exceeds the {} vertex limit",
@@ -1128,8 +1152,7 @@ fn extract_floorplan_layout(cloud: &PointCloud, cut_height: f64) -> Result<Floor
     let span_y = (maximum[1] - minimum[1]).max(1e-4);
     let epsilon = span_y * 0.005;
     let candidate_offsets = [
-        -0.18, -0.15, -0.12, -0.09, -0.06, -0.03, 0.0, 0.03, 0.06, 0.09, 0.12,
-        0.15, 0.18,
+        -0.18, -0.15, -0.12, -0.09, -0.06, -0.03, 0.0, 0.03, 0.06, 0.09, 0.12, 0.15, 0.18,
     ];
     let mut candidates = Vec::new();
 
@@ -1217,8 +1240,7 @@ fn floorplan_candidate_score(index: usize, candidates: &[Vec<Vec<[f64; 2]>>]) ->
         .map(|(_, candidate)| floorplan_polyline_similarity(outer, &candidate[0]))
         .sum::<f64>();
     let closure = if outer.len() >= 3
-        && distance_2d(outer[0], *outer.last().unwrap())
-            <= floorplan_polyline_scale(outer) * 0.025
+        && distance_2d(outer[0], *outer.last().unwrap()) <= floorplan_polyline_scale(outer) * 0.025
     {
         1.0
     } else {
@@ -1557,14 +1579,24 @@ mod tests {
         let mut points = Vec::new();
         for x in 0..4 {
             for z in 0..4 {
-                points.push(Point { x: x as f64, y: 0.0, z: z as f64 });
+                points.push(Point {
+                    x: x as f64,
+                    y: 0.0,
+                    z: z as f64,
+                });
             }
         }
-        points.push(Point { x: 100.0, y: 100.0, z: 100.0 });
+        points.push(Point {
+            x: 100.0,
+            y: 100.0,
+            z: 100.0,
+        });
         let (supported, normals) = estimate_local_normals(&points).expect("supported plane");
         assert!(supported.len() >= 12);
         assert_eq!(supported.len(), normals.len());
-        assert!(normals.iter().all(|normal| normal.iter().all(|value| value.is_finite())));
+        assert!(normals
+            .iter()
+            .all(|normal| normal.iter().all(|value| value.is_finite())));
     }
 
     #[test]

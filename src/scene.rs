@@ -138,12 +138,7 @@ impl FloatingMeshSettings {
                 0.01,
                 0.5,
             ),
-            (
-                "maximum_extent_ratio",
-                self.maximum_extent_ratio,
-                0.01,
-                1.0,
-            ),
+            ("maximum_extent_ratio", self.maximum_extent_ratio, 0.01, 1.0),
             (
                 "minimum_separation_ratio",
                 self.minimum_separation_ratio,
@@ -152,9 +147,7 @@ impl FloatingMeshSettings {
             ),
         ] {
             if !value.is_finite() || value < minimum || value > maximum {
-                bail!(
-                    "Floating-mesh {name} must be between {minimum} and {maximum}"
-                );
+                bail!("Floating-mesh {name} must be between {minimum} and {maximum}");
             }
         }
         Ok(self)
@@ -635,8 +628,7 @@ fn classify_clusters(
     let primary_count = primary.point_indices.len() as f64;
     let primary_diagonal = cluster_diagonal(primary).max(1e-6);
     let primary_density = primary.density.max(1e-6);
-    let remove_limit =
-        (total_points as f64 * settings.maximum_scene_point_ratio).max(8.0);
+    let remove_limit = (total_points as f64 * settings.maximum_scene_point_ratio).max(8.0);
     let keep_limit = (total_points as f64 / 16.0).max(24.0);
 
     components

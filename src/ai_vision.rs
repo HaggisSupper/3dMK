@@ -65,10 +65,8 @@ pub struct VlmObjectDetectionOptions {
 impl Default for VlmObjectDetectionOptions {
     fn default() -> Self {
         Self {
-            endpoint: std::env::var("THREEDMK_VLM_ENDPOINT")
-                .unwrap_or_else(|_| mistral_endpoint()),
-            model: std::env::var("THREEDMK_VLM_MODEL")
-                .unwrap_or_else(|_| "pixtral".to_string()),
+            endpoint: std::env::var("THREEDMK_VLM_ENDPOINT").unwrap_or_else(|_| mistral_endpoint()),
+            model: std::env::var("THREEDMK_VLM_MODEL").unwrap_or_else(|_| "pixtral".to_string()),
             api_key: std::env::var("THREEDMK_VLM_API_KEY").unwrap_or_default(),
             candidate_labels: vec![
                 "door".to_string(),

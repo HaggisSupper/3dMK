@@ -11,7 +11,8 @@ fn frontend_has_a_usable_entry_point() {
     assert!(html.contains("function ensurePlanarUvs"));
     assert!(html.contains("new ResizeObserver(onWindowResize).observe(viewport)"));
     assert!(html.contains("JSZip.loadAsync(file)"));
-    assert!(html.contains("accept=\".3ds,.3mf,.dae,.fbx,.glb,.gltf,.off,.obj,.ply,.stl,.u3d,.x3d,.zip\""));
+    assert!(html
+        .contains("accept=\".3ds,.3mf,.dae,.fbx,.glb,.gltf,.off,.obj,.ply,.stl,.u3d,.x3d,.zip\""));
     assert!(html.contains("manager.setURLModifier"));
     assert!(html.contains("new MTLLoader(manager)"));
     assert!(html.contains("currentTexture || geom.userData.texture"));
@@ -160,7 +161,9 @@ fn calibrated_projection_posts_complete_inputs_and_commits_once() {
     ] {
         assert!(html.contains(&format!("id=\"{id}\"")), "missing {id}");
     }
-    assert!(html.contains("safeBind('calibratedPhotoProjectionBtn', 'click', projectCalibratedPhotos)"));
+    assert!(
+        html.contains("safeBind('calibratedPhotoProjectionBtn', 'click', projectCalibratedPhotos)")
+    );
     assert!(html.contains("async function projectCalibratedPhotos"));
     assert!(html.contains("form.append('cloud', geometryPlyBlob(2000000, true"));
     assert!(html.contains("form.append('camera_set'"));
@@ -216,7 +219,10 @@ fn detached_review_uses_revision_bound_exact_membership() {
     assert!(html.contains("function geometryFingerprint"));
     assert!(html.contains("function requireCurrentFloatingReview"));
     assert!(html.contains("geometry_fingerprint: activeGeometryFingerprint"));
-    assert!(html.contains("saveState();"), "hide/show edits must enter history");
+    assert!(
+        html.contains("saveState();"),
+        "hide/show edits must enter history"
+    );
 }
 
 #[test]
@@ -226,7 +232,9 @@ fn divergent_rust_projects_force_current_browser_package() {
     assert!(html.contains("currentModelPackage.rustProjectId && !rustProjectHasLocalDivergence"));
     assert!(html.contains("const forcedBrowserPackage"));
     assert!(html.contains("geometryPlyBlob(2000000, true, loadedGeometryStore)"));
-    assert!(html.contains("Local geometry or detached-review edits are not committed to the Rust revision"));
+    assert!(html.contains(
+        "Local geometry or detached-review edits are not committed to the Rust revision"
+    ));
     assert!(html.contains("The Rust-backed revision remains unchanged."));
 }
 
@@ -240,6 +248,8 @@ fn vwm_perception_reports_fallback_provenance_honestly() {
     assert!(html.contains("async function runVwmPerception"));
     assert!(html.contains("fetchJson('/api/vwm-perception'"));
     assert!(html.contains("const mode = String(data?.mode || 'unspecified')"));
-    assert!(html.contains("deterministic fallback was used and packaged ONNX inference was not used"));
+    assert!(
+        html.contains("deterministic fallback was used and packaged ONNX inference was not used")
+    );
     assert!(!html.contains("Packaged ONNX inference ready"));
 }
