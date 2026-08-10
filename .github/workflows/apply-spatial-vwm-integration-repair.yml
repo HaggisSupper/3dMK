@@ -39,7 +39,23 @@ jobs:
       - name: Apply and verify bounded repair
         shell: pwsh
         run: |
-          pwsh -NoLogo -NoProfile -File scripts/repair-spatial-vwm-integration.ps1
+          $scriptPath = 'scripts/repair-spatial-vwm-integration.ps1'
+          $original = Get-Content -LiteralPath $scriptPath -Raw
+          $patched = $original.Replace(
+            '[Parameter(Mandatory)][string]$New',
+            '[Parameter(Mandatory)][AllowEmptyString()][string]$New'
+          )
+          if ($patched -eq $original) {
+            throw 'Could not apply the bounded empty-string compatibility patch to the repair script.'
+          }
+          try {
+            Set-Content -LiteralPath $scriptPath -Value $patched -Encoding utf8 -NoNewline
+            pwsh -NoLogo -NoProfile -File $scriptPath
+            if ($LASTEXITCODE -ne 0) { throw "Bounded repair failed with exit code $LASTEXITCODE" }
+          }
+          finally {
+            Set-Content -LiteralPath $scriptPath -Value $original -Encoding utf8 -NoNewline
+          }
 
       - name: Commit repaired production files when required
         shell: pwsh
