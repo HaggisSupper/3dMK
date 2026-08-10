@@ -12,6 +12,12 @@ function Invoke-PreparedRepair {
         [Parameter(Mandatory)][string]$Content
     )
 
+    $repositoryRootLiteral = $RepositoryRoot.Replace("'", "''")
+    $Content = $Content.Replace(
+        '$RepositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot ''..'')).Path',
+        "`$RepositoryRoot = '$repositoryRootLiteral'"
+    )
+
     $temporaryPath = Join-Path ([IO.Path]::GetTempPath()) ("3dmk-{0}-{1}.ps1" -f $Name, [Guid]::NewGuid().ToString('N'))
     try {
         Set-Content -LiteralPath $temporaryPath -Value $Content -Encoding utf8 -NoNewline
