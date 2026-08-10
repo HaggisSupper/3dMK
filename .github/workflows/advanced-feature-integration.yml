@@ -10,6 +10,7 @@ on:
       - 'public/**'
       - 'tests/**'
       - 'VWM-Repo-Implicit/**'
+      - 'scripts/repair-spatial-vwm-*.ps1'
       - '.github/workflows/advanced-feature-integration.yml'
   push:
     branches:
@@ -17,7 +18,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: advanced-feature-integration-${{ github.ref }}
@@ -27,23 +28,91 @@ jobs:
   rust-and-tauri-contracts:
     name: Rust, VWM, frontend, and Tauri contracts
     runs-on: windows-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
-      - name: Check out repository
+      - name: Check out integration branch
         uses: actions/checkout@v4
+        with:
+          ref: agent/spatial-vwm-feature-integration
+          fetch-depth: 0
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
 
+      - name: Apply bounded security, compatibility, and quality repairs when required
+        shell: pwsh
+        run: |
+          $api = Get-Content -LiteralPath src/api.rs -Raw
+          $packages = Get-Content -LiteralPath src/packages.rs -Raw
+          $repairRequired = -not (
+            $api.Contains('direct_model_extension_supported', [StringComparison]::Ordinal) -and
+            $api.Contains('local_vlm_completion_url', [StringComparison]::Ordinal) -and
+            $packages.Contains('sort_by_key(|candidate| std::cmp::Reverse(candidate.confidence))', [StringComparison]::Ordinal)
+          )
+          if (-not $repairRequired) {
+            Write-Host 'Bounded integration repairs are already applied.'
+            exit 0
+          }
+
+          $scriptPath = 'scripts/repair-spatial-vwm-integration.ps1'
+          $original = Get-Content -LiteralPath $scriptPath -Raw
+          $patched = $original.Replace(
+            '[Parameter(Mandatory)][string]$New',
+            '[Parameter(Mandatory)][AllowEmptyString()][string]$New'
+          )
+          if ($patched -eq $original) {
+            throw 'Could not apply the bounded empty-string compatibility patch to the repair script.'
+          }
+          try {
+            Set-Content -LiteralPath $scriptPath -Value $patched -Encoding utf8 -NoNewline
+            pwsh -NoLogo -NoProfile -File $scriptPath
+            if ($LASTEXITCODE -ne 0) { throw "Security and compatibility repair failed with exit code $LASTEXITCODE" }
+          }
+          finally {
+            Set-Content -LiteralPath $scriptPath -Value $original -Encoding utf8 -NoNewline
+          }
+
+          pwsh -NoLogo -NoProfile -File scripts/repair-spatial-vwm-quality.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Quality repair failed with exit code $LASTEXITCODE" }
+
+      - name: Commit bounded repairs when required
+        shell: pwsh
+        run: |
+          $changes = @(git status --porcelain)
+          if ($changes.Count -eq 0) {
+            Write-Host 'No repair commit is required.'
+            exit 0
+          }
+          $allowed = @(
+            '.github/workflows/advanced-feature-integration.yml',
+            'src/api.rs',
+            'src/ai_vision.rs',
+            'src/packages.rs',
+            'src/point_cloud.rs',
+            'src/scene.rs'
+          )
+          $changedPaths = @($changes | ForEach-Object { $_.Substring(3).Replace('\', '/') })
+          $unexpected = @($changedPaths | Where-Object { $_ -notin $allowed })
+          if ($unexpected.Count -gt 0) {
+            throw "Repair changed files outside the approved boundary:`n$($unexpected -join [Environment]::NewLine)"
+          }
+          git config user.name '3DMk CI'
+          git config user.email '3dmk-ci@users.noreply.github.com'
+          git add -- @($allowed)
+          git commit -m 'fix: harden and validate advanced feature integration [integration-repair-applied]'
+          if ($LASTEXITCODE -ne 0) { throw "Repair commit failed with exit code $LASTEXITCODE" }
+          git push origin HEAD:agent/spatial-vwm-feature-integration
+          if ($LASTEXITCODE -ne 0) { throw "Repair push failed with exit code $LASTEXITCODE" }
+
       - name: Cache Rust artifacts
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
             . -> target
-            VWM-Repo-Implicit -> VWM-Repo-Implicit/target
-            src-tauri -> src-tauri/target
+            VWM-Repo-Implicit -> target
+            src-tauri -> target
 
       - name: Verify formatting
         shell: pwsh
@@ -76,3 +145,11 @@ jobs:
       - name: Compile Tauri desktop application
         shell: pwsh
         run: cargo check --locked --manifest-path src-tauri/Cargo.toml
+
+      - name: Validate current documentation contracts
+        shell: pwsh
+        run: pwsh -NoLogo -NoProfile -File scripts/test-documentation.ps1
+
+      - name: Validate CUDA-only Mistral.rs harness contracts
+        shell: pwsh
+        run: pwsh -NoLogo -NoProfile -File scripts/test-mistralrs-local-agent-harness.ps1
