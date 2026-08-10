@@ -23,7 +23,7 @@ jobs:
   repair:
     if: ${{ github.event_name == 'push' || github.event.pull_request.head.ref == 'agent/spatial-vwm-feature-integration' }}
     runs-on: windows-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - name: Check out integration branch
         uses: actions/checkout@v4
@@ -34,9 +34,9 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt
+          components: rustfmt, clippy
 
-      - name: Apply and verify bounded repair
+      - name: Apply and verify security and compatibility repair
         shell: pwsh
         run: |
           $scriptPath = 'scripts/repair-spatial-vwm-integration.ps1'
@@ -51,21 +51,34 @@ jobs:
           try {
             Set-Content -LiteralPath $scriptPath -Value $patched -Encoding utf8 -NoNewline
             pwsh -NoLogo -NoProfile -File $scriptPath
-            if ($LASTEXITCODE -ne 0) { throw "Bounded repair failed with exit code $LASTEXITCODE" }
+            if ($LASTEXITCODE -ne 0) { throw "Security and compatibility repair failed with exit code $LASTEXITCODE" }
           }
           finally {
             Set-Content -LiteralPath $scriptPath -Value $original -Encoding utf8 -NoNewline
           }
+
+      - name: Apply and verify quality repair
+        shell: pwsh
+        run: |
+          pwsh -NoLogo -NoProfile -File scripts/repair-spatial-vwm-quality.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Quality repair failed with exit code $LASTEXITCODE" }
 
       - name: Commit repaired production files when required
         shell: pwsh
         run: |
           $changes = @(git status --porcelain)
           if ($changes.Count -eq 0) {
-            Write-Host 'The bounded integration repair is already applied.'
+            Write-Host 'The bounded integration repairs are already applied.'
             exit 0
           }
-          $allowed = @('src/api.rs', 'src/ai_vision.rs')
+          $allowed = @(
+            '.github/workflows/advanced-feature-integration.yml',
+            'src/api.rs',
+            'src/ai_vision.rs',
+            'src/packages.rs',
+            'src/point_cloud.rs',
+            'src/scene.rs'
+          )
           $changedPaths = @($changes | ForEach-Object { $_.Substring(3).Replace('\', '/') })
           $unexpected = @($changedPaths | Where-Object { $_ -notin $allowed })
           if ($unexpected.Count -gt 0) {
@@ -74,8 +87,8 @@ jobs:
 
           git config user.name '3DMk CI'
           git config user.email '3dmk-ci@users.noreply.github.com'
-          git add -- src/api.rs src/ai_vision.rs
-          git commit -m 'fix: preserve import support and confine VLM to loopback [integration-repair-applied]'
+          git add -- @($allowed)
+          git commit -m 'fix: harden and validate advanced feature integration [integration-repair-applied]'
           if ($LASTEXITCODE -ne 0) { throw "Repair commit failed with exit code $LASTEXITCODE" }
           git push origin HEAD:agent/spatial-vwm-feature-integration
           if ($LASTEXITCODE -ne 0) { throw "Repair push failed with exit code $LASTEXITCODE" }
