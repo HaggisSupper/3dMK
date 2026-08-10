@@ -2,7 +2,7 @@
 
 **Audit date:** 2026-08-10  
 **Audited integration baseline:** advanced spatial/VWM integration candidate on `agent/spatial-vwm-feature-integration`; this document describes the source state carried by that candidate and remains valid when it is merged  
-**Branch admission policy:** before model startup, the controller fetches current `origin/main`, safely fast-forwards a strictly behind implementation branch, blocks on divergence, and admits work only after proving `origin/main` is an ancestor of the active implementation branch  
+**Branch admission policy:** before model startup, the controller fetches current `origin/main`, fast-forwards the branch when it is strictly behind, blocks on divergence, and admits work only after proving `origin/main` is an ancestor of the active implementation branch  
 **Product state:** active implementation; not deployment-ready; `PROJECT_COMPLETE` has not been reached
 
 ## 1. System boundary
