@@ -101,6 +101,12 @@ fn frontend_has_a_usable_entry_point() {
     assert!(html.contains("id=\"helpDrawer\""));
     assert!(html.contains("id=\"helpToggleBtn\""));
     assert!(html.contains("id=\"helpPinBtn\""));
+    assert!(html.contains("id=\"viewCloseBtn\""));
+    assert!(html.contains("id=\"drawerScrim\""));
+    assert!(html.contains("id=\"canvasEmptyState\""));
+    assert!(html.contains("role=\"alertdialog\""));
+    assert!(html.contains("function updateCanvasEmptyState"));
+    assert!(html.contains("toggleAttribute('inert'"));
     assert!(html.contains("id=\"measureUnitsSelect\""));
     assert!(html.contains("Measurement display units"));
     assert!(html.contains("saved as its own measurement object"));
