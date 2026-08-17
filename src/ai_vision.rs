@@ -65,7 +65,7 @@ fn configured_vlm_api_key() -> String {
 }
 
 #[derive(Clone, Deserialize)]
-#[serde(default, deny_unknown_fields)]
+#[serde(default)]
 pub struct VlmObjectDetectionOptions {
     #[serde(skip_deserializing, default = "configured_vlm_endpoint")]
     pub endpoint: String,
@@ -141,7 +141,7 @@ fn local_vlm_completion_url(endpoint: &str) -> Result<String> {
         anyhow::bail!("VLM endpoint must use loopback HTTP");
     }
     let host = url.host_str().unwrap_or_default();
-    if !matches!(host, "127.0.0.1" | "localhost" | "::1") {
+    if !matches!(host, "127.0.0.1" | "localhost" | "::1" | "[::1]") {
         anyhow::bail!("VLM endpoint must use a loopback host");
     }
     if !url.username().is_empty() || url.password().is_some() {
@@ -343,19 +343,84 @@ struct Message {
 }
 
 pub async fn vision_available() -> bool {
-    let endpoint = mistral_endpoint();
+    vision_status().await.reachable
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct VisionRuntimeStatus {
+    pub endpoint: String,
+    pub model: String,
+    pub reachable: bool,
+    pub message: String,
+}
+
+pub async fn vision_status() -> VisionRuntimeStatus {
+    let model = configured_vlm_model().trim().to_owned();
+    let endpoint = match local_vlm_completion_url(&configured_vlm_endpoint()) {
+        Ok(completion_url) => {
+            let mut url = match reqwest::Url::parse(&completion_url) {
+                Ok(url) => url,
+                Err(_) => {
+                    return VisionRuntimeStatus {
+                        endpoint: "loopback VLM endpoint".to_owned(),
+                        model,
+                        reachable: false,
+                        message: "The configured VLM endpoint is invalid.".to_owned(),
+                    }
+                }
+            };
+            url.set_path("");
+            url.set_query(None);
+            url.set_fragment(None);
+            url.to_string().trim_end_matches('/').to_owned()
+        }
+        Err(_) => {
+            return VisionRuntimeStatus {
+                endpoint: "loopback VLM endpoint".to_owned(),
+                model,
+                reachable: false,
+                message: "Configure a loopback HTTP VLM endpoint before running perception."
+                    .to_owned(),
+            }
+        }
+    };
     let client = match reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(2))
         .build()
     {
         Ok(client) => client,
-        Err(_) => return false,
+        Err(error) => {
+            return VisionRuntimeStatus {
+                endpoint,
+                model,
+                reachable: false,
+                message: format!("Could not create the local VLM health client: {error}"),
+            }
+        }
     };
-    client
-        .get(format!("{}/v1/models", endpoint))
-        .send()
-        .await
-        .is_ok_and(|response| response.status().is_success())
+    match client.get(format!("{endpoint}/v1/models")).send().await {
+        Ok(response) if response.status().is_success() => VisionRuntimeStatus {
+            endpoint,
+            model,
+            reachable: true,
+            message: "Local VLM responded on its OpenAI-compatible models endpoint.".to_owned(),
+        },
+        Ok(response) => VisionRuntimeStatus {
+            endpoint,
+            model,
+            reachable: false,
+            message: format!(
+                "Local VLM returned HTTP {} from /v1/models.",
+                response.status()
+            ),
+        },
+        Err(error) => VisionRuntimeStatus {
+            endpoint,
+            model,
+            reachable: false,
+            message: format!("Local VLM is not reachable: {error}"),
+        },
+    }
 }
 
 /// Extract a room-aware layout with local vision when configured, otherwise a deterministic raster outline.
@@ -753,7 +818,7 @@ fn local_mistral_origin(endpoint: &str) -> Option<String> {
     }
     if !matches!(
         url.host_str().unwrap_or_default(),
-        "127.0.0.1" | "localhost" | "::1"
+        "127.0.0.1" | "localhost" | "::1" | "[::1]"
     ) {
         return None;
     }

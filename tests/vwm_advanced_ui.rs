@@ -50,6 +50,9 @@ fn all_operational_vwm_controls_are_exposed_and_wired() {
         "floatingSeparationRatio",
         "vwmPerceptionMode",
         "vlmRuntimeStatus",
+        "vlmRuntimeCard",
+        "vlmRuntimeDetails",
+        "vlmCheckBtn",
         "vlmConfidence",
     ] {
         assert!(html.contains(&format!("id=\"{id}\"")), "missing {id}");
@@ -62,6 +65,11 @@ fn all_operational_vwm_controls_are_exposed_and_wired() {
     assert!(html.contains("structured-ray extraction require corresponding capture data"));
     assert!(html.contains("form.append('floating_mesh_settings'"));
     assert!(html.contains("form.append('vlm_options'"));
+    assert!(html.contains("/api/v1/vlm/status"));
+    assert!(html.contains("function checkVlmRuntime()"));
+    assert!(html.contains("showLoader(true, 'Preparing VWM geometry analysis…'"));
+    assert!(html.contains("setProcessingProgress(42, '42% · Running selected VWM extractor')"));
+    assert!(html.contains("data-state=\"checking\""));
     assert!(html
         .contains("Local VLM connection, model, and credentials are managed by the 3DMk runtime."));
     assert!(!html.contains("id=\"vlmEndpoint\""));

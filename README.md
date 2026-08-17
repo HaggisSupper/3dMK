@@ -93,6 +93,16 @@ cargo tauri dev
 
 This command is not a substitute for the clean-machine release gate; current release packaging remains work in progress.
 
+## Start the local VLM
+
+VWM object detection uses a loopback, OpenAI-compatible Mistral.rs vision server. The helper builds/verifies the CUDA-enabled Mistral.rs binary, sets the runtime endpoint/model variables, and starts a multimodal server:
+
+```powershell
+.\scripts\start-mistralrs-vlm.ps1
+```
+
+Keep that process running while 3DMk is open. The VWM perception panel has a **Check connection** action and will report the configured model, endpoint, and `/v1/models` readiness without exposing credentials. CPU or remote VLM endpoints are rejected by the backend.
+
 ## Run verification
 
 Root crate:
