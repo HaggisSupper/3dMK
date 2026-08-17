@@ -106,6 +106,12 @@ fn frontend_has_a_usable_entry_point() {
     assert!(html.contains("VWM and VLM in plain language"));
     assert!(html
         .contains("Its suggestions are for review; it does not change the saved model by itself."));
+    assert!(html.contains("id=\"sceneBrightness\""));
+    assert!(html.contains("id=\"sceneContrast\""));
+    assert!(html.contains("id=\"resetSceneAppearanceBtn\""));
+    assert!(html.contains("function updateSceneAppearance()"));
+    assert!(html.contains("function resetSceneAppearance()"));
+    assert!(html.contains("ShaderPass"));
     assert!(html.contains("id=\"viewCloseBtn\""));
     assert!(html.contains("id=\"drawerScrim\""));
     assert!(html.contains("id=\"canvasEmptyState\""));

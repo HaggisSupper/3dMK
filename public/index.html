@@ -829,6 +829,9 @@
                 </div>
                 <div class="control-group"><label for="pointSize">Point size</label><input type="range" id="pointSize" min="0.002" max="0.15" step="0.002" value="0.02"><small id="pointSizeLabel" style="color:var(--teal-accent)">0.020 units</small></div>
                 <div class="control-group"><label for="strideInput">Display density</label><input type="range" id="strideInput" min="1" max="100" step="1" value="100"><small id="strideLabel" style="color:var(--teal-accent)">Viewing 100%</small></div>
+                <div class="control-group"><label for="sceneBrightness">Scene brightness <span id="sceneBrightnessLabel" class="range-value">0%</span></label><input type="range" id="sceneBrightness" min="-1" max="1" step="0.05" value="0"></div>
+                <div class="control-group"><label for="sceneContrast">Scene contrast <span id="sceneContrastLabel" class="range-value">0%</span></label><input type="range" id="sceneContrast" min="-1" max="1" step="0.05" value="0"></div>
+                <button id="resetSceneAppearanceBtn" class="action-btn" type="button">Reset brightness and contrast</button>
             </section>
             <section class="drawer-section" aria-labelledby="viewLightingHeading">
                 <h3 id="viewLightingHeading">Lighting and camera</h3>
@@ -965,6 +968,7 @@
         import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
         import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
+        import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
         import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
         import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
         import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -975,7 +979,7 @@
 
         let scene, activeCamera, cameraPersp, cameraOrtho, renderer, controls;
         let dirLight, ambientLight, pmremGenerator, proceduralEnvironment;
-        let composer, renderPass, ssaoPass, outputPass;
+        let composer, renderPass, ssaoPass, colorAdjustPass, outputPass;
         let gridHelper, currentGroup = new THREE.Group(), measurementGroup = new THREE.Group(), measurementDraftGroup = new THREE.Group(), cropGroup = new THREE.Group();
         
         let clipPlaneX = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 10000);
@@ -2529,6 +2533,16 @@
             ssaoPass = new SSAOPass(scene, activeCamera, viewport.clientWidth, viewport.clientHeight);
             ssaoPass.kernelRadius = 16; ssaoPass.minDistance = 0.005; ssaoPass.maxDistance = 0.1; ssaoPass.enabled = false;
             composer.addPass(ssaoPass);
+            colorAdjustPass = new ShaderPass({
+                uniforms: {
+                    tDiffuse: { value: null },
+                    brightness: { value: 0 },
+                    contrast: { value: 0 }
+                },
+                vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+                fragmentShader: 'uniform sampler2D tDiffuse; uniform float brightness; uniform float contrast; varying vec2 vUv; void main() { vec4 color = texture2D(tDiffuse, vUv); color.rgb += brightness; color.rgb = (color.rgb - 0.5) * (1.0 + contrast) + 0.5; gl_FragColor = color; }'
+            });
+            composer.addPass(colorAdjustPass);
             outputPass = new OutputPass(); composer.addPass(outputPass);
 
             pmremGenerator = new THREE.PMREMGenerator(renderer); pmremGenerator.compileEquirectangularShader();
@@ -2596,6 +2610,9 @@
             safeBind('renderMode', 'change', rebuildMeshes);
             safeBind('strideInput', 'input', applyShaderDecimation); 
             safeBind('pointSize', 'input', updatePointSize); 
+            safeBind('sceneBrightness', 'input', updateSceneAppearance);
+            safeBind('sceneContrast', 'input', updateSceneAppearance);
+            safeBind('resetSceneAppearanceBtn', 'click', resetSceneAppearance);
             safeBind('enableShadows', 'change', toggleLighting);
             safeBind('enableSSAO', 'change', (e) => { ssaoPass.enabled = e.target.checked; });
             safeBind('sunAzimuth', 'input', updateSunPath);
@@ -4730,6 +4747,28 @@
             target.setRGB(data[offset] / 255, data[offset + 1] / 255, data[offset + 2] / 255);
         }
         
+        function formatSceneAdjustment(value) {
+            const percent = Math.round(value * 100);
+            return `${percent > 0 ? '+' : ''}${percent}%`;
+        }
+        function updateSceneAppearance() {
+            const brightness = THREE.MathUtils.clamp(Number($('sceneBrightness')?.value) || 0, -1, 1);
+            const contrast = THREE.MathUtils.clamp(Number($('sceneContrast')?.value) || 0, -1, 1);
+            if ($('sceneBrightnessLabel')) $('sceneBrightnessLabel').textContent = formatSceneAdjustment(brightness);
+            if ($('sceneContrastLabel')) $('sceneContrastLabel').textContent = formatSceneAdjustment(contrast);
+            if (colorAdjustPass) {
+                colorAdjustPass.uniforms.brightness.value = brightness;
+                colorAdjustPass.uniforms.contrast.value = contrast;
+            }
+        }
+        function resetSceneAppearance() {
+            if ($('sceneBrightness')) $('sceneBrightness').value = '0';
+            if ($('sceneContrast')) $('sceneContrast').value = '0';
+            updateSceneAppearance();
+        }
+        function hasSceneAppearanceAdjustments() {
+            return Math.abs(Number($('sceneBrightness')?.value) || 0) > 0.001 || Math.abs(Number($('sceneContrast')?.value) || 0) > 0.001;
+        }
         function updatePointSize() { const size = parseFloat($('pointSize').value); if ($('pointSizeLabel')) $('pointSizeLabel').textContent = `${size.toFixed(3)} units`; currentGroup.traverse((child) => { if (child.isPoints && child.material) child.material.size = size; }); }
 
         async function loadBlueprintFile(file) {
@@ -5158,7 +5197,13 @@
             } catch (e) { unloadCurrentModel("Error applying materials."); }
         }
 
-        function switchCamera() { activeCamera = $('cameraType').value === 'orthographic' ? cameraOrtho : cameraPersp; controls.object = activeCamera; centerCamera(); }
+        function switchCamera() {
+            activeCamera = $('cameraType').value === 'orthographic' ? cameraOrtho : cameraPersp;
+            controls.object = activeCamera;
+            if (renderPass) renderPass.camera = activeCamera;
+            if (ssaoPass) ssaoPass.camera = activeCamera;
+            centerCamera();
+        }
         function centerCamera() {
             if (currentGroup.children.length === 0) { activeCamera.position.set(0, 10, 20); controls.target.set(0, 0, 0); controls.update(); return; }
             const box = new THREE.Box3().setFromObject(currentGroup); if (box.isEmpty()) return;
@@ -5622,7 +5667,7 @@
                 label.element.style.opacity = '1';
             });
             
-            if (ssaoPass && ssaoPass.enabled && activeCamera === cameraPersp) composer.render();
+            if ((ssaoPass && ssaoPass.enabled && activeCamera === cameraPersp) || hasSceneAppearanceAdjustments()) composer.render();
             else renderer.render(scene, activeCamera);
         }
     </script>
