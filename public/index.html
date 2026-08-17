@@ -747,8 +747,8 @@
     <aside id="helpDrawer" aria-label="Context help" aria-hidden="true" inert>
         <header class="help-header">
             <div>
-                <div class="help-kicker">Quick help</div>
-                <div class="help-title">Context guide</div>
+                <div class="help-kicker">Start here</div>
+                <div class="help-title">How to use 3DMk</div>
             </div>
             <div class="help-actions">
                 <button id="helpPinBtn" class="help-icon-btn" type="button" aria-pressed="false">Pin</button>
@@ -757,25 +757,45 @@
         </header>
         <div class="help-body">
             <details class="help-card" open>
-                <summary id="helpControlsHeading">Supported mouse controls</summary>
-                <ul class="help-control-list">
-                    <li><strong>Left drag</strong>Rotate the camera around the current target.</li>
-                    <li><strong>Mouse wheel</strong>Zoom in and out.</li>
-                    <li><strong>Middle drag</strong>Zoom continuously without using the wheel.</li>
-                    <li><strong>Right drag</strong>Pan the view.</li>
-                    <li><strong>Ctrl/Cmd + wheel or +/-</strong>Zoom the whole app UI, like a webpage.</li>
-                </ul>
-                <p class="help-note">Touch support: one-finger rotate, two-finger pan and pinch zoom. Use Fit Scene / Reset Camera if you lose the model.</p>
+                <summary id="helpStartHeading">A simple first run</summary>
+                <ol class="help-next-steps" aria-label="First steps">
+                    <li><strong>1. Import</strong>Open a model, scan, or working package from the Import section.</li>
+                    <li><strong>2. Inspect</strong>Drag to turn the model, use the wheel to zoom, and use the View button for display settings.</li>
+                    <li><strong>3. Work</strong>Use Scene analysis, Measure, or the VWM tools in the left panel.</li>
+                    <li><strong>4. Save</strong>Use Export to save a working package or a model file.</li>
+                </ol>
+                <p class="help-note">Buttons turn on when the file type and data they need are ready.</p>
             </details>
             <details class="help-card" open>
-                <summary id="helpContextHeading">What matters right now</summary>
+                <summary id="helpControlsHeading">Move around the model</summary>
+                <ul class="help-control-list">
+                    <li><strong>Left drag</strong>Turn the model.</li>
+                    <li><strong>Mouse wheel</strong>Zoom in or out.</li>
+                    <li><strong>Middle drag</strong>Zoom smoothly.</li>
+                    <li><strong>Right drag</strong>Move the model across the screen.</li>
+                    <li><strong>Ctrl/Cmd + wheel or +/-</strong>Make the app text and controls larger or smaller.</li>
+                </ul>
+                <p class="help-note">On a touch screen, use one finger to turn, two fingers to move, and pinch to zoom. Use Fit scene / reset camera if the model is hard to find.</p>
+            </details>
+            <details class="help-card" open>
+                <summary id="helpContextHeading">Your next step</summary>
                 <div id="helpContextBadge" class="help-context-label">Getting started</div>
-                <p id="helpContextSummary" aria-live="polite">Import a model or ZIP package to start.</p>
+                <p id="helpContextSummary" aria-live="polite">Import a model, scan, or working package to start.</p>
                 <ul id="helpNextSteps" class="help-next-steps" aria-live="polite"></ul>
             </details>
             <details class="help-card">
-                <summary id="helpFeaturesHeading">Feature guide</summary>
+                <summary id="helpFeaturesHeading">What the main tools do</summary>
                 <dl id="helpFeatureList" aria-live="polite"></dl>
+            </details>
+            <details class="help-card">
+                <summary id="helpVwmHeading">VWM and VLM in plain language</summary>
+                <ul class="help-control-list">
+                    <li><strong>VWM tools</strong>Find surfaces, rebuild scan points into a mesh, and review parts of a model.</li>
+                    <li><strong>Progress bar</strong>Shows the current stage while a calculation is running. Large files can take a while.</li>
+                    <li><strong>VLM object detection</strong>Uses a local vision model to suggest objects and boxes in an image. Its suggestions are for review; it does not change the saved model by itself.</li>
+                    <li><strong>Check connection</strong>Use this before VLM detection. The app only accepts a local connection on this computer.</li>
+                    <li><strong>Advanced controls</strong>Leave the starting values alone unless you know what you want to change. Smaller tolerances are stricter; larger values accept more variation.</li>
+                </ul>
             </details>
         </div>
     </aside>
@@ -2343,67 +2363,67 @@
             const mode = getLoadedGeometryMode();
             const hasTexture = !!getActiveTexture();
             let context = 'Getting started';
-            let contextSummary = 'Import a model or ZIP package to start.';
+            let contextSummary = 'Import a model, scan, or working package to start.';
             const next = [];
             const features = [];
 
-            if (!backendCapabilities.connected) next.push('<strong>Reconnect the backend</strong>Analysis, alignment, smoothing, and room-plan extraction stay disabled.');
+            if (!backendCapabilities.connected) next.push('<strong>Reconnect the app service</strong>Analysis, alignment, smoothing, and room-plan tools need the local service.');
 
             if (mode === 'empty') {
-                next.push('<strong>Load geometry</strong>Import a mesh, point cloud, or ZIP package.');
+                next.push('<strong>Import a file</strong>Open a model, scan, or working package.');
                 features.push(
-                    { title: 'Load geometry', body: 'Meshes, point clouds, and ZIP packages stay together.' },
-                    { title: 'Texture', body: 'Projects onto a loaded mesh and fills UVs when needed.' },
-                    { title: 'Blueprint', body: 'Keeps the image on the floor as reference only.' }
+                    { title: 'Import', body: 'Open a model, scan, or working package.' },
+                    { title: 'Texture', body: 'Put a 2D image on a mesh for comparison.' },
+                    { title: 'Blueprint', body: 'Place a reference image on the floor without changing the model.' }
                 );
             } else if (mode === 'mixed') {
-                context = 'Mixed geometry loaded';
-                contextSummary = 'Mesh and point-cloud layers are mixed. Hide one before converting.';
-                next.push('<strong>Use layers</strong>Hide one geometry type before converting.');
-                next.push('<strong>Run scene analysis</strong>Detect floors, walls, and stray fragments.');
+                context = 'Two data types loaded';
+                contextSummary = 'A mesh and scan are loaded together. Hide one before converting.';
+                next.push('<strong>Choose one data type</strong>Hide either the mesh or the scan before converting.');
+                next.push('<strong>Analyze the scene</strong>Find floors, walls, and loose pieces.');
                 features.push(
-                    { title: 'Layers', body: 'Hide or isolate geometry before running transforms.' },
-                    { title: 'Scene analysis', body: 'Finds structural surfaces and detached fragments.' },
-                    { title: 'Align to ground', body: 'Rotates the model so its support plane is horizontal.' }
+                    { title: 'Layers', body: 'Hide or isolate parts before changing them.' },
+                    { title: 'Scene analysis', body: 'Find floors, walls, and loose pieces.' },
+                    { title: 'Align to ground', body: 'Turn the model so its support surface is level.' }
                 );
             } else if (mode === 'point-cloud') {
-                context = 'Point cloud loaded';
-                contextSummary = 'Raw scan points are loaded. Next: analysis, mesh reconstruction, or cleanup.';
-                if (backendCapabilities.meshReconstruction) next.push('<strong>Reconstruct mesh</strong>Build a mesh from the loaded point cloud.');
-                if (backendCapabilities.meshReconstruction) next.push('<strong>Reconstruct from file</strong>Process a separate point-cloud file.');
-                if (backendCapabilities.analysis) next.push('<strong>Scene analysis</strong>Identify floors, walls, and stray fragments.');
+                context = 'Scan loaded';
+                contextSummary = 'Your scan points are loaded. Next, analyze them or build a surface.';
+                if (backendCapabilities.meshReconstruction) next.push('<strong>Build a surface</strong>Turn the scan points into a mesh.');
+                if (backendCapabilities.meshReconstruction) next.push('<strong>Use another scan file</strong>Process a separate point-cloud file.');
+                if (backendCapabilities.analysis) next.push('<strong>Analyze the scene</strong>Find floors, walls, and loose pieces.');
                 features.push(
-                    { title: 'Reconstruct mesh', body: 'Runs the Rust Poisson reconstruction engine on the loaded scan.' },
-                    { title: 'Reconstruct from file', body: 'Uses local PDAL when a separate file is better.' }
+                    { title: 'Build a surface', body: 'Creates a mesh from the loaded scan.' },
+                    { title: 'Use another scan file', body: 'Processes a separate point-cloud file.' }
                 );
             } else if (mode === 'mesh') {
-                context = hasTexture ? 'Textured mesh loaded' : 'Mesh loaded';
+                context = hasTexture ? 'Textured model loaded' : 'Model loaded';
                 contextSummary = hasTexture
-                    ? 'A mesh with texture context is loaded. Cleanup and alignment keep it in place.'
-                    : 'A mesh is loaded. Clean, align, smooth, sample, or derive a room plan.';
-                if (!hasTexture) next.push('<strong>Texture</strong>Project a reference image for comparison or context.');
-                if (backendCapabilities.analysis) next.push('<strong>Scene analysis</strong>Find floors, walls, and detached fragments.');
-                if (backendCapabilities.flatCorrection) next.push('<strong>Align to ground</strong>Rotate the model so its support plane sits horizontal.');
-                if (backendCapabilities.meshSmoothing) next.push('<strong>Smooth mesh</strong>Relax noisy surfaces while preserving topology.');
-                if (backendCapabilities.modelFloorplanRecognition) next.push('<strong>Build room plan</strong>Slice the model and draw walls and corners.');
+                    ? 'A model with an image is loaded. You can clean it up or line it up with the ground.'
+                    : 'A model is loaded. You can clean it, line it up, smooth it, measure it, or make a room plan.';
+                if (!hasTexture) next.push('<strong>Add a texture</strong>Place a reference image on the model.');
+                if (backendCapabilities.analysis) next.push('<strong>Analyze the scene</strong>Find floors, walls, and loose pieces.');
+                if (backendCapabilities.flatCorrection) next.push('<strong>Align to ground</strong>Make the support surface level.');
+                if (backendCapabilities.meshSmoothing) next.push('<strong>Smooth the model</strong>Reduce noisy bumps in the surface.');
+                if (backendCapabilities.modelFloorplanRecognition) next.push('<strong>Build a room plan</strong>Draw walls and corners from a slice of the model.');
                 features.push(
-                    { title: 'Texture', body: 'Applies a 2D image across the mesh.' },
-                    { title: 'Smooth mesh', body: 'Softens noisy scan surfaces using connectivity.' },
-                    { title: 'Sample to points', body: 'Converts the mesh back into a point cloud.' },
-                    { title: 'Build room plan', body: 'Slices the model and overlays room lines and corners.' }
+                    { title: 'Texture', body: 'Puts a 2D image on the model.' },
+                    { title: 'Smooth the model', body: 'Reduces noisy bumps in the surface.' },
+                    { title: 'Sample to points', body: 'Turns the model into scan points.' },
+                    { title: 'Build a room plan', body: 'Slices the model and draws room lines and corners.' }
                 );
             }
 
             if (isMeasuring) {
                 next.unshift('<strong>Measuring is active</strong>Click the model to place points. Click a saved point to move it.');
-                features.unshift({ title: 'Measurements', body: 'Each saved measurement becomes its own object with editable points instead of being flattened into a running text log.' });
+                features.unshift({ title: 'Measurements', body: 'Save each measurement as its own object so you can edit its points later.' });
             }
-            if ($('enableSlicing')?.checked) features.unshift({ title: 'Interactive Clipping Planes', body: 'The slice sliders cut temporary sections through the view. They do not edit or delete the saved geometry.' });
-            if (floorplanLayoutGroup) features.push({ title: 'Room plan overlay', body: 'Wall lines, corner markers, and raw traces stay on screen.' });
-            if (structuralMeshLayerGroup) features.push({ title: 'Structural surfaces', body: 'Detected floors, walls, and support planes are shown as a toggleable mesh layer.' });
-            if (sceneAnalysisOverlayGroup) features.push({ title: 'Detected objects', body: 'Removable and uncertain fragments are outlined in the scene.' });
-            if (floatingObjectLayerGroup) features.push({ title: 'Floating objects', body: 'Disconnected fragments are isolated in a removable geometry layer.' });
-            if (measurementSets.length) features.push({ title: 'Measurement units', body: 'Switch between metres, feet, millimetres, centimetres, and inches.' });
+            if ($('enableSlicing')?.checked) features.unshift({ title: 'Clipping planes', body: 'Temporarily hide part of the view for inspection. The saved model is not changed.' });
+            if (floorplanLayoutGroup) features.push({ title: 'Room plan overlay', body: 'Keep wall lines, corner markers, and traces visible.' });
+            if (structuralMeshLayerGroup) features.push({ title: 'Structural surfaces', body: 'Show detected floors, walls, and support surfaces as a separate layer.' });
+            if (sceneAnalysisOverlayGroup) features.push({ title: 'Detected objects', body: 'Outline pieces that may be loose or need review.' });
+            if (floatingObjectLayerGroup) features.push({ title: 'Loose pieces', body: 'Review disconnected pieces before hiding or deleting them.' });
+            if (measurementSets.length) features.push({ title: 'Measurement units', body: 'Choose metres, feet, millimetres, centimetres, or inches.' });
 
             // ponytail: this is a heuristic summary, not a full onboarding system; expand only if users still miss the primary workflow.
             const compactNext = [...new Set(next)].slice(0, 5);
@@ -2415,8 +2435,8 @@
                 compactFeatures.push(feature);
                 if (compactFeatures.length >= 6) break;
             }
-            if (!compactNext.length) compactNext.push('<strong>Nothing is blocked</strong>Use the left sidebar to load data, inspect it, and export what you need.');
-            if (!compactFeatures.length) compactFeatures.push({ title: 'Sidebar controls', body: 'Most actions live in the left sidebar. Load data first, then the relevant cleanup and export tools will enable themselves.' });
+            if (!compactNext.length) compactNext.push('<strong>You are ready</strong>Use the left panel to inspect, edit, and export your work.');
+            if (!compactFeatures.length) compactFeatures.push({ title: 'Left panel', body: 'Start at the top. The app enables each tool when its required data is ready.' });
 
             badge.innerText = context;
             summary.innerText = contextSummary;
