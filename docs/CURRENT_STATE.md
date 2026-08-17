@@ -95,6 +95,7 @@ Security and resource controls added during integration:
 
 - VLM connection, model, and credentials are server-owned and cannot be overridden by request payloads;
 - Mistral.rs and VLM endpoints are restricted to loopback HTTP origins;
+- the workstation exposes a sanitized VLM readiness check and a CUDA-only local startup helper;
 - perception uploads have compressed-byte and decoded-pixel budgets;
 - calibrated projection has route, multipart, cloud, report, manifest, provenance, option, image-count, compressed-image, vertex, and face limits;
 - unsafe filenames, duplicate photo uploads, ambiguous camera bindings, invalid provenance, and unsupported formats fail closed;
@@ -177,7 +178,7 @@ The next dependency-ready product work remains Authoritative Task 1, tracked by 
 2. Candidate publication, compare, accept/reject, exact persisted source selections, and recovery are incomplete.
 3. The accepted transactional SQLite/CAS architecture is not implemented.
 4. Product CUDA runtime, broker, worker, kernels, and telemetry are not implemented.
-5. Mistral.rs is not supervised as a product process.
+5. Mistral.rs is not supervised as a product process; the new startup helper is operator-run and does not replace product supervision.
 6. Perception lacks packaged production model assets and complete source-linked multiview integration.
 7. Browser-owned production compute/export paths and external frontend dependencies remain.
 8. Installer, offline packaging, session security, upgrade/rollback, fault matrix, long soak, and clean-machine deployment validation remain incomplete.

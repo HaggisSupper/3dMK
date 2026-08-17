@@ -89,39 +89,39 @@
         .drawer-section h3 { font-size: 12px; line-height: 1.3; color: var(--text-main); margin-bottom: 8px; }
         .drawer-note { margin-top: 8px; color: var(--text-muted); font-size: 10px; line-height: 1.45; }
 
-        #sidebar { position: fixed; top: 0; bottom: 0; left: -340px; width: 340px; height: var(--app-viewport-height, 100dvh); min-height: 0; max-height: var(--app-viewport-height, 100dvh); overflow: hidden; overscroll-behavior: contain; background-color: var(--bg-panel); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 100; transition: left 0.25s ease; box-shadow: 2px 0 20px rgba(0,0,0,0.45); }
+        #sidebar { position: fixed; top: 0; bottom: 0; left: -304px; width: 304px; height: var(--app-viewport-height, 100dvh); min-height: 0; max-height: var(--app-viewport-height, 100dvh); overflow: hidden; overscroll-behavior: contain; background-color: var(--bg-panel); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 100; transition: left 0.25s ease; box-shadow: 2px 0 20px rgba(0,0,0,0.45); }
         #sidebar.open { left: 0; }
         
-        .sidebar-header { padding: 16px 16px 16px 72px; min-height: 68px; border-bottom: 1px solid var(--border-color); background: var(--bg-panel); }
+        .sidebar-header { padding: 14px 14px 12px 64px; min-height: 60px; border-bottom: 1px solid var(--border-color); background: var(--bg-panel); }
         .brand-title { font-size: 18px; line-height: 1.2; letter-spacing: -0.02em; }
-        .backend-status { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--text-muted); font-size: 10px; }
+        .backend-status { display: flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--text-muted); font-size: 10px; }
         .backend-status::before { content: ''; width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--warning); }
         .backend-status.connected::before { background: var(--success); }
         .backend-status.offline::before { background: var(--error-red); }
-        .sidebar-content { flex-grow: 1; overflow-y: auto; padding: 8px; }
+        .sidebar-content { flex-grow: 1; overflow-y: auto; padding: 6px; }
 
-        .accordion-item { border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 8px; background: var(--bg-dark); overflow: hidden; }
-        .accordion-header { width: 100%; min-height: 44px; border: 0; background: var(--bg-panel); color: var(--teal-accent); padding: 8px 12px; font: inherit; font-size: 12px; font-weight: 700; text-align: left; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; transition: background 0.2s; }
+        .accordion-item { border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 6px; background: var(--bg-dark); overflow: hidden; }
+        .accordion-header { width: 100%; min-height: 38px; border: 0; background: var(--bg-panel); color: var(--teal-accent); padding: 7px 10px; font: inherit; font-size: 11px; font-weight: 700; text-align: left; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; transition: background 0.2s; }
         .accordion-header:hover { background: var(--bg-hover); }
         .accordion-header:focus-visible { outline: 2px solid var(--teal-accent); outline-offset: -2px; }
         .accordion-header::after { content: '+'; font-size: 14px; font-weight: normal; color: var(--text-muted); }
         .accordion-item.active > .accordion-header::after { content: '−'; }
-        .accordion-body { padding: 12px; display: none; background: var(--bg-dark); }
+        .accordion-body { padding: 9px; display: none; background: var(--bg-dark); }
         .accordion-item.active > .accordion-body { display: block; }
         .nested-accordion { display: grid; gap: 8px; }
         .nested-accordion .accordion-item { margin-bottom: 0; border-radius: var(--panel-radius); background: var(--bg-input); }
-        .nested-accordion .accordion-header { min-height: 40px; padding: 10px 12px; background: rgba(20, 184, 166, 0.08); color: var(--text-main); font-size: 11px; text-transform: none; letter-spacing: 0.02em; }
+        .nested-accordion .accordion-header { min-height: 36px; padding: 8px 10px; background: rgba(20, 184, 166, 0.08); color: var(--text-main); font-size: 11px; text-transform: none; letter-spacing: 0.02em; }
         .nested-accordion .accordion-header:hover { background: rgba(20, 184, 166, 0.14); }
         .nested-accordion .accordion-header::after { font-size: 12px; }
         .nested-accordion .accordion-body { padding: 10px; background: transparent; }
         .nested-accordion .accordion-body > .workflow-card:last-child { margin-bottom: 0; }
 
-        .control-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; width: 100%; }
-        .checkbox-group { flex-direction: row; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .control-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; width: 100%; }
+        .checkbox-group { flex-direction: row; align-items: center; gap: 8px; margin-bottom: 8px; }
 
         label { color: var(--text-muted); font-weight: 500; font-size: 11px; }
 
-        input[type="file"], select, input[type="range"], button.action-btn { background-color: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); min-height: 40px; padding: 8px; border-radius: 6px; font-family: inherit; font-size: 12px; transition: all 0.2s ease; outline: none; width: 100%; }
+        input[type="file"], select, input[type="range"], button.action-btn { background-color: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); min-height: 36px; padding: 7px; border-radius: 6px; font-family: inherit; font-size: 12px; transition: all 0.2s ease; outline: none; width: 100%; }
         input[type="file"]::file-selector-button { background: #1e1e1e; border: 1px solid var(--border-color); color: var(--text-main); padding: 2px 6px; border-radius: 2px; margin-right: 8px; cursor: pointer; transition: 0.2s; }
         input[type="checkbox"] { accent-color: var(--teal-accent); width: 14px; height: 14px; cursor: pointer; border-radius: 2px; }
 
@@ -139,7 +139,7 @@
         button.action-btn.danger:hover { background-color: var(--error-red); color: #fff; }
         button.action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-        .workflow-card { margin-bottom: 12px; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--panel-radius); background: var(--bg-input); }
+        .workflow-card { margin-bottom: 8px; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--panel-radius); background: var(--bg-input); }
         .workflow-card h3 { color: var(--text-main); font-size: 12px; line-height: 1.3; }
         .workflow-card > p { margin: 4px 0 10px; color: var(--text-muted); font-size: 10px; line-height: 1.45; }
         .workflow-card .control-group:last-child, .workflow-card .action-btn:last-child { margin-bottom: 0; }
@@ -247,7 +247,7 @@
         
         #loader { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(18, 18, 18, 0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--teal-accent); font-size: 14px; font-weight: 600; z-index: 20; display: none; }
         .spinner { width: 32px; height: 32px; border: 3px solid var(--bg-input); border-top: 3px solid var(--teal-accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px; }
-        #processingProgress { width: min(420px, 72vw); height: 7px; margin: 2px 0 10px; border: 1px solid var(--border-color); border-radius: 999px; background: var(--bg-input); overflow: hidden; }
+        #processingProgress { width: min(420px, 72vw); height: 9px; margin: 8px 0 8px; border: 1px solid var(--border-color); border-radius: 999px; background: var(--bg-input); overflow: hidden; box-shadow: 0 0 0 1px rgba(20,184,166,0.08); }
         #processingProgressBar { width: 8%; height: 100%; border-radius: inherit; background: var(--teal-accent); transition: width .2s ease; }
         #processingProgress.indeterminate #processingProgressBar { width: 34%; animation: progress-slide 1.2s ease-in-out infinite; }
         #processingProgressValue { color: var(--text-muted); font: 10px ui-monospace, monospace; margin-bottom: 5px; }
@@ -290,6 +290,29 @@
         .vlm-preview img { display: block; width: 100%; height: auto; }
         .vlm-box { position: absolute; border: 2px solid var(--teal-accent); background: rgba(20,184,166,0.08); box-shadow: 0 0 0 1px rgba(0,0,0,0.65); pointer-events: none; }
         .vlm-box span { position: absolute; left: -2px; top: -20px; max-width: 180px; padding: 2px 5px; overflow: hidden; border-radius: 3px 3px 0 0; background: var(--teal-accent); color: #06110f; font-size: 9px; font-weight: 800; white-space: nowrap; text-overflow: ellipsis; }
+        .vlm-runtime-card { display: grid; gap: 7px; margin: 8px 0 10px; padding: 9px; border: 1px solid var(--border-color); border-radius: 7px; background: rgba(12, 24, 23, 0.68); }
+        .vlm-runtime-card[data-state="ready"] { border-color: rgba(52, 211, 153, 0.6); }
+        .vlm-runtime-card[data-state="unavailable"] { border-color: rgba(251, 191, 36, 0.55); }
+        .vlm-runtime-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .vlm-runtime-label { display: inline-flex; align-items: center; gap: 7px; color: var(--text-main); font-size: 11px; font-weight: 700; }
+        .vlm-runtime-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--warning); }
+        .vlm-runtime-card[data-state="ready"] .vlm-runtime-dot { background: var(--success); box-shadow: 0 0 8px rgba(52,211,153,0.55); }
+        .vlm-runtime-card[data-state="unavailable"] .vlm-runtime-dot { background: var(--warning); }
+        .vlm-runtime-details { color: var(--text-muted); font-size: 10px; line-height: 1.4; }
+        .vlm-runtime-card .action-btn { min-height: 32px; margin: 0; }
+        .vlm-runtime-card details { border-top: 1px solid rgba(52,65,63,0.72); padding-top: 7px; }
+        .vlm-runtime-card details summary { color: var(--teal-accent); cursor: pointer; font-size: 10px; font-weight: 700; }
+        .vlm-runtime-card code { display: block; margin-top: 6px; padding: 6px; overflow-x: auto; border-radius: 4px; background: #101817; color: var(--text-main); font: 9px ui-monospace, monospace; white-space: pre-wrap; }
+        #vwmAdvancedPanel { border-color: rgba(20,184,166,0.35); background: linear-gradient(180deg, rgba(20,184,166,0.07), var(--bg-input) 140px); }
+        #vwmAdvancedPanel > details { margin-top: 8px; padding: 0 9px 8px; border: 1px solid rgba(52,65,63,0.9); border-radius: 7px; background: rgba(18,18,18,0.72); }
+        #vwmAdvancedPanel > details > summary { padding: 10px 0 8px; color: var(--text-main); cursor: pointer; font-size: 11px; font-weight: 700; list-style-position: inside; }
+        #vwmAdvancedPanel > details > summary::marker { color: var(--teal-accent); }
+        #vwmAdvancedPanel > details > .control-group:not(.checkbox-group) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(96px, 0.7fr); align-items: center; gap: 8px; }
+        #vwmAdvancedPanel > details > .control-group > label { margin: 0; line-height: 1.25; }
+        #vwmAdvancedPanel > details > .control-group > input,
+        #vwmAdvancedPanel > details > .control-group > select { min-height: 32px; }
+        #vwmAdvancedPanel > details > .action-btn { min-height: 34px; margin-top: 3px; }
+        #vwmAdvancedPanel .drawer-note { padding: 7px; border-left: 2px solid var(--teal-accent); background: rgba(20,184,166,0.06); }
 
         @media (min-width: 900px) {
             #drawerScrim { display: none !important; }
@@ -299,7 +322,7 @@
         }
         @media (max-width: 899px) {
             body.sidebar-open #drawerScrim, body.help-open #drawerScrim, body.view-open #drawerScrim { display: block; }
-            #sidebar { width: min(320px, 88vw); left: min(-320px, -88vw); }
+            #sidebar { width: min(304px, 88vw); left: min(-304px, -88vw); }
             #helpDrawer, #viewDrawer { width: min(360px, 94vw); right: min(-360px, -94vw); }
             #historyControls { top: 10px; right: 10px; gap: 6px; }
             .history-btn, #hamburgerBtn { width: 40px; height: 40px; }
@@ -492,7 +515,12 @@
                                     <div class="control-group" aria-labelledby="vwmPerceptionHeading">
                                         <label id="vwmPerceptionHeading" for="vwmPerceptionImageInput">Advanced VWM perception</label>
                                         <select id="vwmPerceptionMode" aria-label="Perception engine"><option value="vlm">VLM object detection</option><option value="auto">VLM with deterministic fallback</option><option value="deterministic">Deterministic color regions</option></select>
-                                        <div id="vlmRuntimeStatus" class="inline-note">Local VLM connection, model, and credentials are managed by the 3DMk runtime.</div>
+                                        <div id="vlmRuntimeCard" class="vlm-runtime-card" data-state="checking" aria-live="polite">
+                                            <div class="vlm-runtime-head"><div class="vlm-runtime-label"><span class="vlm-runtime-dot" aria-hidden="true"></span><span id="vlmRuntimeStatus">Checking local VLM…</span></div><button id="vlmCheckBtn" class="action-btn" type="button">Check connection</button></div>
+                                            <div id="vlmRuntimeDetails" class="vlm-runtime-details">The app will only use a loopback, OpenAI-compatible vision endpoint.</div>
+                                            <div id="vlmRuntimeModeNote" class="inline-note">Local VLM connection, model, and credentials are managed by the 3DMk runtime.</div>
+                                            <details><summary>Local CUDA VLM setup</summary><div class="inline-note">Start the CUDA-backed Mistral.rs vision server before running object detection. Set these variables in the same shell that launches 3DMk:</div><code>$env:THREEDMK_VLM_ENDPOINT='http://127.0.0.1:8080'&#10;$env:THREEDMK_VLM_MODEL='mistralai/Pixtral-12B-2409'</code></details>
+                                        </div>
                                         <input id="vlmCandidateLabels" type="text" value="door, window, chair, table, sofa, bed, cabinet, appliance" aria-label="Preferred object classes">
                                         <div class="control-group"><label for="vlmConfidence">Minimum confidence <span id="vlmConfidenceLabel">35%</span></label><input id="vlmConfidence" type="range" min="0" max="1" step="0.05" value="0.35"></div>
                                         <input id="vwmPerceptionImageInput" type="file" accept="image/png,image/jpeg">
@@ -719,8 +747,8 @@
     <aside id="helpDrawer" aria-label="Context help" aria-hidden="true" inert>
         <header class="help-header">
             <div>
-                <div class="help-kicker">Quick help</div>
-                <div class="help-title">Context guide</div>
+                <div class="help-kicker">Start here</div>
+                <div class="help-title">How to use 3DMk</div>
             </div>
             <div class="help-actions">
                 <button id="helpPinBtn" class="help-icon-btn" type="button" aria-pressed="false">Pin</button>
@@ -729,25 +757,45 @@
         </header>
         <div class="help-body">
             <details class="help-card" open>
-                <summary id="helpControlsHeading">Supported mouse controls</summary>
-                <ul class="help-control-list">
-                    <li><strong>Left drag</strong>Rotate the camera around the current target.</li>
-                    <li><strong>Mouse wheel</strong>Zoom in and out.</li>
-                    <li><strong>Middle drag</strong>Zoom continuously without using the wheel.</li>
-                    <li><strong>Right drag</strong>Pan the view.</li>
-                    <li><strong>Ctrl/Cmd + wheel or +/-</strong>Zoom the whole app UI, like a webpage.</li>
-                </ul>
-                <p class="help-note">Touch support: one-finger rotate, two-finger pan and pinch zoom. Use Fit Scene / Reset Camera if you lose the model.</p>
+                <summary id="helpStartHeading">A simple first run</summary>
+                <ol class="help-next-steps" aria-label="First steps">
+                    <li><strong>1. Import</strong>Open a model, scan, or working package from the Import section.</li>
+                    <li><strong>2. Inspect</strong>Drag to turn the model, use the wheel to zoom, and use the View button for display settings.</li>
+                    <li><strong>3. Work</strong>Use Scene analysis, Measure, or the VWM tools in the left panel.</li>
+                    <li><strong>4. Save</strong>Use Export to save a working package or a model file.</li>
+                </ol>
+                <p class="help-note">Buttons turn on when the file type and data they need are ready.</p>
             </details>
             <details class="help-card" open>
-                <summary id="helpContextHeading">What matters right now</summary>
+                <summary id="helpControlsHeading">Move around the model</summary>
+                <ul class="help-control-list">
+                    <li><strong>Left drag</strong>Turn the model.</li>
+                    <li><strong>Mouse wheel</strong>Zoom in or out.</li>
+                    <li><strong>Middle drag</strong>Zoom smoothly.</li>
+                    <li><strong>Right drag</strong>Move the model across the screen.</li>
+                    <li><strong>Ctrl/Cmd + wheel or +/-</strong>Make the app text and controls larger or smaller.</li>
+                </ul>
+                <p class="help-note">On a touch screen, use one finger to turn, two fingers to move, and pinch to zoom. Use Fit scene / reset camera if the model is hard to find.</p>
+            </details>
+            <details class="help-card" open>
+                <summary id="helpContextHeading">Your next step</summary>
                 <div id="helpContextBadge" class="help-context-label">Getting started</div>
-                <p id="helpContextSummary" aria-live="polite">Import a model or ZIP package to start.</p>
+                <p id="helpContextSummary" aria-live="polite">Import a model, scan, or working package to start.</p>
                 <ul id="helpNextSteps" class="help-next-steps" aria-live="polite"></ul>
             </details>
             <details class="help-card">
-                <summary id="helpFeaturesHeading">Feature guide</summary>
+                <summary id="helpFeaturesHeading">What the main tools do</summary>
                 <dl id="helpFeatureList" aria-live="polite"></dl>
+            </details>
+            <details class="help-card">
+                <summary id="helpVwmHeading">VWM and VLM in plain language</summary>
+                <ul class="help-control-list">
+                    <li><strong>VWM tools</strong>Find surfaces, rebuild scan points into a mesh, and review parts of a model.</li>
+                    <li><strong>Progress bar</strong>Shows the current stage while a calculation is running. Large files can take a while.</li>
+                    <li><strong>VLM object detection</strong>Uses a local vision model to suggest objects and boxes in an image. Its suggestions are for review; it does not change the saved model by itself.</li>
+                    <li><strong>Check connection</strong>Use this before VLM detection. The app only accepts a local connection on this computer.</li>
+                    <li><strong>Advanced controls</strong>Leave the starting values alone unless you know what you want to change. Smaller tolerances are stricter; larger values accept more variation.</li>
+                </ul>
             </details>
         </div>
     </aside>
@@ -781,6 +829,9 @@
                 </div>
                 <div class="control-group"><label for="pointSize">Point size</label><input type="range" id="pointSize" min="0.002" max="0.15" step="0.002" value="0.02"><small id="pointSizeLabel" style="color:var(--teal-accent)">0.020 units</small></div>
                 <div class="control-group"><label for="strideInput">Display density</label><input type="range" id="strideInput" min="1" max="100" step="1" value="100"><small id="strideLabel" style="color:var(--teal-accent)">Viewing 100%</small></div>
+                <div class="control-group"><label for="sceneBrightness">Object brightness <span id="sceneBrightnessLabel" class="range-value">0%</span></label><input type="range" id="sceneBrightness" min="-1" max="1" step="0.05" value="0"></div>
+                <div class="control-group"><label for="sceneContrast">Object contrast <span id="sceneContrastLabel" class="range-value">0%</span></label><input type="range" id="sceneContrast" min="-1" max="1" step="0.05" value="0"></div>
+                <button id="resetSceneAppearanceBtn" class="action-btn" type="button">Reset object brightness and contrast</button>
             </section>
             <section class="drawer-section" aria-labelledby="viewLightingHeading">
                 <h3 id="viewLightingHeading">Lighting and camera</h3>
@@ -928,6 +979,7 @@
         let scene, activeCamera, cameraPersp, cameraOrtho, renderer, controls;
         let dirLight, ambientLight, pmremGenerator, proceduralEnvironment;
         let composer, renderPass, ssaoPass, outputPass;
+        const objectAppearanceMaterials = new Set();
         let gridHelper, currentGroup = new THREE.Group(), measurementGroup = new THREE.Group(), measurementDraftGroup = new THREE.Group(), cropGroup = new THREE.Group();
         
         let clipPlaneX = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 10000);
@@ -959,12 +1011,12 @@
         let vlmPreviewObjectUrl = null;
         let orientationAxes = null, orientationAxisScene = null, orientationAxisCamera = null, orientationAxisRenderer = null;
         let sceneManualRotation = new THREE.Euler(0, 0, 0, 'XYZ');
-        let backendCapabilities = { connected: false, pdal: false, meshReconstruction: false, analysis: false, flatCorrection: false, meshSmoothing: false, imageRefinement: false, modelFloorplanRecognition: false, floorplanVision: false, sceneContext: false };
+        let backendCapabilities = { connected: false, vlm: false, pdal: false, meshReconstruction: false, analysis: false, flatCorrection: false, meshSmoothing: false, imageRefinement: false, modelFloorplanRecognition: false, floorplanVision: false, sceneContext: false };
         const ROOM_PLAN_LAYER_INPUTS = { walls: 'roomPlanShowWalls', corners: 'roomPlanShowCorners', rooms: 'roomPlanShowRooms', raw: 'roomPlanShowRaw' };
         
         let isMeasuring = false, activeMeasurePoints = [], measurementSets = [], activeMeasurementEdit = null, measurementIdSequence = 0, measurementCounters = { distance: 0, angle: 0, area: 0 }, raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2(), pointerDownPos = new THREE.Vector2(), labelObjects = [], cancelProcessFlag = false;
-        let activeRequestController = null, processingProgressTimer = null, processingCancelled = false;
+        let activeRequestController = null, processingCancelled = false;
         let cropBoxMesh = null;
         let floatingObjectEntries = new Map();
         let selectedFloatingClusterIds = new Set();
@@ -2315,67 +2367,67 @@
             const mode = getLoadedGeometryMode();
             const hasTexture = !!getActiveTexture();
             let context = 'Getting started';
-            let contextSummary = 'Import a model or ZIP package to start.';
+            let contextSummary = 'Import a model, scan, or working package to start.';
             const next = [];
             const features = [];
 
-            if (!backendCapabilities.connected) next.push('<strong>Reconnect the backend</strong>Analysis, alignment, smoothing, and room-plan extraction stay disabled.');
+            if (!backendCapabilities.connected) next.push('<strong>Reconnect the app service</strong>Analysis, alignment, smoothing, and room-plan tools need the local service.');
 
             if (mode === 'empty') {
-                next.push('<strong>Load geometry</strong>Import a mesh, point cloud, or ZIP package.');
+                next.push('<strong>Import a file</strong>Open a model, scan, or working package.');
                 features.push(
-                    { title: 'Load geometry', body: 'Meshes, point clouds, and ZIP packages stay together.' },
-                    { title: 'Texture', body: 'Projects onto a loaded mesh and fills UVs when needed.' },
-                    { title: 'Blueprint', body: 'Keeps the image on the floor as reference only.' }
+                    { title: 'Import', body: 'Open a model, scan, or working package.' },
+                    { title: 'Texture', body: 'Put a 2D image on a mesh for comparison.' },
+                    { title: 'Blueprint', body: 'Place a reference image on the floor without changing the model.' }
                 );
             } else if (mode === 'mixed') {
-                context = 'Mixed geometry loaded';
-                contextSummary = 'Mesh and point-cloud layers are mixed. Hide one before converting.';
-                next.push('<strong>Use layers</strong>Hide one geometry type before converting.');
-                next.push('<strong>Run scene analysis</strong>Detect floors, walls, and stray fragments.');
+                context = 'Two data types loaded';
+                contextSummary = 'A mesh and scan are loaded together. Hide one before converting.';
+                next.push('<strong>Choose one data type</strong>Hide either the mesh or the scan before converting.');
+                next.push('<strong>Analyze the scene</strong>Find floors, walls, and loose pieces.');
                 features.push(
-                    { title: 'Layers', body: 'Hide or isolate geometry before running transforms.' },
-                    { title: 'Scene analysis', body: 'Finds structural surfaces and detached fragments.' },
-                    { title: 'Align to ground', body: 'Rotates the model so its support plane is horizontal.' }
+                    { title: 'Layers', body: 'Hide or isolate parts before changing them.' },
+                    { title: 'Scene analysis', body: 'Find floors, walls, and loose pieces.' },
+                    { title: 'Align to ground', body: 'Turn the model so its support surface is level.' }
                 );
             } else if (mode === 'point-cloud') {
-                context = 'Point cloud loaded';
-                contextSummary = 'Raw scan points are loaded. Next: analysis, mesh reconstruction, or cleanup.';
-                if (backendCapabilities.meshReconstruction) next.push('<strong>Reconstruct mesh</strong>Build a mesh from the loaded point cloud.');
-                if (backendCapabilities.meshReconstruction) next.push('<strong>Reconstruct from file</strong>Process a separate point-cloud file.');
-                if (backendCapabilities.analysis) next.push('<strong>Scene analysis</strong>Identify floors, walls, and stray fragments.');
+                context = 'Scan loaded';
+                contextSummary = 'Your scan points are loaded. Next, analyze them or build a surface.';
+                if (backendCapabilities.meshReconstruction) next.push('<strong>Build a surface</strong>Turn the scan points into a mesh.');
+                if (backendCapabilities.meshReconstruction) next.push('<strong>Use another scan file</strong>Process a separate point-cloud file.');
+                if (backendCapabilities.analysis) next.push('<strong>Analyze the scene</strong>Find floors, walls, and loose pieces.');
                 features.push(
-                    { title: 'Reconstruct mesh', body: 'Runs the Rust Poisson reconstruction engine on the loaded scan.' },
-                    { title: 'Reconstruct from file', body: 'Uses local PDAL when a separate file is better.' }
+                    { title: 'Build a surface', body: 'Creates a mesh from the loaded scan.' },
+                    { title: 'Use another scan file', body: 'Processes a separate point-cloud file.' }
                 );
             } else if (mode === 'mesh') {
-                context = hasTexture ? 'Textured mesh loaded' : 'Mesh loaded';
+                context = hasTexture ? 'Textured model loaded' : 'Model loaded';
                 contextSummary = hasTexture
-                    ? 'A mesh with texture context is loaded. Cleanup and alignment keep it in place.'
-                    : 'A mesh is loaded. Clean, align, smooth, sample, or derive a room plan.';
-                if (!hasTexture) next.push('<strong>Texture</strong>Project a reference image for comparison or context.');
-                if (backendCapabilities.analysis) next.push('<strong>Scene analysis</strong>Find floors, walls, and detached fragments.');
-                if (backendCapabilities.flatCorrection) next.push('<strong>Align to ground</strong>Rotate the model so its support plane sits horizontal.');
-                if (backendCapabilities.meshSmoothing) next.push('<strong>Smooth mesh</strong>Relax noisy surfaces while preserving topology.');
-                if (backendCapabilities.modelFloorplanRecognition) next.push('<strong>Build room plan</strong>Slice the model and draw walls and corners.');
+                    ? 'A model with an image is loaded. You can clean it up or line it up with the ground.'
+                    : 'A model is loaded. You can clean it, line it up, smooth it, measure it, or make a room plan.';
+                if (!hasTexture) next.push('<strong>Add a texture</strong>Place a reference image on the model.');
+                if (backendCapabilities.analysis) next.push('<strong>Analyze the scene</strong>Find floors, walls, and loose pieces.');
+                if (backendCapabilities.flatCorrection) next.push('<strong>Align to ground</strong>Make the support surface level.');
+                if (backendCapabilities.meshSmoothing) next.push('<strong>Smooth the model</strong>Reduce noisy bumps in the surface.');
+                if (backendCapabilities.modelFloorplanRecognition) next.push('<strong>Build a room plan</strong>Draw walls and corners from a slice of the model.');
                 features.push(
-                    { title: 'Texture', body: 'Applies a 2D image across the mesh.' },
-                    { title: 'Smooth mesh', body: 'Softens noisy scan surfaces using connectivity.' },
-                    { title: 'Sample to points', body: 'Converts the mesh back into a point cloud.' },
-                    { title: 'Build room plan', body: 'Slices the model and overlays room lines and corners.' }
+                    { title: 'Texture', body: 'Puts a 2D image on the model.' },
+                    { title: 'Smooth the model', body: 'Reduces noisy bumps in the surface.' },
+                    { title: 'Sample to points', body: 'Turns the model into scan points.' },
+                    { title: 'Build a room plan', body: 'Slices the model and draws room lines and corners.' }
                 );
             }
 
             if (isMeasuring) {
                 next.unshift('<strong>Measuring is active</strong>Click the model to place points. Click a saved point to move it.');
-                features.unshift({ title: 'Measurements', body: 'Each saved measurement becomes its own object with editable points instead of being flattened into a running text log.' });
+                features.unshift({ title: 'Measurements', body: 'Save each measurement as its own object so you can edit its points later.' });
             }
-            if ($('enableSlicing')?.checked) features.unshift({ title: 'Interactive Clipping Planes', body: 'The slice sliders cut temporary sections through the view. They do not edit or delete the saved geometry.' });
-            if (floorplanLayoutGroup) features.push({ title: 'Room plan overlay', body: 'Wall lines, corner markers, and raw traces stay on screen.' });
-            if (structuralMeshLayerGroup) features.push({ title: 'Structural surfaces', body: 'Detected floors, walls, and support planes are shown as a toggleable mesh layer.' });
-            if (sceneAnalysisOverlayGroup) features.push({ title: 'Detected objects', body: 'Removable and uncertain fragments are outlined in the scene.' });
-            if (floatingObjectLayerGroup) features.push({ title: 'Floating objects', body: 'Disconnected fragments are isolated in a removable geometry layer.' });
-            if (measurementSets.length) features.push({ title: 'Measurement units', body: 'Switch between metres, feet, millimetres, centimetres, and inches.' });
+            if ($('enableSlicing')?.checked) features.unshift({ title: 'Clipping planes', body: 'Temporarily hide part of the view for inspection. The saved model is not changed.' });
+            if (floorplanLayoutGroup) features.push({ title: 'Room plan overlay', body: 'Keep wall lines, corner markers, and traces visible.' });
+            if (structuralMeshLayerGroup) features.push({ title: 'Structural surfaces', body: 'Show detected floors, walls, and support surfaces as a separate layer.' });
+            if (sceneAnalysisOverlayGroup) features.push({ title: 'Detected objects', body: 'Outline pieces that may be loose or need review.' });
+            if (floatingObjectLayerGroup) features.push({ title: 'Loose pieces', body: 'Review disconnected pieces before hiding or deleting them.' });
+            if (measurementSets.length) features.push({ title: 'Measurement units', body: 'Choose metres, feet, millimetres, centimetres, or inches.' });
 
             // ponytail: this is a heuristic summary, not a full onboarding system; expand only if users still miss the primary workflow.
             const compactNext = [...new Set(next)].slice(0, 5);
@@ -2387,8 +2439,8 @@
                 compactFeatures.push(feature);
                 if (compactFeatures.length >= 6) break;
             }
-            if (!compactNext.length) compactNext.push('<strong>Nothing is blocked</strong>Use the left sidebar to load data, inspect it, and export what you need.');
-            if (!compactFeatures.length) compactFeatures.push({ title: 'Sidebar controls', body: 'Most actions live in the left sidebar. Load data first, then the relevant cleanup and export tools will enable themselves.' });
+            if (!compactNext.length) compactNext.push('<strong>You are ready</strong>Use the left panel to inspect, edit, and export your work.');
+            if (!compactFeatures.length) compactFeatures.push({ title: 'Left panel', body: 'Start at the top. The app enables each tool when its required data is ready.' });
 
             badge.innerText = context;
             summary.innerText = contextSummary;
@@ -2536,6 +2588,7 @@
             safeBind('vwmPerceptionBtn', 'click', runVwmPerception);
             safeBind('vwmPerceptionMode', 'change', updateVlmControls);
             safeBind('vlmConfidence', 'input', updateVlmControls);
+            safeBind('vlmCheckBtn', 'click', checkVlmRuntime);
             safeBind('vwmRunGeometryBtn', 'click', runAdvancedVwmGeometryAnalysis);
             safeBind('vwmReconstructAdvancedBtn', 'click', runAdvancedVwmReconstruction);
             safeBind('vwmRunPerceptionAdvancedBtn', 'click', runVwmPerception);
@@ -2547,6 +2600,9 @@
             safeBind('renderMode', 'change', rebuildMeshes);
             safeBind('strideInput', 'input', applyShaderDecimation); 
             safeBind('pointSize', 'input', updatePointSize); 
+            safeBind('sceneBrightness', 'input', updateSceneAppearance);
+            safeBind('sceneContrast', 'input', updateSceneAppearance);
+            safeBind('resetSceneAppearanceBtn', 'click', resetSceneAppearance);
             safeBind('enableShadows', 'change', toggleLighting);
             safeBind('enableSSAO', 'change', (e) => { ssaoPass.enabled = e.target.checked; });
             safeBind('sunAzimuth', 'input', updateSunPath);
@@ -2747,6 +2803,7 @@
                 const health = await fetchJson('/api/health', { cache: 'no-store' }, 5000);
                 backendCapabilities = {
                     connected: true,
+                    vlm: false,
                     pdal: !!health.capabilities?.point_cloud_to_mesh_pdal,
                     meshReconstruction: !!health.capabilities?.point_cloud_to_mesh,
                     analysis: !!health.capabilities?.point_cloud_analysis,
@@ -2761,13 +2818,17 @@
                 status.innerText = 'Connected';
                 setStatus('poissonStatus', backendCapabilities.meshReconstruction ? (backendCapabilities.pdal ? 'Ready: PDAL pipeline.' : 'Ready: Rust Poisson fallback.') : 'Point-cloud meshing is unavailable.', backendCapabilities.meshReconstruction ? 'success' : '');
                 setStatus('pdfTo3dStatus', backendCapabilities.floorplanVision ? 'Vision layout extraction ready.' : 'Local outline fallback ready; start the vision service for room boundaries.');
+                await checkVlmRuntime();
             } catch (error) {
-                backendCapabilities = { connected: false, pdal: false, meshReconstruction: false, analysis: false, flatCorrection: false, meshSmoothing: false, imageRefinement: false, modelFloorplanRecognition: false, floorplanVision: false, sceneContext: false };
+                backendCapabilities = { connected: false, vlm: false, pdal: false, meshReconstruction: false, analysis: false, flatCorrection: false, meshSmoothing: false, imageRefinement: false, modelFloorplanRecognition: false, floorplanVision: false, sceneContext: false };
                 status.className = 'backend-status offline';
                 status.innerText = 'Offline';
                 setStatus('poissonStatus', `Backend unavailable: ${error.message}`, 'error');
                 setStatus('pdfTo3dStatus', `Backend unavailable: ${error.message}`, 'error');
                 setStatus('modelFloorplanStatus', `Backend unavailable: ${error.message}`, 'error');
+                if ($('vlmRuntimeCard')) $('vlmRuntimeCard').dataset.state = 'unavailable';
+                if ($('vlmRuntimeStatus')) $('vlmRuntimeStatus').textContent = 'Local VLM unavailable';
+                if ($('vlmRuntimeDetails')) $('vlmRuntimeDetails').textContent = 'Start the 3DMk backend before checking the VLM.';
             }
             $('runPoissonBtn').disabled = !backendCapabilities.meshReconstruction;
             updateWorkflowAvailability();
@@ -2804,7 +2865,8 @@
             const hasCalibratedCameras = Array.isArray(cameraReport?.cameras) && cameraReport.cameras.some(camera => camera?.calibration_valid && camera?.image_present);
             if ($('calibratedPhotoProjectionBtn')) $('calibratedPhotoProjectionBtn').disabled = !hasGeometry || !backendCapabilities.connected || !hasCalibratedCameras || !(currentModelPackage.referenceImages?.length);
             const perceptionImageReady = !!$('vwmPerceptionImageInput')?.files?.[0] || !!currentModelPackage.referenceImages?.length;
-            if ($('vwmPerceptionBtn')) $('vwmPerceptionBtn').disabled = !backendCapabilities.connected || !perceptionImageReady;
+            const perceptionMode = $('vwmPerceptionMode')?.value || 'vlm';
+            if ($('vwmPerceptionBtn')) $('vwmPerceptionBtn').disabled = !backendCapabilities.connected || !perceptionImageReady || (perceptionMode === 'vlm' && !backendCapabilities.vlm);
             $('recognizeObjectsBtn').disabled = !(hasPointCloud || hasMesh);
             $('correctFlatSurfaceBtn').disabled = !(hasPointCloud || hasMesh) || !backendCapabilities.flatCorrection;
             $('recognizeModelFloorplanBtn').disabled = !hasMesh || !backendCapabilities.modelFloorplanRecognition;
@@ -3923,10 +3985,39 @@
         function updateVlmControls() {
             const vlmEnabled = $('vwmPerceptionMode').value !== 'deterministic';
             ['vlmCandidateLabels', 'vlmConfidence'].forEach(id => { $(id).disabled = !vlmEnabled; });
-            $('vlmRuntimeStatus').textContent = vlmEnabled
+            $('vlmRuntimeModeNote').textContent = vlmEnabled
                 ? 'Local VLM connection, model, and credentials are managed by the 3DMk runtime.'
                 : 'Deterministic perception selected; the managed local VLM will not be invoked.';
             $('vlmConfidenceLabel').textContent = `${Math.round(Number($('vlmConfidence').value) * 100)}%`;
+            updateWorkflowAvailability();
+        }
+        async function checkVlmRuntime() {
+            const card = $('vlmRuntimeCard');
+            const status = $('vlmRuntimeStatus');
+            const details = $('vlmRuntimeDetails');
+            const button = $('vlmCheckBtn');
+            if (!card || !status || !details) return false;
+            card.dataset.state = 'checking';
+            status.textContent = 'Checking local VLM…';
+            details.textContent = 'Querying the configured loopback /v1/models endpoint.';
+            if (button) { button.disabled = true; button.textContent = 'Checking…'; }
+            try {
+                const runtime = await fetchJson('/api/v1/vlm/status', { cache: 'no-store' }, 5000);
+                backendCapabilities.vlm = !!runtime.reachable;
+                card.dataset.state = runtime.reachable ? 'ready' : 'unavailable';
+                status.textContent = runtime.reachable ? 'Local VLM ready' : 'Local VLM not ready';
+                details.textContent = `${runtime.model || 'No model selected'} · ${runtime.endpoint || 'loopback endpoint'} · ${runtime.message || 'No status message.'}`;
+                return backendCapabilities.vlm;
+            } catch (error) {
+                backendCapabilities.vlm = false;
+                card.dataset.state = 'unavailable';
+                status.textContent = 'Local VLM status unavailable';
+                details.textContent = error.message;
+                return false;
+            } finally {
+                if (button) { button.disabled = false; button.textContent = 'Check connection'; }
+                updateWorkflowAvailability();
+            }
         }
         function vlmDetectionOptionsFromUi() {
             return {
@@ -3972,12 +4063,16 @@
             if (!meshes.length) { setStatus('vwmGeometryStatus', 'Load a triangle mesh first.', 'error'); return; }
             const button = $('vwmRunGeometryBtn'); button.disabled = true; button.innerText = 'Analyzing VWM geometry…';
             setStatus('vwmGeometryStatus', 'Segmenting patches, fitting planes and building relations/intersections…');
+            showLoader(true, 'Preparing VWM geometry analysis…', true, 8);
             try {
                 const options = vwmGeometryOptionsFromUi();
                 const form = new FormData();
+                setProcessingProgress(24, '24% · Encoding mesh evidence');
                 form.append('cloud', geometryPlyBlob(2000000, true, meshes), 'vwm-geometry.ply');
                 form.append('options', new Blob([JSON.stringify(options)], { type: 'application/json' }), 'vwm-geometry-options.json');
+                setProcessingProgress(38, '38% · Running patch and plane analysis');
                 const data = await fetchJson('/api/vwm-geometry-analyze', { method: 'POST', body: form }, 10 * 60 * 1000);
+                setProcessingProgress(88, '88% · Rendering structural evidence');
                 const analysis = data.analysis || {};
                 currentModelPackage.analysisContext = { ...(currentModelPackage.analysisContext || {}), vwm_geometry: analysis, vwm_geometry_options: options };
                 meshes.forEach(geometry => { geometry.userData.vwmGeometryAnalysis = analysis; });
@@ -3985,6 +4080,7 @@
             } catch (error) {
                 setStatus('vwmGeometryStatus', `VWM geometry analysis failed: ${error.message}`, 'error');
             } finally {
+                showLoader(false);
                 button.disabled = false; button.innerText = 'Analyze patches, planes and relations';
             }
         }
@@ -3992,13 +4088,16 @@
             const clouds = loadedGeometryStore.filter(geometry => geometry.userData.isPointCloud && geometry.attributes.position);
             if (!clouds.length) { setStatus('vwmReconstructionStatus', 'Load a point cloud first.', 'error'); return; }
             const button = $('vwmReconstructAdvancedBtn'); button.disabled = true; button.innerText = 'Reconstructing…';
-            showLoader(true, 'Running configured VWM reconstruction…');
+            showLoader(true, 'Preparing VWM reconstruction…', true, 8);
             try {
                 const options = vwmReconstructionOptionsFromUi();
                 const form = new FormData();
+                setProcessingProgress(22, '22% · Sampling oriented points');
                 form.append('cloud', geometryPlyBlob(2000000, false, clouds), 'vwm-reconstruction.ply');
                 form.append('vwm_options', new Blob([JSON.stringify(options)], { type: 'application/json' }), 'vwm-reconstruction-options.json');
+                setProcessingProgress(42, '42% · Running selected VWM extractor');
                 const data = await fetchJson('/api/point-cloud-to-mesh', { method: 'POST', body: form }, 30 * 60 * 1000);
+                setProcessingProgress(82, '82% · Loading reconstructed mesh');
                 const meshGeometry = await loadPlyGeometryFromUrl(data.mesh_file || data.ply_file);
                 meshGeometry.name = `VWM ${data.vwm?.extraction || data.backend || 'reconstruction'}`;
                 meshGeometry.userData = { ...meshGeometry.userData, isMesh: true, isPointCloud: false, vwmReconstruction: data.vwm || { backend: data.backend } };
@@ -4023,13 +4122,17 @@
             button.disabled = true; button.innerText = 'Analyzing image…';
             const perceptionMode = $('vwmPerceptionMode').value;
             setStatus('vwmPerceptionStatus', perceptionMode === 'deterministic' ? 'Running deterministic region segmentation.' : 'Sending one image to the configured VLM for object boxes.');
+            showLoader(true, perceptionMode === 'deterministic' ? 'Preparing VWM perception…' : 'Waiting for local VLM…', true, 10);
             try {
                 const form = new FormData();
+                setProcessingProgress(28, '28% · Validating image evidence');
                 form.append('image', image, sanitizeFilename(filename, 'scene.png'));
                 form.append('mode', perceptionMode);
                 form.append('options', new Blob([JSON.stringify(vwmPerceptionOptionsFromUi())], { type: 'application/json' }), 'vwm-perception-options.json');
                 form.append('vlm_options', new Blob([JSON.stringify(vlmDetectionOptionsFromUi())], { type: 'application/json' }), 'vlm-options.json');
+                setProcessingProgress(48, perceptionMode === 'deterministic' ? '48% · Segmenting deterministic regions' : '48% · Running advisory VLM detection');
                 const data = await fetchJson('/api/vwm-perception', { method: 'POST', body: form }, 120000);
+                setProcessingProgress(88, '88% · Rendering detection evidence');
                 const summary = renderVwmPerceptionResult(data, image);
                 setStatus('vwmPerceptionStatus', `${summary.provenance} ${summary.count} region${summary.count === 1 ? '' : 's'} returned.`, summary.count ? 'success' : '');
             } catch (error) {
@@ -4037,6 +4140,7 @@
                 setStatus('vwmPerceptionStatus', `VWM perception failed: ${error.message}`, 'error');
             } finally {
                 button.innerText = 'Detect objects + bounds';
+                showLoader(false);
                 updateWorkflowAvailability();
             }
         }
@@ -4633,6 +4737,52 @@
             target.setRGB(data[offset] / 255, data[offset + 1] / 255, data[offset + 2] / 255);
         }
         
+        function formatSceneAdjustment(value) {
+            const percent = Math.round(value * 100);
+            return `${percent > 0 ? '+' : ''}${percent}%`;
+        }
+        function sceneAppearanceValues() {
+            return {
+                brightness: THREE.MathUtils.clamp(Number($('sceneBrightness')?.value) || 0, -1, 1),
+                contrast: THREE.MathUtils.clamp(Number($('sceneContrast')?.value) || 0, -1, 1)
+            };
+        }
+        function configureObjectAppearanceMaterial(material) {
+            if (!material || material.userData.objectAppearanceConfigured) return;
+            const previousOnBeforeCompile = material.onBeforeCompile;
+            material.onBeforeCompile = (shader, rendererInstance) => {
+                previousOnBeforeCompile?.(shader, rendererInstance);
+                const values = sceneAppearanceValues();
+                shader.uniforms.uObjectBrightness = { value: values.brightness };
+                shader.uniforms.uObjectContrast = { value: values.contrast };
+                shader.fragmentShader = `uniform float uObjectBrightness;\nuniform float uObjectContrast;\n${shader.fragmentShader}`;
+                shader.fragmentShader = shader.fragmentShader.replace(
+                    '#include <opaque_fragment>',
+                    '#include <opaque_fragment>\nvec3 adjustedObjectColor = (gl_FragColor.rgb + uObjectBrightness - 0.5) * (1.0 + uObjectContrast) + 0.5;\ngl_FragColor.rgb = adjustedObjectColor;'
+                );
+                material.userData.objectAppearanceShader = shader;
+            };
+            material.userData.objectAppearanceConfigured = true;
+            objectAppearanceMaterials.add(material);
+            material.needsUpdate = true;
+        }
+        function updateSceneAppearance() {
+            const { brightness, contrast } = sceneAppearanceValues();
+            if ($('sceneBrightnessLabel')) $('sceneBrightnessLabel').textContent = formatSceneAdjustment(brightness);
+            if ($('sceneContrastLabel')) $('sceneContrastLabel').textContent = formatSceneAdjustment(contrast);
+            objectAppearanceMaterials.forEach(material => {
+                const shader = material.userData.objectAppearanceShader;
+                if (shader) {
+                    shader.uniforms.uObjectBrightness.value = brightness;
+                    shader.uniforms.uObjectContrast.value = contrast;
+                }
+            });
+        }
+        function resetSceneAppearance() {
+            if ($('sceneBrightness')) $('sceneBrightness').value = '0';
+            if ($('sceneContrast')) $('sceneContrast').value = '0';
+            updateSceneAppearance();
+        }
         function updatePointSize() { const size = parseFloat($('pointSize').value); if ($('pointSizeLabel')) $('pointSizeLabel').textContent = `${size.toFixed(3)} units`; currentGroup.traverse((child) => { if (child.isPoints && child.material) child.material.size = size; }); }
 
         async function loadBlueprintFile(file) {
@@ -5018,6 +5168,7 @@
         }
 
         function rebuildMeshes() {
+            objectAppearanceMaterials.clear();
             currentGroup.children.forEach(child => { if((child.type === "Mesh" || child.type === "Points") && child !== blueprintPlane) { if(child.material) { if (Array.isArray(child.material)) child.material.forEach(m => m.dispose()); else child.material.dispose(); } if (child.geometry?.userData?.reviewDerivedRenderGeometry) child.geometry.dispose(); } });
             const childrenToRemove = currentGroup.children.filter(c => c !== blueprintPlane && c !== activeInstancedMesh && c !== floorplanLayoutGroup && c !== sceneAnalysisOverlayGroup && c !== structuralMeshLayerGroup && c !== floatingObjectLayerGroup); childrenToRemove.forEach(c => currentGroup.remove(c));
             if (activeInstancedMesh) return; if (loadedGeometryStore.length === 0) return;
@@ -5045,6 +5196,7 @@
                     if (mode.startsWith('points')) {
                         const material = new THREE.PointsMaterial({ size: pSize, color: useVertexColors ? 0xffffff : 0xcccccc, sizeAttenuation: true, vertexColors: useVertexColors, clippingPlanes: activePlanes });
                         material.onBeforeCompile = (shader) => { shader.uniforms.uDensity = { value: Math.max(0.01, Number($('strideInput').value) / 100) }; shader.vertexShader = `uniform float uDensity;\n` + shader.vertexShader; shader.vertexShader = shader.vertexShader.replace(`#include <begin_vertex>`, `#include <begin_vertex>\nfloat densityHash = fract(sin((float(gl_VertexID) + 1.0) * 12.9898) * 43758.5453);\nif (densityHash > uDensity) transformed = vec3(1e20);`); material.userData.shader = shader; };
+                        configureObjectAppearanceMaterial(material);
                         object = new THREE.Points(geom, material);
                     } else {
                         if (!geom.attributes.normal && geom.attributes.position) geom.computeVertexNormals(); let material;
@@ -5052,6 +5204,7 @@
                         else if (mode === 'solid-clay') material = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.9, metalness: 0.1, side: THREE.DoubleSide, flatShading: isFlat, clippingPlanes: activePlanes });
                         else if (mode === 'solid-xray') material = new THREE.MeshPhongMaterial({ color: 0x14b8a6, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide, flatShading: isFlat, clippingPlanes: activePlanes });
                         else material = new THREE.MeshPhongMaterial({ color: useVertexColors ? 0xffffff : 0xdddddd, wireframe: isWireframe, map: isFalseColor || geom.userData.preferVertexColors ? null : (currentTexture || geom.userData.texture), side: THREE.DoubleSide, vertexColors: useVertexColors, flatShading: isFlat, clippingPlanes: activePlanes });
+                        configureObjectAppearanceMaterial(material);
                         object = new THREE.Mesh(geom, material); object.castShadow = castShadows; object.receiveShadow = castShadows;
                         if (mode === 'solid-edges' && geom.attributes.position && geom.attributes.position.count < 500000) object.add(new THREE.LineSegments(new THREE.EdgesGeometry(geom), new THREE.LineBasicMaterial({ color: 0x14b8a6, linewidth: 1, clippingPlanes: activePlanes })));
                     }
@@ -5061,7 +5214,13 @@
             } catch (e) { unloadCurrentModel("Error applying materials."); }
         }
 
-        function switchCamera() { activeCamera = $('cameraType').value === 'orthographic' ? cameraOrtho : cameraPersp; controls.object = activeCamera; centerCamera(); }
+        function switchCamera() {
+            activeCamera = $('cameraType').value === 'orthographic' ? cameraOrtho : cameraPersp;
+            controls.object = activeCamera;
+            if (renderPass) renderPass.camera = activeCamera;
+            if (ssaoPass) ssaoPass.camera = activeCamera;
+            centerCamera();
+        }
         function centerCamera() {
             if (currentGroup.children.length === 0) { activeCamera.position.set(0, 10, 20); controls.target.set(0, 0, 0); controls.update(); return; }
             const box = new THREE.Box3().setFromObject(currentGroup); if (box.isEmpty()) return;
@@ -5463,7 +5622,7 @@
             showLoader(false);
             setStatus('cleanupStatus', 'Processing stopped by user.', 'error');
         }
-        function showLoader(visible, text="Processing...", showCancel=visible) {
+        function showLoader(visible, text="Processing...", showCancel=visible, initialProgress = null) {
             const loader = $('loader'); if (!loader) return;
             loader.style.display = visible ? 'flex' : 'none';
             $('loader-text').innerText = text;
@@ -5471,12 +5630,9 @@
             if (visible) {
                 processingCancelled = false; cancelProcessFlag = false;
                 button.style.display = showCancel ? 'block' : 'none'; button.disabled = false; button.innerText = 'Stop processing';
-                setProcessingProgress(null, 'Working…');
-                clearInterval(processingProgressTimer);
-                let progress = 8;
-                processingProgressTimer = setInterval(() => { progress = Math.min(progress + 1.5, 92); setProcessingProgress(progress, `${Math.round(progress)}% · ${text}`); }, 900);
+                setProcessingProgress(Number.isFinite(initialProgress) ? initialProgress : null, Number.isFinite(initialProgress) ? `${Math.round(initialProgress)}% · ${text}` : 'Working…');
             } else {
-                clearInterval(processingProgressTimer); processingProgressTimer = null; setProcessingProgress(100, 'Complete');
+                setProcessingProgress(100, 'Complete');
                 button.style.display = 'none'; button.disabled = false;
             }
         }

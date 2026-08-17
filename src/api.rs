@@ -98,6 +98,7 @@ pub fn create_router(
             get(handle_get_job).delete(handle_cancel_job),
         )
         .route("/api/health", get(handle_health))
+        .route("/api/v1/vlm/status", get(handle_vlm_status))
         .route("/api/pdf-to-3d", post(handle_pdf_to_3d))
         .route("/api/poisson-reconstruct", post(handle_poisson))
         .route("/api/point-cloud-to-mesh", post(handle_poisson))
@@ -1258,6 +1259,10 @@ async fn handle_health() -> Json<serde_json::Value> {
             "static_viewer": true
         }
     }))
+}
+
+async fn handle_vlm_status() -> Json<ai_vision::VisionRuntimeStatus> {
+    Json(ai_vision::vision_status().await)
 }
 
 fn build_capabilities(vision: bool, pdal: bool) -> Vec<CapabilityDescriptor> {

@@ -101,6 +101,20 @@ fn frontend_has_a_usable_entry_point() {
     assert!(html.contains("id=\"helpDrawer\""));
     assert!(html.contains("id=\"helpToggleBtn\""));
     assert!(html.contains("id=\"helpPinBtn\""));
+    assert!(html.contains("How to use 3DMk"));
+    assert!(html.contains("A simple first run"));
+    assert!(html.contains("VWM and VLM in plain language"));
+    assert!(html
+        .contains("Its suggestions are for review; it does not change the saved model by itself."));
+    assert!(html.contains("id=\"sceneBrightness\""));
+    assert!(html.contains("id=\"sceneContrast\""));
+    assert!(html.contains("id=\"resetSceneAppearanceBtn\""));
+    assert!(html.contains("function updateSceneAppearance()"));
+    assert!(html.contains("function resetSceneAppearance()"));
+    assert!(html.contains("function configureObjectAppearanceMaterial"));
+    assert!(html.contains("adjustedObjectColor"));
+    assert!(html.contains("uniform float uObjectBrightness"));
+    assert!(html.contains("#include <opaque_fragment>"));
     assert!(html.contains("id=\"viewCloseBtn\""));
     assert!(html.contains("id=\"drawerScrim\""));
     assert!(html.contains("id=\"canvasEmptyState\""));
