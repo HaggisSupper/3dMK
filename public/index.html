@@ -829,9 +829,9 @@
                 </div>
                 <div class="control-group"><label for="pointSize">Point size</label><input type="range" id="pointSize" min="0.002" max="0.15" step="0.002" value="0.02"><small id="pointSizeLabel" style="color:var(--teal-accent)">0.020 units</small></div>
                 <div class="control-group"><label for="strideInput">Display density</label><input type="range" id="strideInput" min="1" max="100" step="1" value="100"><small id="strideLabel" style="color:var(--teal-accent)">Viewing 100%</small></div>
-                <div class="control-group"><label for="sceneBrightness">Scene brightness <span id="sceneBrightnessLabel" class="range-value">0%</span></label><input type="range" id="sceneBrightness" min="-1" max="1" step="0.05" value="0"></div>
-                <div class="control-group"><label for="sceneContrast">Scene contrast <span id="sceneContrastLabel" class="range-value">0%</span></label><input type="range" id="sceneContrast" min="-1" max="1" step="0.05" value="0"></div>
-                <button id="resetSceneAppearanceBtn" class="action-btn" type="button">Reset brightness and contrast</button>
+                <div class="control-group"><label for="sceneBrightness">Object brightness <span id="sceneBrightnessLabel" class="range-value">0%</span></label><input type="range" id="sceneBrightness" min="-1" max="1" step="0.05" value="0"></div>
+                <div class="control-group"><label for="sceneContrast">Object contrast <span id="sceneContrastLabel" class="range-value">0%</span></label><input type="range" id="sceneContrast" min="-1" max="1" step="0.05" value="0"></div>
+                <button id="resetSceneAppearanceBtn" class="action-btn" type="button">Reset object brightness and contrast</button>
             </section>
             <section class="drawer-section" aria-labelledby="viewLightingHeading">
                 <h3 id="viewLightingHeading">Lighting and camera</h3>
@@ -968,7 +968,6 @@
         import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
         import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
-        import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
         import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
         import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
         import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -979,7 +978,8 @@
 
         let scene, activeCamera, cameraPersp, cameraOrtho, renderer, controls;
         let dirLight, ambientLight, pmremGenerator, proceduralEnvironment;
-        let composer, renderPass, ssaoPass, colorAdjustPass, outputPass;
+        let composer, renderPass, ssaoPass, outputPass;
+        const objectAppearanceMaterials = new Set();
         let gridHelper, currentGroup = new THREE.Group(), measurementGroup = new THREE.Group(), measurementDraftGroup = new THREE.Group(), cropGroup = new THREE.Group();
         
         let clipPlaneX = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 10000);
@@ -2533,16 +2533,6 @@
             ssaoPass = new SSAOPass(scene, activeCamera, viewport.clientWidth, viewport.clientHeight);
             ssaoPass.kernelRadius = 16; ssaoPass.minDistance = 0.005; ssaoPass.maxDistance = 0.1; ssaoPass.enabled = false;
             composer.addPass(ssaoPass);
-            colorAdjustPass = new ShaderPass({
-                uniforms: {
-                    tDiffuse: { value: null },
-                    brightness: { value: 0 },
-                    contrast: { value: 0 }
-                },
-                vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-                fragmentShader: 'uniform sampler2D tDiffuse; uniform float brightness; uniform float contrast; varying vec2 vUv; void main() { vec4 color = texture2D(tDiffuse, vUv); color.rgb += brightness; color.rgb = (color.rgb - 0.5) * (1.0 + contrast) + 0.5; gl_FragColor = color; }'
-            });
-            composer.addPass(colorAdjustPass);
             outputPass = new OutputPass(); composer.addPass(outputPass);
 
             pmremGenerator = new THREE.PMREMGenerator(renderer); pmremGenerator.compileEquirectangularShader();
@@ -4751,23 +4741,46 @@
             const percent = Math.round(value * 100);
             return `${percent > 0 ? '+' : ''}${percent}%`;
         }
+        function sceneAppearanceValues() {
+            return {
+                brightness: THREE.MathUtils.clamp(Number($('sceneBrightness')?.value) || 0, -1, 1),
+                contrast: THREE.MathUtils.clamp(Number($('sceneContrast')?.value) || 0, -1, 1)
+            };
+        }
+        function configureObjectAppearanceMaterial(material) {
+            if (!material || material.userData.objectAppearanceConfigured) return;
+            const previousOnBeforeCompile = material.onBeforeCompile;
+            material.onBeforeCompile = (shader, rendererInstance) => {
+                previousOnBeforeCompile?.(shader, rendererInstance);
+                const values = sceneAppearanceValues();
+                shader.uniforms.uObjectBrightness = { value: values.brightness };
+                shader.uniforms.uObjectContrast = { value: values.contrast };
+                shader.fragmentShader = shader.fragmentShader.replace(
+                    '#include <output_fragment>',
+                    '#include <output_fragment>\nvec3 adjustedObjectColor = (gl_FragColor.rgb + uObjectBrightness - 0.5) * (1.0 + uObjectContrast) + 0.5;\ngl_FragColor.rgb = adjustedObjectColor;'
+                );
+                material.userData.objectAppearanceShader = shader;
+            };
+            material.userData.objectAppearanceConfigured = true;
+            objectAppearanceMaterials.add(material);
+            material.needsUpdate = true;
+        }
         function updateSceneAppearance() {
-            const brightness = THREE.MathUtils.clamp(Number($('sceneBrightness')?.value) || 0, -1, 1);
-            const contrast = THREE.MathUtils.clamp(Number($('sceneContrast')?.value) || 0, -1, 1);
+            const { brightness, contrast } = sceneAppearanceValues();
             if ($('sceneBrightnessLabel')) $('sceneBrightnessLabel').textContent = formatSceneAdjustment(brightness);
             if ($('sceneContrastLabel')) $('sceneContrastLabel').textContent = formatSceneAdjustment(contrast);
-            if (colorAdjustPass) {
-                colorAdjustPass.uniforms.brightness.value = brightness;
-                colorAdjustPass.uniforms.contrast.value = contrast;
-            }
+            objectAppearanceMaterials.forEach(material => {
+                const shader = material.userData.objectAppearanceShader;
+                if (shader) {
+                    shader.uniforms.uObjectBrightness.value = brightness;
+                    shader.uniforms.uObjectContrast.value = contrast;
+                }
+            });
         }
         function resetSceneAppearance() {
             if ($('sceneBrightness')) $('sceneBrightness').value = '0';
             if ($('sceneContrast')) $('sceneContrast').value = '0';
             updateSceneAppearance();
-        }
-        function hasSceneAppearanceAdjustments() {
-            return Math.abs(Number($('sceneBrightness')?.value) || 0) > 0.001 || Math.abs(Number($('sceneContrast')?.value) || 0) > 0.001;
         }
         function updatePointSize() { const size = parseFloat($('pointSize').value); if ($('pointSizeLabel')) $('pointSizeLabel').textContent = `${size.toFixed(3)} units`; currentGroup.traverse((child) => { if (child.isPoints && child.material) child.material.size = size; }); }
 
@@ -5154,6 +5167,7 @@
         }
 
         function rebuildMeshes() {
+            objectAppearanceMaterials.clear();
             currentGroup.children.forEach(child => { if((child.type === "Mesh" || child.type === "Points") && child !== blueprintPlane) { if(child.material) { if (Array.isArray(child.material)) child.material.forEach(m => m.dispose()); else child.material.dispose(); } if (child.geometry?.userData?.reviewDerivedRenderGeometry) child.geometry.dispose(); } });
             const childrenToRemove = currentGroup.children.filter(c => c !== blueprintPlane && c !== activeInstancedMesh && c !== floorplanLayoutGroup && c !== sceneAnalysisOverlayGroup && c !== structuralMeshLayerGroup && c !== floatingObjectLayerGroup); childrenToRemove.forEach(c => currentGroup.remove(c));
             if (activeInstancedMesh) return; if (loadedGeometryStore.length === 0) return;
@@ -5181,6 +5195,7 @@
                     if (mode.startsWith('points')) {
                         const material = new THREE.PointsMaterial({ size: pSize, color: useVertexColors ? 0xffffff : 0xcccccc, sizeAttenuation: true, vertexColors: useVertexColors, clippingPlanes: activePlanes });
                         material.onBeforeCompile = (shader) => { shader.uniforms.uDensity = { value: Math.max(0.01, Number($('strideInput').value) / 100) }; shader.vertexShader = `uniform float uDensity;\n` + shader.vertexShader; shader.vertexShader = shader.vertexShader.replace(`#include <begin_vertex>`, `#include <begin_vertex>\nfloat densityHash = fract(sin((float(gl_VertexID) + 1.0) * 12.9898) * 43758.5453);\nif (densityHash > uDensity) transformed = vec3(1e20);`); material.userData.shader = shader; };
+                        configureObjectAppearanceMaterial(material);
                         object = new THREE.Points(geom, material);
                     } else {
                         if (!geom.attributes.normal && geom.attributes.position) geom.computeVertexNormals(); let material;
@@ -5188,6 +5203,7 @@
                         else if (mode === 'solid-clay') material = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.9, metalness: 0.1, side: THREE.DoubleSide, flatShading: isFlat, clippingPlanes: activePlanes });
                         else if (mode === 'solid-xray') material = new THREE.MeshPhongMaterial({ color: 0x14b8a6, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide, flatShading: isFlat, clippingPlanes: activePlanes });
                         else material = new THREE.MeshPhongMaterial({ color: useVertexColors ? 0xffffff : 0xdddddd, wireframe: isWireframe, map: isFalseColor || geom.userData.preferVertexColors ? null : (currentTexture || geom.userData.texture), side: THREE.DoubleSide, vertexColors: useVertexColors, flatShading: isFlat, clippingPlanes: activePlanes });
+                        configureObjectAppearanceMaterial(material);
                         object = new THREE.Mesh(geom, material); object.castShadow = castShadows; object.receiveShadow = castShadows;
                         if (mode === 'solid-edges' && geom.attributes.position && geom.attributes.position.count < 500000) object.add(new THREE.LineSegments(new THREE.EdgesGeometry(geom), new THREE.LineBasicMaterial({ color: 0x14b8a6, linewidth: 1, clippingPlanes: activePlanes })));
                     }
@@ -5667,7 +5683,7 @@
                 label.element.style.opacity = '1';
             });
             
-            if ((ssaoPass && ssaoPass.enabled && activeCamera === cameraPersp) || hasSceneAppearanceAdjustments()) composer.render();
+            if (ssaoPass && ssaoPass.enabled && activeCamera === cameraPersp) composer.render();
             else renderer.render(scene, activeCamera);
         }
     </script>

@@ -111,7 +111,8 @@ fn frontend_has_a_usable_entry_point() {
     assert!(html.contains("id=\"resetSceneAppearanceBtn\""));
     assert!(html.contains("function updateSceneAppearance()"));
     assert!(html.contains("function resetSceneAppearance()"));
-    assert!(html.contains("ShaderPass"));
+    assert!(html.contains("function configureObjectAppearanceMaterial"));
+    assert!(html.contains("adjustedObjectColor"));
     assert!(html.contains("id=\"viewCloseBtn\""));
     assert!(html.contains("id=\"drawerScrim\""));
     assert!(html.contains("id=\"canvasEmptyState\""));
