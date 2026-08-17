@@ -27,6 +27,8 @@
             --success: #34d399; --warning: #fbbf24;
             --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px;
             --ui-scale: 1;
+            --panel-radius: 4px;
+            --scrim: rgba(0, 0, 0, 0.58);
         }
 
         html { zoom: var(--ui-scale); }
@@ -38,7 +40,9 @@
         ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--teal-accent); box-shadow: 0 0 5px var(--teal-glow); }
 
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-dark); color: var(--text-main); display: flex; min-height: 100vh; overflow: hidden; font-size: 12px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-dark); color: var(--text-main); display: flex; min-height: 100vh; overflow: hidden; font-size: 13px; }
+        button, input, select { font: inherit; }
+        button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--teal-accent); outline-offset: 2px; }
 
         #hamburgerBtn { position: fixed; top: 12px; left: 12px; z-index: 101; background-color: var(--bg-panel); color: var(--teal-accent); border: 1px solid var(--border-color); width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; }
         #hamburgerBtn:hover { border-color: var(--teal-accent); }
@@ -47,7 +51,7 @@
 
         /* History Controls */
         #historyControls { position: absolute; top: 12px; right: 12px; z-index: 101; display: flex; gap: 8px; transition: right 0.25s ease; }
-        .history-btn { background-color: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border-color); width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; }
+        .history-btn { background-color: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border-color); width: 44px; height: 44px; border-radius: var(--panel-radius); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; }
         .history-btn:not(:disabled):hover { border-color: var(--teal-accent); color: var(--teal-accent); box-shadow: 0 0 0 3px var(--teal-glow); }
         .history-btn:focus { outline: none; border-color: var(--teal-accent); }
         .history-btn:disabled { opacity: 0.3; cursor: not-allowed; }
@@ -85,7 +89,7 @@
         .drawer-section h3 { font-size: 12px; line-height: 1.3; color: var(--text-main); margin-bottom: 8px; }
         .drawer-note { margin-top: 8px; color: var(--text-muted); font-size: 10px; line-height: 1.45; }
 
-        #sidebar { position: fixed; top: 0; bottom: 0; left: -340px; width: 340px; height: var(--app-viewport-height, 100dvh); min-height: 0; max-height: var(--app-viewport-height, 100dvh); overflow: hidden; background-color: var(--bg-panel); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 100; transition: left 0.25s ease; box-shadow: 2px 0 20px rgba(0,0,0,0.45); }
+        #sidebar { position: fixed; top: 0; bottom: 0; left: -340px; width: 340px; height: var(--app-viewport-height, 100dvh); min-height: 0; max-height: var(--app-viewport-height, 100dvh); overflow: hidden; overscroll-behavior: contain; background-color: var(--bg-panel); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 100; transition: left 0.25s ease; box-shadow: 2px 0 20px rgba(0,0,0,0.45); }
         #sidebar.open { left: 0; }
         
         .sidebar-header { padding: 16px 16px 16px 72px; min-height: 68px; border-bottom: 1px solid var(--border-color); background: var(--bg-panel); }
@@ -105,7 +109,7 @@
         .accordion-body { padding: 12px; display: none; background: var(--bg-dark); }
         .accordion-item.active > .accordion-body { display: block; }
         .nested-accordion { display: grid; gap: 8px; }
-        .nested-accordion .accordion-item { margin-bottom: 0; border-radius: 8px; background: var(--bg-input); }
+        .nested-accordion .accordion-item { margin-bottom: 0; border-radius: var(--panel-radius); background: var(--bg-input); }
         .nested-accordion .accordion-header { min-height: 40px; padding: 10px 12px; background: rgba(20, 184, 166, 0.08); color: var(--text-main); font-size: 11px; text-transform: none; letter-spacing: 0.02em; }
         .nested-accordion .accordion-header:hover { background: rgba(20, 184, 166, 0.14); }
         .nested-accordion .accordion-header::after { font-size: 12px; }
@@ -127,12 +131,15 @@
         button.action-btn { cursor: pointer; font-weight: 600; background-color: #2a2a2a; margin-bottom: 4px; }
         button.action-btn:active { background-color: var(--teal-accent); color: #000; }
         button.action-btn.primary { border-color: var(--teal-accent); color: var(--teal-accent); margin-top: 4px; }
+        button.action-btn.primary:not(#importPackageBtn):not(#exportBundleBtn):not(#savePackageBtn) { border-color: var(--border-color); color: var(--text-main); }
+        #importPackageBtn, #exportBundleBtn, #savePackageBtn, #emptyImportBtn { background: var(--teal-accent); color: #06110f; border-color: var(--teal-accent); }
+        #startCropBtn { border-color: var(--border-color); color: var(--text-main); }
         button.action-btn.active-toggle { background-color: var(--teal-accent); color: #000; border-color: var(--teal-accent); }
         button.action-btn.danger { border-color: var(--error-red); color: var(--error-red); }
         button.action-btn.danger:hover { background-color: var(--error-red); color: #fff; }
         button.action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-        .workflow-card { margin-bottom: 12px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-input); }
+        .workflow-card { margin-bottom: 12px; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--panel-radius); background: var(--bg-input); }
         .workflow-card h3 { color: var(--text-main); font-size: 12px; line-height: 1.3; }
         .workflow-card > p { margin: 4px 0 10px; color: var(--text-muted); font-size: 10px; line-height: 1.45; }
         .workflow-card .control-group:last-child, .workflow-card .action-btn:last-child { margin-bottom: 0; }
@@ -146,7 +153,7 @@
         .summary-badge.active { border-color: var(--teal-accent); color: var(--teal-accent); }
         .summary-grid { display: grid; gap: 8px; }
         .review-list { display: grid; gap: 8px; }
-        .review-item { padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-panel); }
+        .review-item { padding: 8px; border-radius: var(--panel-radius); border: 1px solid var(--border-color); background: var(--bg-panel); }
         .review-item strong { color: var(--text-main); display: block; font-size: 11px; }
         .review-item p { margin-top: 4px; color: var(--text-muted); font-size: 10px; line-height: 1.45; }
         .review-item-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
@@ -159,7 +166,7 @@
         .package-review .summary-grid { grid-template-columns: 1fr 1fr; }
         .package-review .summary-badge { justify-content: center; }
         .analysis-object-list { display: grid; gap: 8px; margin-top: 8px; }
-        .analysis-object-card { padding: 8px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-panel); display: grid; gap: 4px; }
+        .analysis-object-card { padding: 8px; border: 1px solid var(--border-color); border-radius: var(--panel-radius); background: var(--bg-panel); display: grid; gap: 4px; }
         .analysis-object-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
         .analysis-object-kind { color: var(--text-main); font-size: 11px; font-weight: 700; line-height: 1.3; }
         .analysis-object-score { color: var(--teal-accent); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -228,6 +235,14 @@
         .stat-value { font-family: monospace; color: var(--teal-accent); }
 
         #canvas-container { position: fixed; top: 0; left: 0; width: var(--app-viewport-width, 100vw); height: var(--app-viewport-height, 100dvh); overflow: hidden; background-color: var(--bg-dark); z-index: 10; }
+        #drawerScrim { display: none; position: fixed; inset: 0; z-index: 99; background: var(--scrim); backdrop-filter: blur(1px); }
+        .canvas-empty-state { position: absolute; z-index: 12; inset: 50% auto auto 50%; width: min(460px, calc(100vw - 48px)); transform: translate(-50%, -50%); padding: 28px; border: 1px solid var(--border-color); border-radius: var(--panel-radius); background: rgba(30, 30, 30, 0.94); box-shadow: 0 14px 40px rgba(0,0,0,0.45); text-align: center; }
+        .canvas-empty-state[hidden] { display: none; }
+        .canvas-empty-state h1 { color: var(--text-main); font-size: 22px; line-height: 1.2; margin-bottom: 8px; }
+        .canvas-empty-state p { color: var(--text-muted); font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+        .canvas-empty-state .empty-actions { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+        .canvas-empty-state .action-btn { width: auto; min-width: 150px; }
+        .empty-formats { display: block; margin-top: 12px; color: var(--text-muted); font: 11px ui-monospace, monospace; }
         canvas { display: block; width: 100%; height: 100%; }
         
         #loader { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(18, 18, 18, 0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--teal-accent); font-size: 14px; font-weight: 600; z-index: 20; display: none; }
@@ -264,7 +279,8 @@
         #cropBoxUI { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--bg-panel); border: 1px solid var(--teal-accent); padding: 12px; border-radius: 8px; z-index: 102; display: none; box-shadow: 0 4px 20px rgba(0,0,0,0.8); width: 400px; }
         .crop-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;}
 
-        #errorModal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-panel); border: 1px solid var(--error-red); padding: 20px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 999; display: none; flex-direction: column; gap: 16px; max-width: 400px; }
+        #errorModal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-panel); border: 1px solid var(--error-red); padding: 20px; border-radius: var(--panel-radius); box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 999; display: none; flex-direction: column; gap: 16px; width: min(440px, calc(100vw - 32px)); }
+        #errorModal::before { content: ''; position: fixed; inset: -100vmax; z-index: -1; background: rgba(0,0,0,0.58); }
         #errorModal h3 { color: var(--error-red); margin: 0; font-size: 16px; }
         #errorModal p { color: var(--text-main); font-size: 12px; line-height: 1.4; margin: 0; white-space: pre-wrap; word-wrap: break-word;}
         #errorModal button { background: var(--error-red); color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; font-family: inherit; }
@@ -276,13 +292,19 @@
         .vlm-box span { position: absolute; left: -2px; top: -20px; max-width: 180px; padding: 2px 5px; overflow: hidden; border-radius: 3px 3px 0 0; background: var(--teal-accent); color: #06110f; font-size: 9px; font-weight: 800; white-space: nowrap; text-overflow: ellipsis; }
 
         @media (min-width: 900px) {
+            #drawerScrim { display: none !important; }
             body.sidebar-open #historyControls { right: 24px; }
             body.sidebar-open.help-open #historyControls,
             body.sidebar-open.view-open #historyControls { right: min(372px, calc(92vw + 12px)); }
         }
         @media (max-width: 899px) {
-            #sidebar { width: min(340px, 92vw); left: min(-340px, -92vw); }
+            body.sidebar-open #drawerScrim, body.help-open #drawerScrim, body.view-open #drawerScrim { display: block; }
+            #sidebar { width: min(320px, 88vw); left: min(-320px, -88vw); }
+            #helpDrawer, #viewDrawer { width: min(360px, 94vw); right: min(-360px, -94vw); }
+            #historyControls { top: 10px; right: 10px; gap: 6px; }
+            .history-btn, #hamburgerBtn { width: 40px; height: 40px; }
             #cropBoxUI { width: calc(100vw - 24px); }
+            .canvas-empty-state { width: min(420px, calc(100vw - 32px)); padding: 22px; }
         }
         @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; } }
     </style>
@@ -297,21 +319,22 @@
             <svg viewBox="0 0 24 24"><path d="M11.5 8C15.89 8 19.48 10.5 20.89 14.22l-2.37.78c-1.05-3.19-4.06-5.5-7.6-5.5-1.95 0-3.73.72-5.12 1.88L9.42 15H.42V6l3.6 3.6C5.87 8.99 8.27 8 11.5 8z"/></svg>
         </button>
         <button id="viewToggleBtn" class="history-btn" aria-label="Toggle view settings" aria-controls="viewDrawer" aria-expanded="false" title="View">
-            <svg viewBox="0 0 24 24" class="stroke-icon"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            <svg viewBox="0 0 24 24" class="stroke-icon"><line x1="4" y1="6" x2="20" y2="6"></line><circle cx="9" cy="6" r="2"></circle><line x1="4" y1="12" x2="20" y2="12"></line><circle cx="15" cy="12" r="2"></circle><line x1="4" y1="18" x2="20" y2="18"></line><circle cx="11" cy="18" r="2"></circle></svg>
         </button>
         <button id="helpToggleBtn" class="history-btn" aria-label="Toggle help" aria-controls="helpDrawer" aria-expanded="false" title="Help">
-            <svg viewBox="0 0 24 24" class="stroke-icon"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            <svg viewBox="0 0 24 24" class="stroke-icon"><circle cx="12" cy="12" r="9"></circle><path d="M9.7 9a2.4 2.4 0 1 1 4.6 1c-.4 1.1-1.8 1.4-2.3 2.3-.2.3-.3.7-.3 1.1"></path><circle cx="12" cy="16.8" r=".8" fill="currentColor" stroke="none"></circle></svg>
         </button>
     </div>
 
     <button id="hamburgerBtn" aria-label="Toggle workspace controls" aria-controls="sidebar" aria-expanded="true">
         <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
     </button>
+    <div id="drawerScrim" aria-hidden="true"></div>
 
-    <div id="errorModal">
-        <h3>Critical Error Detected</h3>
+    <div id="errorModal" role="alertdialog" aria-modal="true" aria-labelledby="errorModalTitle" aria-describedby="errorModalMsg">
+        <h3 id="errorModalTitle">Processing could not be completed</h3>
         <p id="errorModalMsg">An error occurred during processing.</p>
-        <button onclick="document.getElementById('errorModal').style.display='none'">Acknowledge & Reset</button>
+        <button id="errorModalCloseBtn" type="button">Dismiss</button>
     </div>
 
     <div id="cropBoxUI">
@@ -330,7 +353,7 @@
         </div>
     </div>
 
-    <aside id="sidebar" class="open" aria-label="Workspace controls">
+    <aside id="sidebar" class="open" aria-label="Workspace controls" aria-hidden="false">
         <header class="sidebar-header">
             <div class="brand-title">3DMk</div>
             <div id="backendStatus" class="backend-status" role="status">Connecting…</div>
@@ -693,7 +716,7 @@
         </div>
     </aside>
 
-    <aside id="helpDrawer" aria-label="Context help" aria-hidden="true">
+    <aside id="helpDrawer" aria-label="Context help" aria-hidden="true" inert>
         <header class="help-header">
             <div>
                 <div class="help-kicker">Quick help</div>
@@ -729,12 +752,13 @@
         </div>
     </aside>
 
-    <aside id="viewDrawer" aria-label="View settings" aria-hidden="true">
+    <aside id="viewDrawer" aria-label="View settings" aria-hidden="true" inert>
         <header class="help-header">
             <div>
                 <div class="help-kicker">Inspect</div>
                 <div class="help-title">View settings</div>
             </div>
+            <div class="help-actions"><button id="viewCloseBtn" class="help-icon-btn" type="button">Close</button></div>
         </header>
         <div class="help-body">
             <section class="drawer-section" aria-labelledby="viewDisplayHeading">
@@ -767,8 +791,8 @@
                     <input type="range" id="rotationSensitivity" min="0.1" max="3.0" step="0.1" value="1.0">
                     <small id="sensitivityLabel" style="color:var(--teal-accent)">100%</small>
                 </div>
-                <div class="control-group"><label for="sunAzimuth">Sun azimuth</label><input type="range" id="sunAzimuth" min="0" max="360" value="45"></div>
-                <div class="control-group"><label for="sunElevation">Sun elevation</label><input type="range" id="sunElevation" min="0" max="90" value="45"></div>
+                <div class="control-group"><label for="sunAzimuth">Sun azimuth <span id="sunAzimuthLabel" class="range-value">45°</span></label><input type="range" id="sunAzimuth" min="0" max="360" value="45"></div>
+                <div class="control-group"><label for="sunElevation">Sun elevation <span id="sunElevationLabel" class="range-value">45°</span></label><input type="range" id="sunElevation" min="0" max="90" value="45"></div>
                 <button id="resetCameraBtn" class="action-btn" style="margin-top: 8px;">Fit scene / reset camera</button>
             </section>
             <section class="drawer-section" aria-labelledby="viewClipHeading">
@@ -845,6 +869,12 @@
     </aside>
 
     <main id="canvas-container">
+        <section id="canvasEmptyState" class="canvas-empty-state" aria-labelledby="canvasEmptyTitle">
+            <h1 id="canvasEmptyTitle">Start a 3D workspace</h1>
+            <p>Import a model, scan, or working package to inspect geometry, measure it, and create reviewable outputs.</p>
+            <div class="empty-actions"><button id="emptyImportBtn" class="action-btn primary" type="button">Import model or package</button><button id="emptyHelpBtn" class="action-btn" type="button">Show quick help</button></div>
+            <small class="empty-formats">GLB · GLTF · OBJ · PLY · STL · ZIP</small>
+        </section>
         <div id="labels-container"></div>
         <div id="floatingMeshContextMenu" class="canvas-context-menu" role="menu" hidden>
             <div id="floatingContextTitle" class="canvas-context-title">Detached mesh</div>
@@ -1938,10 +1968,24 @@
             if (hiddenFloatingClusterIds.size || pendingFloatingDeletionIds.size) rebuildMeshes();
             if (!currentModelPackage.sourceModel && modelName) currentModelPackage.sourceModel = modelName;
         }
+        const syncDrawerModalState = () => {
+            const sidebarOpen = $('sidebar')?.classList.contains('open');
+            const helpOpen = document.body.classList.contains('help-open');
+            const viewOpen = document.body.classList.contains('view-open');
+            $('sidebar')?.toggleAttribute('inert', !sidebarOpen);
+            $('sidebar')?.setAttribute('aria-hidden', String(!sidebarOpen));
+            $('helpDrawer')?.toggleAttribute('inert', !helpOpen);
+            $('viewDrawer')?.toggleAttribute('inert', !viewOpen);
+            const scrim = $('drawerScrim');
+            if (scrim) scrim.setAttribute('aria-hidden', String(!(sidebarOpen || helpOpen || viewOpen)));
+        };
         const setSidebarOpen = open => {
-            $('sidebar').classList.toggle('open', open);
+            const sidebar = $('sidebar');
+            sidebar?.classList.toggle('open', open);
             document.body.classList.toggle('sidebar-open', open);
-            $('hamburgerBtn').setAttribute('aria-expanded', String(open));
+            $('hamburgerBtn')?.setAttribute('aria-expanded', String(open));
+            if (!open && sidebar?.contains(document.activeElement)) $('hamburgerBtn')?.focus();
+            syncDrawerModalState();
         };
         const setHelpOpen = open => {
             helpDrawerOpen = !!open;
@@ -1950,6 +1994,8 @@
             $('helpDrawer')?.setAttribute('aria-hidden', String(!helpDrawerOpen));
             $('helpToggleBtn')?.setAttribute('aria-expanded', String(helpDrawerOpen));
             localStorage.setItem(HELP_DRAWER_OPEN_KEY, helpDrawerOpen ? 'true' : 'false');
+            if (!helpDrawerOpen && $('helpDrawer')?.contains(document.activeElement)) $('helpToggleBtn')?.focus();
+            syncDrawerModalState();
         };
         const setHelpPinned = pinned => {
             helpDrawerPinned = !!pinned;
@@ -1971,6 +2017,8 @@
             document.body.classList.toggle('view-open', viewDrawerOpen);
             $('viewDrawer')?.setAttribute('aria-hidden', String(!viewDrawerOpen));
             $('viewToggleBtn')?.setAttribute('aria-expanded', String(viewDrawerOpen));
+            if (!viewDrawerOpen && $('viewDrawer')?.contains(document.activeElement)) $('viewToggleBtn')?.focus();
+            syncDrawerModalState();
         };
         const closeViewDrawer = () => setViewOpen(false);
         function syncSlideOutViewport() {
@@ -2470,9 +2518,14 @@
             safeBind('undoBtn', 'click', undo);
             safeBind('redoBtn', 'click', redo);
             safeBind('viewToggleBtn', 'click', () => { if (viewDrawerOpen) closeViewDrawer(); else setViewOpen(true); });
+            safeBind('viewCloseBtn', 'click', closeViewDrawer);
             safeBind('helpToggleBtn', 'click', () => { if (helpDrawerOpen) closeHelpDrawer(); else setHelpOpen(true); });
             safeBind('helpPinBtn', 'click', () => setHelpPinned(!helpDrawerPinned));
             safeBind('helpCloseBtn', 'click', closeHelpDrawer);
+            safeBind('emptyImportBtn', 'click', () => { setSidebarOpen(true); $('modelInput')?.click(); });
+            safeBind('emptyHelpBtn', 'click', () => setHelpOpen(true));
+            safeBind('errorModalCloseBtn', 'click', () => { $('errorModal').style.display = 'none'; $('helpToggleBtn')?.focus(); });
+            safeBind('drawerScrim', 'click', () => { if (viewDrawerOpen) closeViewDrawer(); else if (helpDrawerOpen) closeHelpDrawer(); else if ($('sidebar')?.classList.contains('open')) setSidebarOpen(false); });
             safeBind('modelInput', 'change', handleModelUpload);
             safeBind('importPackageBtn', 'click', commitPendingPackage);
             safeBind('textureInput', 'change', handleTextureUpload); 
@@ -2593,6 +2646,8 @@
                 if ($('exportRoomPlanSliceLabel')) $('exportRoomPlanSliceLabel').innerText = `${e.target.value}%`;
             });
             safeBind('cancelProcessBtn', 'click', cancelActiveProcessing);
+            safeBind('sunAzimuth', 'input', (e) => { $('sunAzimuthLabel').innerText = `${e.target.value}°`; updateSunPath(); });
+            safeBind('sunElevation', 'input', (e) => { $('sunElevationLabel').innerText = `${e.target.value}°`; updateSunPath(); });
             safeBind('extrudeHeight', 'input', (e) => { $('extrudeHeightLabel').innerText = `${e.target.value}m`; });
             safeBind('runPdfTo3dBtn', 'click', runPdfTo3dBackend);
             safeBind('runPoissonBtn', 'click', runPoissonBackend);
@@ -2728,7 +2783,14 @@
             return 'empty';
         }
 
+        function updateCanvasEmptyState() {
+            const emptyState = $('canvasEmptyState');
+            if (!emptyState) return;
+            emptyState.hidden = getLoadedGeometryMode() !== 'empty';
+        }
+
         function updateWorkflowAvailability() {
+            updateCanvasEmptyState();
             const mode = getLoadedGeometryMode();
             const hasPointCloud = mode === 'point-cloud' || mode === 'mixed';
             const hasMesh = mode === 'mesh' || mode === 'mixed';
@@ -2772,6 +2834,7 @@
 
         // --- Stats ---
         function updateStatsUI() {
+            updateCanvasEmptyState();
             if (activeInstancedMesh) {
                 const rm = $('renderMode');
                 if(rm) { rm.value = 'solid-smooth'; }
@@ -3014,7 +3077,7 @@
         }
 
         function unloadCurrentModel(errorMessage) {
-            showLoader(false); if (errorMessage) { $('errorModalMsg').innerText = errorMessage; $('errorModal').style.display = 'flex'; }
+            showLoader(false); if (errorMessage) { $('errorModalMsg').innerText = errorMessage; $('errorModal').style.display = 'flex'; $('errorModalCloseBtn')?.focus(); }
             cancelCropMode();
             
             const oldGeoms = loadedGeometryStore;
@@ -3041,7 +3104,7 @@
             sceneManualRotation.set(0, 0, 0);
             ['sceneRotateX', 'sceneRotateY', 'sceneRotateZ'].forEach(id => { const el = $(id); if (el) el.value = '0'; });
 
-            $('statVertices').innerText = "0"; $('statFaces').innerText = "0"; controls.target.set(0, 0, 0); activeCamera.position.set(0, 10, 20); controls.update(); buildSceneGraph();
+            $('statVertices').innerText = "0"; $('statFaces').innerText = "0"; controls.target.set(0, 0, 0); activeCamera.position.set(0, 10, 20); controls.update(); buildSceneGraph(); updateCanvasEmptyState();
             setStatus('textureStatus', 'Generates planar UVs when needed.');
             updatePackageImagesStatus('Open a ZIP package with a texture and reference photos.');
             setStatus('imageRefinementStatus', 'Photos are kept with the model; this pass improves the draped texture.');
