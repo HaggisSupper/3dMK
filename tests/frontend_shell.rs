@@ -113,6 +113,8 @@ fn frontend_has_a_usable_entry_point() {
     assert!(html.contains("function resetSceneAppearance()"));
     assert!(html.contains("function configureObjectAppearanceMaterial"));
     assert!(html.contains("adjustedObjectColor"));
+    assert!(html.contains("uniform float uObjectBrightness"));
+    assert!(html.contains("#include <opaque_fragment>"));
     assert!(html.contains("id=\"viewCloseBtn\""));
     assert!(html.contains("id=\"drawerScrim\""));
     assert!(html.contains("id=\"canvasEmptyState\""));

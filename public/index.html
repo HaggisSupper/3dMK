@@ -4755,9 +4755,10 @@
                 const values = sceneAppearanceValues();
                 shader.uniforms.uObjectBrightness = { value: values.brightness };
                 shader.uniforms.uObjectContrast = { value: values.contrast };
+                shader.fragmentShader = `uniform float uObjectBrightness;\nuniform float uObjectContrast;\n${shader.fragmentShader}`;
                 shader.fragmentShader = shader.fragmentShader.replace(
-                    '#include <output_fragment>',
-                    '#include <output_fragment>\nvec3 adjustedObjectColor = (gl_FragColor.rgb + uObjectBrightness - 0.5) * (1.0 + uObjectContrast) + 0.5;\ngl_FragColor.rgb = adjustedObjectColor;'
+                    '#include <opaque_fragment>',
+                    '#include <opaque_fragment>\nvec3 adjustedObjectColor = (gl_FragColor.rgb + uObjectBrightness - 0.5) * (1.0 + uObjectContrast) + 0.5;\ngl_FragColor.rgb = adjustedObjectColor;'
                 );
                 material.userData.objectAppearanceShader = shader;
             };
