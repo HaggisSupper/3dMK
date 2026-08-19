@@ -4,6 +4,8 @@ Read AGENTS.md first, then docs/CURRENT_STATE.md and the governing documents it 
 
 The task supplied in the generated issue is the only implementation scope. The issue contains the exact content diff from .github/DEV_INSTRUCTIONS.md. Implement only the new or changed task.
 
+For 3dMK work, load .codex/skills/3dmk-dev/SKILL.md and the minimum referenced material needed for the task. Treat it as a portable governed workflow, not as permission to widen scope.
+
 Required behavior:
 
 - Work on the assigned Copilot branch and open a draft pull request.
