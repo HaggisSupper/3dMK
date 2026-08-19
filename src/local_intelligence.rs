@@ -109,6 +109,130 @@ pub fn route_request(request: &IntelligenceRequest) -> IntelligenceDecision {
     }
 }
 
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct IntelligenceCapacity {
+    pub cuda_ready: bool,
+    pub available_vram_mib: u32,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct IntelligenceGovernorConfig {
+    pub maximum_active_inference: usize,
+    pub minimum_inference_vram_mib: u32,
+    pub interactive_safety_reserve_mib: u32,
+}
+
+impl Default for IntelligenceGovernorConfig {
+    fn default() -> Self {
+        Self {
+            maximum_active_inference: 1,
+            minimum_inference_vram_mib: 1536,
+            interactive_safety_reserve_mib: 1024,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum IntelligenceAdmissionBlockReason {
+    RoutingBlocked,
+    CudaUnavailable,
+    InsufficientVram,
+    ConcurrencyLimitReached,
+}
+
+#[derive(Debug)]
+pub struct IntelligenceGovernor {
+    config: IntelligenceGovernorConfig,
+    active_inference: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+}
+
+impl IntelligenceGovernor {
+    pub fn new(config: IntelligenceGovernorConfig) -> Self {
+        Self {
+            config,
+            active_inference: std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+        }
+    }
+
+    pub fn active_inference(&self) -> usize {
+        self.active_inference.load(std::sync::atomic::Ordering::Acquire)
+    }
+
+    pub fn admit(
+        &self,
+        request: &IntelligenceRequest,
+        capacity: IntelligenceCapacity,
+    ) -> Result<IntelligenceLease, IntelligenceAdmissionBlockReason> {
+        let decision = route_request(request);
+        match decision.tier {
+            IntelligenceTier::Blocked => {
+                return Err(IntelligenceAdmissionBlockReason::RoutingBlocked)
+            }
+            IntelligenceTier::Deterministic => {
+                return Ok(IntelligenceLease::deterministic());
+            }
+            IntelligenceTier::MistralRs
+            | IntelligenceTier::LlamaCpp
+            | IntelligenceTier::OpenAiCompatibleCloud => {}
+        }
+
+        if !capacity.cuda_ready {
+            return Err(IntelligenceAdmissionBlockReason::CudaUnavailable);
+        }
+
+        let required_vram = self
+            .config
+            .minimum_inference_vram_mib
+            .saturating_add(self.config.interactive_safety_reserve_mib);
+        if capacity.available_vram_mib < required_vram {
+            return Err(IntelligenceAdmissionBlockReason::InsufficientVram);
+        }
+
+        let mut active = self.active_inference.load(std::sync::atomic::Ordering::Acquire);
+        loop {
+            if active >= self.config.maximum_active_inference {
+                return Err(IntelligenceAdmissionBlockReason::ConcurrencyLimitReached);
+            }
+            match self.active_inference.compare_exchange_weak(
+                active,
+                active + 1,
+                std::sync::atomic::Ordering::AcqRel,
+                std::sync::atomic::Ordering::Acquire,
+            ) {
+                Ok(_) => {
+                    return Ok(IntelligenceLease {
+                        active_inference: Some(std::sync::Arc::clone(&self.active_inference)),
+                    })
+                }
+                Err(observed) => active = observed,
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct IntelligenceLease {
+    active_inference: Option<std::sync::Arc<std::sync::atomic::AtomicUsize>>,
+}
+
+impl IntelligenceLease {
+    const fn deterministic() -> Self {
+        Self {
+            active_inference: None,
+        }
+    }
+}
+
+impl Drop for IntelligenceLease {
+    fn drop(&mut self) {
+        if let Some(active_inference) = self.active_inference.take() {
+            active_inference.fetch_sub(1, std::sync::atomic::Ordering::AcqRel);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,6 +244,74 @@ mod tests {
             input_bytes: 1024,
             requires_authoritative_state: false,
         }
+    }
+
+
+    #[test]
+    fn governor_reserves_vram_and_releases_the_concurrency_lease() {
+        let governor = IntelligenceGovernor::new(IntelligenceGovernorConfig {
+            maximum_active_inference: 1,
+            minimum_inference_vram_mib: 2048,
+            interactive_safety_reserve_mib: 1024,
+        });
+        let request = request(IntelligenceOperation::VisionAdjudication);
+        let capacity = IntelligenceCapacity {
+            cuda_ready: true,
+            available_vram_mib: 4096,
+        };
+
+        let lease = governor.admit(&request, capacity).unwrap();
+        assert_eq!(governor.active_inference(), 1);
+        assert_eq!(
+            governor.admit(&request, capacity),
+            Err(IntelligenceAdmissionBlockReason::ConcurrencyLimitReached)
+        );
+        drop(lease);
+        assert_eq!(governor.active_inference(), 0);
+        assert!(governor.admit(&request, capacity).is_ok());
+    }
+
+    #[test]
+    fn governor_blocks_local_inference_without_cuda_or_safe_vram() {
+        let governor = IntelligenceGovernor::new(IntelligenceGovernorConfig::default());
+        let request = request(IntelligenceOperation::FloorplanInterpretation);
+        assert_eq!(
+            governor.admit(
+                &request,
+                IntelligenceCapacity {
+                    cuda_ready: false,
+                    available_vram_mib: 8192,
+                },
+            ),
+            Err(IntelligenceAdmissionBlockReason::CudaUnavailable)
+        );
+        assert_eq!(
+            governor.admit(
+                &request,
+                IntelligenceCapacity {
+                    cuda_ready: true,
+                    available_vram_mib: 2048,
+                },
+            ),
+            Err(IntelligenceAdmissionBlockReason::InsufficientVram)
+        );
+    }
+
+    #[test]
+    fn governor_never_consumes_gpu_capacity_for_deterministic_work() {
+        let governor = IntelligenceGovernor::new(IntelligenceGovernorConfig::default());
+        let request = request(IntelligenceOperation::EvidenceSummarization);
+        let lease = governor
+            .admit(
+                &request,
+                IntelligenceCapacity {
+                    cuda_ready: false,
+                    available_vram_mib: 0,
+                },
+            )
+            .unwrap();
+        assert_eq!(governor.active_inference(), 0);
+        drop(lease);
     }
 
     #[test]
