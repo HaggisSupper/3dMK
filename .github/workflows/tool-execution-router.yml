@@ -7,6 +7,12 @@ on:
       - scripts/validate-3dmk-toolkit.sh
       - scripts/validate-3dmk-exec-router-contract.sh
       - scripts/test-3dmk-exec-router-contract.sh
+      - contracts/veritas-child-conformance.v1.json
+      - scripts/validate-veritas-child-contract.sh
+      - scripts/test-veritas-child-contract.sh
+      - contracts/veritas-child-conformance.v1.json
+      - scripts/validate-veritas-child-contract.sh
+      - scripts/test-veritas-child-contract.sh
       - scripts/validate-3dmk-exec-router-contract.sh
       - scripts/test-3dmk-exec-router-contract.sh
       - .codex/skills/3dmk-dev/**
@@ -35,6 +41,13 @@ jobs:
 
       - name: Run Git Bash-compatible toolkit validation
         run: bash scripts/validate-3dmk-toolkit.sh
+      - name: Enforce Veritas child conformance
+        run: |
+          bash -n scripts/validate-veritas-child-contract.sh
+          bash -n scripts/test-veritas-child-contract.sh
+          bash scripts/validate-veritas-child-contract.sh
+          bash scripts/test-veritas-child-contract.sh
+
       - name: Enforce immutable execution-router contract
         run: |
           bash -n scripts/validate-3dmk-exec-router-contract.sh
