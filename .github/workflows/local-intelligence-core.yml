@@ -4,24 +4,24 @@ on:
   pull_request:
     paths:
       - Cargo.toml
+      - Cargo.lock
       - src/lib.rs
       - src/main.rs
       - src/local_intelligence.rs
       - contracts/local-intelligence-routing.v1.json
-      - scripts/validate-local-intelligence-contract.sh
-      - scripts/test-local-intelligence-contract.sh
+      - tests/local_intelligence_contract.rs
       - .github/workflows/local-intelligence-core.yml
   push:
     branches:
       - main
     paths:
       - Cargo.toml
+      - Cargo.lock
       - src/lib.rs
       - src/main.rs
       - src/local_intelligence.rs
       - contracts/local-intelligence-routing.v1.json
-      - scripts/validate-local-intelligence-contract.sh
-      - scripts/test-local-intelligence-contract.sh
+      - tests/local_intelligence_contract.rs
       - .github/workflows/local-intelligence-core.yml
 
 permissions:
@@ -35,13 +35,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
-      - name: Enforce routing contract
-        run: |
-          bash -n scripts/validate-local-intelligence-contract.sh
-          bash -n scripts/test-local-intelligence-contract.sh
-          bash scripts/validate-local-intelligence-contract.sh
-          bash scripts/test-local-intelligence-contract.sh
-      - name: Format local intelligence core
+      - name: Format contract implementation
         run: cargo fmt --all -- --check
-      - name: Test local intelligence core
+      - name: Run unit contract and governor tests
         run: cargo test --lib local_intelligence -- --nocapture
+      - name: Run public contract boundary tests
+        run: cargo test --test local_intelligence_contract -- --nocapture
+      - name: Exercise contract-backed CLI route
+        run: |
+          cargo run -- intelligence-route vision-adjudication --input-bytes 1024
+          cargo run -- intelligence-route general-assistance --input-bytes 1024
