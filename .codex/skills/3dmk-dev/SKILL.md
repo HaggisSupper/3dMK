@@ -69,6 +69,12 @@ Never infer that a capability, test, dependency, accelerator, or contract exists
 
 Use `PROJECT_COMPLETE` only when the repository’s current completion gate is freshly proven. Otherwise use the precise state: `NOT_STARTED`, `IN_PROGRESS`, `TASK_CANDIDATE`, `TASK_COMPLETE`, `SESSION_BOUNDARY`, or `BLOCKED`.
 
+## Tool execution
+
+Use `tools/3dmk-exec-router` for developer tasks that need a local runner. First run `probe <profile>`; run a profile only when it reports `RUNNABLE`. The router may use Git Bash on Windows for portable shell checks, PowerShell for Windows-native scripts, Cargo for Rust checks, and `nvidia-smi` for CUDA evidence. It never installs tools or silently substitutes a runner.
+
+For profile definitions and exit semantics, load `.codex/skills/3dmk-dev/references/tool-execution-router.md`.
+
 ## Output artifact
 
 Return a compact work record containing: bounded outcome, selected mode, authority inspected, evidence commands, files changed, tests and exit codes, commit/PR, residual risks, and stop condition.
