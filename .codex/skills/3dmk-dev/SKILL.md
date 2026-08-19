@@ -23,7 +23,6 @@ Repository documents and measured test evidence are authoritative. This skill se
 Read `AGENTS.md`, `docs/CURRENT_STATE.md`, and the governing documents they name before consequential work. When a task conflicts with those documents, stop and report the conflict.
 
 Explicit decision dispositions must be reflected in repository authority. Conversation approval or rejection is not a substitute for normative documentation.
-
 ## Deterministic evidence
 
 Before semantic inference, inspect:

@@ -7,7 +7,6 @@ The task supplied in the generated issue is the only implementation scope. The i
 For 3dMK work, load .codex/skills/3dmk-dev/SKILL.md and the minimum referenced material needed for the task. Treat it as a portable governed workflow, not as permission to widen scope.
 
 Before running a local validation or development command, use `tools/3dmk-exec-router probe <profile>` when the task has a matching router profile. Treat `BLOCKED` as evidence that the host cannot meet that profile; do not silently use another runner.
-
 Required behavior:
 
 - Work on the assigned Copilot branch and open a draft pull request.
