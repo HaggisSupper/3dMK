@@ -262,10 +262,10 @@ mod tests {
 
         let lease = governor.admit(&request, capacity).unwrap();
         assert_eq!(governor.active_inference(), 1);
-        assert_eq!(
+        assert!(matches!(
             governor.admit(&request, capacity),
             Err(IntelligenceAdmissionBlockReason::ConcurrencyLimitReached)
-        );
+        ));
         drop(lease);
         assert_eq!(governor.active_inference(), 0);
         assert!(governor.admit(&request, capacity).is_ok());
@@ -275,7 +275,7 @@ mod tests {
     fn governor_blocks_local_inference_without_cuda_or_safe_vram() {
         let governor = IntelligenceGovernor::new(IntelligenceGovernorConfig::default());
         let request = request(IntelligenceOperation::FloorplanInterpretation);
-        assert_eq!(
+        assert!(matches!(
             governor.admit(
                 &request,
                 IntelligenceCapacity {
@@ -284,8 +284,8 @@ mod tests {
                 },
             ),
             Err(IntelligenceAdmissionBlockReason::CudaUnavailable)
-        );
-        assert_eq!(
+        ));
+        assert!(matches!(
             governor.admit(
                 &request,
                 IntelligenceCapacity {
@@ -294,7 +294,7 @@ mod tests {
                 },
             ),
             Err(IntelligenceAdmissionBlockReason::InsufficientVram)
-        );
+        ));
     }
 
     #[test]
