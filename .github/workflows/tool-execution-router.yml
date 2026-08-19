@@ -5,6 +5,10 @@ on:
     paths:
       - tools/3dmk-exec-router/**
       - scripts/validate-3dmk-toolkit.sh
+      - scripts/validate-3dmk-exec-router-contract.sh
+      - scripts/test-3dmk-exec-router-contract.sh
+      - scripts/validate-3dmk-exec-router-contract.sh
+      - scripts/test-3dmk-exec-router-contract.sh
       - .codex/skills/3dmk-dev/**
       - .github/workflows/tool-execution-router.yml
   push:
@@ -31,6 +35,13 @@ jobs:
 
       - name: Run Git Bash-compatible toolkit validation
         run: bash scripts/validate-3dmk-toolkit.sh
+      - name: Enforce immutable execution-router contract
+        run: |
+          bash -n scripts/validate-3dmk-exec-router-contract.sh
+          bash -n scripts/test-3dmk-exec-router-contract.sh
+          bash scripts/validate-3dmk-exec-router-contract.sh
+          bash scripts/test-3dmk-exec-router-contract.sh
+
       - name: Format router
         working-directory: tools/3dmk-exec-router
         run: cargo fmt --check
