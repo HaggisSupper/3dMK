@@ -73,7 +73,7 @@ Use `PROJECT_COMPLETE` only when the repository’s current completion gate is f
 
 Use `tools/3dmk-exec-router` for developer tasks that need a local runner. First run `probe <profile>`; run a profile only when it reports `RUNNABLE`. The router may use Git Bash on Windows for portable shell checks, PowerShell for Windows-native scripts, Cargo for Rust checks, and `nvidia-smi` for CUDA evidence. It never installs tools or silently substitutes a runner.
 
-For profile definitions and exit semantics, load `.codex/skills/3dmk-dev/references/tool-execution-router.md`.
+The router’s immutable machine-readable contract is `tools/3dmk-exec-router/contract.json`. Validation fails closed if runner declarations or process-safety invariants drift. For profile definitions and exit semantics, load `.codex/skills/3dmk-dev/references/tool-execution-router.md`.
 
 ## Output artifact
 
