@@ -134,6 +134,33 @@ fn default_detection_confidence() -> f64 {
     0.5
 }
 
+fn validate_local_ai_image_budget(bytes: &[u8]) -> Result<(u32, u32)> {
+    if bytes.len() > crate::perception::MAX_VWM_PERCEPTION_IMAGE_BYTES {
+        anyhow::bail!("Local AI image exceeds the compressed-byte budget");
+    }
+    let reader = image::ImageReader::new(std::io::Cursor::new(bytes))
+        .with_guessed_format()
+        .context("Local AI could not determine the supplied image format")?;
+    let (width, height) = reader
+        .into_dimensions()
+        .context("Local AI could not read the supplied image dimensions")?;
+    let pixels = u64::from(width)
+        .checked_mul(u64::from(height))
+        .context("Local AI image dimensions overflow")?;
+    if width == 0 || height == 0 || pixels > crate::perception::MAX_VWM_PERCEPTION_PIXELS {
+        anyhow::bail!("Local AI image exceeds the decoded-pixel budget");
+    }
+    Ok((width, height))
+}
+
+fn local_ai_http_client(timeout: std::time::Duration) -> Result<reqwest::Client> {
+    reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(timeout)
+        .build()
+        .context("Could not create the local AI HTTP client")
+}
+
 fn local_vlm_completion_url(endpoint: &str) -> Result<String> {
     let mut url = reqwest::Url::parse(endpoint.trim().trim_end_matches('/'))
         .context("VLM endpoint is not a valid URL")?;
@@ -181,9 +208,12 @@ pub async fn detect_objects_vlm(
     {
         anyhow::bail!("VLM confidence threshold must be between 0 and 1");
     }
+    let (image_width, image_height) = validate_local_ai_image_budget(image_bytes)?;
     let decoded = image::load_from_memory(image_bytes)
         .context("VLM object detection could not decode the supplied image")?;
-    let (image_width, image_height) = (decoded.width(), decoded.height());
+    if decoded.width() != image_width || decoded.height() != image_height {
+        anyhow::bail!("Local AI image dimensions changed during decode");
+    }
     let mime = match Path::new(source_id)
         .extension()
         .and_then(|extension| extension.to_str())
@@ -221,9 +251,7 @@ pub async fn detect_objects_vlm(
         "max_tokens": 1800
     });
 
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
-        .build()?;
+    let client = local_ai_http_client(std::time::Duration::from_secs(120))?;
     let mut request = client.post(&completion_url).json(&payload);
     if !options.api_key.trim().is_empty() {
         request = request.bearer_auth(options.api_key.trim());
@@ -384,10 +412,7 @@ pub async fn vision_status() -> VisionRuntimeStatus {
             }
         }
     };
-    let client = match reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(2))
-        .build()
-    {
+    let client = match local_ai_http_client(std::time::Duration::from_secs(2)) {
         Ok(client) => client,
         Err(error) => {
             return VisionRuntimeStatus {
@@ -456,6 +481,7 @@ pub async fn extract_floorplan_mistral(image_path: &str) -> Result<Vec<(f64, f64
 async fn extract_floorplan_mistral_layout(path: &Path) -> Result<FloorplanLayout> {
     let image_bytes = std::fs::read(path)
         .with_context(|| format!("Failed to read image file: {}", path.display()))?;
+    validate_local_ai_image_budget(&image_bytes)?;
     let mime = match path
         .extension()
         .and_then(|extension| extension.to_str())
@@ -479,9 +505,7 @@ async fn extract_floorplan_mistral_layout(path: &Path) -> Result<FloorplanLayout
         "max_tokens": 1200
     });
     let endpoint = mistral_endpoint();
-    let response = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
-        .build()?
+    let response = local_ai_http_client(std::time::Duration::from_secs(120))?
         .post(format!("{}/v1/chat/completions", endpoint))
         .json(&payload)
         .send()
