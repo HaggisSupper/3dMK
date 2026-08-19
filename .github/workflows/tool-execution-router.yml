@@ -24,6 +24,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
       - name: Run Git Bash-compatible toolkit validation
         run: bash scripts/validate-3dmk-toolkit.sh
       - name: Format router
