@@ -1,10 +1,11 @@
 //! Deterministic, typed admission for the 3DMK local-intelligence ladder.
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
 pub const LOCAL_INTELLIGENCE_CONTRACT_VERSION: u16 = 1;
 pub const MAXIMUM_REQUEST_BYTES: u64 = 16 * 1024 * 1024;
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, ValueEnum)]
 #[serde(rename_all = "snake_case")]
 pub enum IntelligenceOperation {
     MetadataInspection,
