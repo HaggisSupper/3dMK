@@ -1,0 +1,47 @@
+name: Local Intelligence Core
+
+on:
+  pull_request:
+    paths:
+      - Cargo.toml
+      - src/lib.rs
+      - src/main.rs
+      - src/local_intelligence.rs
+      - contracts/local-intelligence-routing.v1.json
+      - scripts/validate-local-intelligence-contract.sh
+      - scripts/test-local-intelligence-contract.sh
+      - .github/workflows/local-intelligence-core.yml
+  push:
+    branches:
+      - main
+    paths:
+      - Cargo.toml
+      - src/lib.rs
+      - src/main.rs
+      - src/local_intelligence.rs
+      - contracts/local-intelligence-routing.v1.json
+      - scripts/validate-local-intelligence-contract.sh
+      - scripts/test-local-intelligence-contract.sh
+      - .github/workflows/local-intelligence-core.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Enforce routing contract
+        run: |
+          bash -n scripts/validate-local-intelligence-contract.sh
+          bash -n scripts/test-local-intelligence-contract.sh
+          bash scripts/validate-local-intelligence-contract.sh
+          bash scripts/test-local-intelligence-contract.sh
+      - name: Format local intelligence core
+        run: cargo fmt --all -- --check
+      - name: Test local intelligence core
+        run: cargo test --lib local_intelligence -- --nocapture
