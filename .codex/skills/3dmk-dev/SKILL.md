@@ -10,7 +10,7 @@ metadata:
 
 # 3DMK Development Toolkit
 
-Use this skill for implementation, debugging, review, planning, or release work in the 3dMK repository.
+Use this skill for implementation, debugging, review, planning, or release work in the 3dMK repository. It enforces Veritas child conformance: versioned machine-readable contracts at practical boundaries, validated concrete types after ingress, deterministic evidence, negative/regression tests, and no silent fallback or undocumented shared mutable state.
 
 ## Trigger
 
