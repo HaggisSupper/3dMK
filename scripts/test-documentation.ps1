@@ -50,6 +50,15 @@ $requiredFiles = @(
     'docs/architecture/decisions/ADR-001-transactional-project-store.md',
     'docs/architecture/decisions/ADR-002-supervised-cuda-worker.md',
     'docs/architecture/decisions/ADR-003-tiered-cache.md',
+    'docs/architecture/decisions/ADR-004-capability-domain-convergence-architecture.md',
+    'docs/architecture/CAPABILITY_FRAMEWORK_AGENT_GOVERNANCE.md',
+    'docs/architecture/CAPABILITY_FRAMEWORK_IMPLEMENTATION_SEQUENCE.md',
+    'docs/architecture/CAPABILITY_FRAMEWORK_MASTER_SPEC.md',
+    'docs/architecture/HARDWARE_AWARE_EXECUTION_SPEC.md',
+    'docs/architecture/IMPLEMENTATION_GUARDRAILS.md',
+    'docs/architecture/INTELLIGENCE_ESCALATION_SPEC.md',
+    'docs/architecture/NON_NEGOTIABLE_ACCEPTANCE_GATES.md',
+    'docs/architecture/OUTCOME_EVALUATION_AND_CONVERGENCE_SPEC.md',
     'docs/agent-execution/README.md',
     'docs/agent-execution/MISTRALRS_LOCAL_AGENT.md',
     'docs/agent-execution/VWM_PROGRESS.md',
@@ -145,12 +154,42 @@ $agents = Get-Content -LiteralPath (Resolve-RepositoryPath 'AGENTS.md') -Raw
 foreach ($required in @(
     'docs/CURRENT_STATE.md',
     'CUDA Foundation FB1–FB8',
-    'CPU LLM inference and cloud inference fallback are prohibited.',
+    'CPU LLM inference and cloud inference fallback are prohibited for the active autonomous development executor.',
+    'Product-runtime intelligence escalation, when separately implemented and validated under ADR-004',
+    'Conversation state SHALL NOT remain stronger than repository authority.',
     'Reviewer and verifier sessions are read-only',
     'Evidence before assertion. No exceptions.'
 )) {
     if (-not $agents.Contains($required, [StringComparison]::Ordinal)) {
         throw "AGENTS.md is missing governing text: $required"
+    }
+}
+
+$capabilityGovernance = Get-Content -LiteralPath (Resolve-RepositoryPath 'docs/architecture/CAPABILITY_FRAMEWORK_AGENT_GOVERNANCE.md') -Raw
+foreach ($required in @(
+    '3DMk SHALL always remain a child of Veritas. Veritas is the core.',
+    'How much of this is speculative bullshit because we enjoy the riff?',
+    'Mandatory disposition-to-documentation rule',
+    '`APPROVED` requirements SHALL be expressed normatively',
+    '`REJECTED` mechanisms SHALL be removed',
+    '`SUPERSEDED` material SHALL be removed from active authority',
+    '`DEFERRED`, `HYPOTHESIS`, and `RIFF` material SHALL remain expressly non-normative',
+    'contradictory active requirements are a blocking defect'
+)) {
+    if (-not $capabilityGovernance.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Capability governance is missing normative disposition text: $required"
+    }
+}
+
+$acceptanceGates = Get-Content -LiteralPath (Resolve-RepositoryPath 'docs/architecture/NON_NEGOTIABLE_ACCEPTANCE_GATES.md') -Raw
+foreach ($required in @(
+    'Gate N — Documentation truth and decision disposition',
+    'every explicitly `APPROVED` requirement is represented',
+    'every explicitly `REJECTED` mechanism is removed',
+    'no contradictory active normative requirements remain'
+)) {
+    if (-not $acceptanceGates.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Acceptance gates are missing decision-disposition enforcement: $required"
     }
 }
 
