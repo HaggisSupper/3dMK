@@ -64,7 +64,34 @@ jobs:
           fi
 
           marker="<!-- dev-instructions-commit:$COMMIT_SHA -->"
-          if gh issue list --repo "$REPOSITORY" --state all --search "$marker in:body" --json number --jq 'length' | grep -q '^1$'; then
+          if gh issue list --repo "$REPOSITORY" --state all --search "$COMMIT_SHA in:title" --json number --jq 'length' | grep -q '^1
+            echo "An issue already exists for $COMMIT_SHA."
+            exit 0
+          fi
+
+          delta="$(cat "$DELTA_FILE")"
+          instructions="$(cat .github/copilot-instructions.md)"
+          body="$(jq -n \
+            --arg marker "$marker" \
+            --arg sha "$COMMIT_SHA" \
+            --arg delta "$delta" \
+            --arg instructions "$instructions" \
+            '$marker + "\n\nAutomated task generated from .github/DEV_INSTRUCTIONS.md at commit " + $sha + ".\n\n## Instructions delta\n\n    " + ($delta | gsub("\n"; "\n    ")) + "\n\n## Repository instructions\n\n" + $instructions')"
+
+          jq -n \
+            --arg title "[Copilot] Apply development-instructions delta $COMMIT_SHA" \
+            --arg body "$body" \
+            --arg target_repo "$REPOSITORY" \
+            '{title:$title, body:$body, assignees:["copilot-swe-agent[bot]"], agent_assignment:{target_repo:$target_repo, base_branch:"main", custom_instructions:"Implement only the instructions delta in this issue. Open a draft pull request and include test evidence.", custom_agent:"", model:""}}' > issue.json
+
+          gh api \
+            --method POST \
+            --repo "$REPOSITORY" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/"$REPOSITORY"/issues \
+            --input issue.json
+; then
             echo "An issue already exists for $COMMIT_SHA."
             exit 0
           fi
