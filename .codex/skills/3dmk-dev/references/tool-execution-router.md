@@ -23,6 +23,10 @@ Always probe before running. Its JSON result is authoritative for runner availab
 | `cuda-probe` | `nvidia-smi` | GPU/driver evidence. |
 | `mistralrs-agent` | `pwsh`, then `powershell.exe` | Local Mistral.rs agent task entrypoint. |
 
+## Immutable contract
+
+`tools/3dmk-exec-router/contract.json` is the machine-readable contract. Its version is emitted on every probe result. The router and toolkit validation both fail closed when profile declarations, exit semantics, direct-process execution, or no-bypass/no-install safeguards drift.
+
 ## Semantics
 
 - Exit `0`: runnable probe or successful run.
