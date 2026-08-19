@@ -1,9 +1,10 @@
 use std::env;
 use std::ffi::OsString;
-use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
+
+const CONTRACT_VERSION: u8 = 1;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Runner {
@@ -141,7 +142,8 @@ impl ProbeResult {
         let reason = self.reason.as_deref().unwrap_or("");
 
         println!(
-            "{{\"state\":\"{}\",\"profile\":\"{}\",\"runner\":\"{}\",\"executable\":\"{}\",\"reason\":\"{}\"}}",
+            "{{\"contract_version\":{},\"state\":\"{}\",\"profile\":\"{}\",\"runner\":\"{}\",\"executable\":\"{}\",\"reason\":\"{}\"}}",
+            CONTRACT_VERSION,
             state,
             escape_json(self.profile.name),
             escape_json(runner),
@@ -261,7 +263,7 @@ fn command_for(
                     command.arg(script);
                 }
                 Runner::PowerShellCore | Runner::WindowsPowerShell => {
-                    command.args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"]);
+                    command.args(["-NoProfile", "-File"]);
                     command.arg(script);
                 }
                 Runner::Cargo | Runner::NvidiaSmi => {
