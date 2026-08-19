@@ -1,4 +1,4 @@
-use agentic_cad_backend::{ai_vision, api, cad_engine, point_cloud};
+use agentic_cad_backend::{ai_vision, api, cad_engine, local_intelligence, point_cloud};
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -27,6 +27,15 @@ enum Commands {
     PoissonReconstruct {
         #[arg(short, long)]
         input: String,
+    },
+    /// Inspect the deterministic-first local intelligence route for one typed request.
+    IntelligenceRoute {
+        #[arg(value_enum)]
+        operation: local_intelligence::IntelligenceOperation,
+        #[arg(long, default_value_t = 0)]
+        input_bytes: u64,
+        #[arg(long)]
+        requires_authoritative_state: bool,
     },
     /// Start the HTTP API server for the web viewer
     Serve {
@@ -63,6 +72,22 @@ async fn main() -> Result<()> {
                 point_cloud::run_implicit_pipeline(input_path, output_path)?;
             }
             println!("[+] Successfully reconstructed point cloud mesh.");
+        }
+        Commands::IntelligenceRoute {
+            operation,
+            input_bytes,
+            requires_authoritative_state,
+        } => {
+            let request = local_intelligence::IntelligenceRequest {
+                contract_version: local_intelligence::LOCAL_INTELLIGENCE_CONTRACT_VERSION,
+                operation: *operation,
+                input_bytes: *input_bytes,
+                requires_authoritative_state: *requires_authoritative_state,
+            };
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&local_intelligence::route_request(&request))?
+            );
         }
         Commands::Serve { port } => {
             let current_dir = std::env::current_dir()?;
