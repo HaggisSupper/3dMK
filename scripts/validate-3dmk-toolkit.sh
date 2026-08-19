@@ -8,6 +8,8 @@ required_files=(
   ".codex/skills/3dmk-dev/SKILL.md"
   ".codex/skills/3dmk-dev/references/authority-map.md"
   ".codex/skills/3dmk-dev/references/verification-matrix.md"
+  "tools/3dmk-exec-router/contract.json"
+  "scripts/validate-3dmk-exec-router-contract.sh"
 )
 
 for relative_path in "${required_files[@]}"; do
@@ -44,4 +46,5 @@ if grep -Ein '\b(TODO|FIXME)\b' "$skill_path"; then
   exit 1
 fi
 
+bash "$repository_root/scripts/validate-3dmk-exec-router-contract.sh" "$repository_root"
 printf '3DMK toolkit validation: PASS\n'
