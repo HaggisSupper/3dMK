@@ -22,6 +22,8 @@ Repository documents and measured test evidence are authoritative. This skill se
 
 Read `AGENTS.md`, `docs/CURRENT_STATE.md`, and the governing documents they name before consequential work. When a task conflicts with those documents, stop and report the conflict.
 
+Explicit decision dispositions must be reflected in repository authority. Conversation approval or rejection is not a substitute for normative documentation.
+
 ## Deterministic evidence
 
 Before semantic inference, inspect:
@@ -58,8 +60,9 @@ Never infer that a capability, test, dependency, accelerator, or contract exists
 - Rust is authoritative for geometry, persistence, processing, contracts, and durable state.
 - Tauri 2 is the deployment shell; Axum is the embedded/browser-development backend.
 - CUDA is primary for eligible heavy compute; Vulkan/WebGPU is a capability-specific fallback only after verification.
-- Mistral.rs is the local inference runtime; llama.cpp is fallback when explicitly supported.
-- No Docker, Podman, WSL, Electron, cloud processing, or Python production backend.
+- The active autonomous development executor uses local CUDA-backed Mistral.rs; development-executor CPU/cloud inference fallback is prohibited.
+- Product-runtime intelligence escalation is governed separately by ADR-004 and may use only explicitly approved, policy-admitted local or OpenAI-compatible cloud providers; it remains non-authoritative and optional.
+- No Docker, Podman, WSL, Electron, or Python production backend.
 - JavaScript is presentation, input, rendering, and bounded evidence capture—not authoritative geometry or durable state.
 - Bulk geometry must not cross Tauri IPC.
 - AI/VLM output is advisory and cannot publish geometry or accepted state.
