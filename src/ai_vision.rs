@@ -869,6 +869,41 @@ mod tests {
     use super::*;
 
     #[test]
+    fn local_ai_image_budget_rejects_oversized_payloads() {
+        let oversized = vec![0_u8; crate::perception::MAX_VWM_PERCEPTION_IMAGE_BYTES + 1];
+        let error = validate_local_ai_image_budget(&oversized)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("compressed-byte budget"));
+    }
+
+    #[tokio::test]
+    async fn local_ai_http_client_does_not_follow_redirects() {
+        use tokio::io::AsyncWriteExt;
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            stream
+                .write_all(
+                    b"HTTP/1.1 302 Found\r\nLocation: http://example.com/\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                )
+                .await
+                .unwrap();
+        });
+
+        let response = local_ai_http_client(std::time::Duration::from_secs(5))
+            .unwrap()
+            .get(format!("http://{address}"))
+            .send()
+            .await
+            .unwrap();
+        assert!(response.status().is_redirection());
+        server.await.unwrap();
+    }
+
+    #[test]
     fn mistral_endpoint_origin_is_loopback_only() {
         for endpoint in [
             "http://127.0.0.1:8080",
