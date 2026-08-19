@@ -10,7 +10,6 @@ on:
       - 'public/**'
       - 'tests/**'
       - 'VWM-Repo-Implicit/**'
-      - 'docs/**'
       - 'scripts/test-documentation.ps1'
       - 'scripts/test-mistralrs-local-agent-harness.ps1'
       - '.github/workflows/advanced-feature-integration.yml'
@@ -20,7 +19,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: advanced-feature-integration-${{ github.ref }}
@@ -32,210 +31,15 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 120
     steps:
-      - name: Check out integration branch
+      - name: Check out triggering revision
         uses: actions/checkout@v4
         with:
-          ref: agent/spatial-vwm-feature-integration
           fetch-depth: 0
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-
-      - name: Apply local-AI redirect and image-budget hardening when required
-        shell: pwsh
-        run: |
-          $path = 'src/ai_vision.rs'
-          $content = Get-Content -LiteralPath $path -Raw
-          if ($content.Contains('fn validate_local_ai_image_budget', [StringComparison]::Ordinal)) {
-            Write-Host 'Local-AI network and image-budget hardening is already applied.'
-            exit 0
-          }
-
-          function Replace-Required {
-            param(
-              [Parameter(Mandatory)][string]$Name,
-              [Parameter(Mandatory)][string]$Old,
-              [Parameter(Mandatory)][string]$New
-            )
-            if (-not $script:content.Contains($Old, [StringComparison]::Ordinal)) {
-              throw "$Name is missing its expected source anchor."
-            }
-            $script:content = $script:content.Replace($Old, $New)
-          }
-
-          $helperAnchor = @'
-          fn local_vlm_completion_url(endpoint: &str) -> Result<String> {
-          '@
-          $helpers = @'
-          fn validate_local_ai_image_budget(bytes: &[u8]) -> Result<(u32, u32)> {
-              if bytes.len() > crate::perception::MAX_VWM_PERCEPTION_IMAGE_BYTES {
-                  anyhow::bail!("Local AI image exceeds the compressed-byte budget");
-              }
-              let reader = image::ImageReader::new(std::io::Cursor::new(bytes))
-                  .with_guessed_format()
-                  .context("Local AI could not determine the supplied image format")?;
-              let (width, height) = reader
-                  .into_dimensions()
-                  .context("Local AI could not read the supplied image dimensions")?;
-              let pixels = u64::from(width)
-                  .checked_mul(u64::from(height))
-                  .context("Local AI image dimensions overflow")?;
-              if width == 0
-                  || height == 0
-                  || pixels > crate::perception::MAX_VWM_PERCEPTION_PIXELS
-              {
-                  anyhow::bail!("Local AI image exceeds the decoded-pixel budget");
-              }
-              Ok((width, height))
-          }
-
-          fn local_ai_http_client(timeout: std::time::Duration) -> Result<reqwest::Client> {
-              reqwest::Client::builder()
-                  .redirect(reqwest::redirect::Policy::none())
-                  .timeout(timeout)
-                  .build()
-                  .context("Could not create the local AI HTTP client")
-          }
-
-          fn local_vlm_completion_url(endpoint: &str) -> Result<String> {
-          '@
-          Replace-Required -Name 'local AI helper insertion' -Old $helperAnchor -New $helpers
-
-          $decodeOld = @'
-              let decoded = image::load_from_memory(image_bytes)
-                  .context("VLM object detection could not decode the supplied image")?;
-              let (image_width, image_height) = (decoded.width(), decoded.height());
-          '@
-          $decodeNew = @'
-              let (image_width, image_height) = validate_local_ai_image_budget(image_bytes)?;
-              let decoded = image::load_from_memory(image_bytes)
-                  .context("VLM object detection could not decode the supplied image")?;
-              if decoded.width() != image_width || decoded.height() != image_height {
-                  anyhow::bail!("Local AI image dimensions changed during decode");
-              }
-          '@
-          Replace-Required -Name 'VLM image budget' -Old $decodeOld -New $decodeNew
-
-          $vlmClientOld = @'
-              let client = reqwest::Client::builder()
-                  .timeout(std::time::Duration::from_secs(120))
-                  .build()?;
-          '@
-          $vlmClientNew = @'
-              let client = local_ai_http_client(std::time::Duration::from_secs(120))?;
-          '@
-          Replace-Required -Name 'VLM redirect policy' -Old $vlmClientOld -New $vlmClientNew
-
-          $availabilityOld = @'
-              let client = match reqwest::Client::builder()
-                  .timeout(std::time::Duration::from_secs(2))
-                  .build()
-              {
-          '@
-          $availabilityNew = @'
-              let client = match local_ai_http_client(std::time::Duration::from_secs(2)) {
-          '@
-          Replace-Required -Name 'vision availability redirect policy' -Old $availabilityOld -New $availabilityNew
-
-          $readOld = @'
-              let image_bytes = std::fs::read(path)
-                  .with_context(|| format!("Failed to read image file: {}", path.display()))?;
-          '@
-          $readNew = @'
-              let image_bytes = std::fs::read(path)
-                  .with_context(|| format!("Failed to read image file: {}", path.display()))?;
-              validate_local_ai_image_budget(&image_bytes)?;
-          '@
-          Replace-Required -Name 'floorplan image budget' -Old $readOld -New $readNew
-
-          $floorplanClientOld = @'
-              let response = reqwest::Client::builder()
-                  .timeout(std::time::Duration::from_secs(120))
-                  .build()?
-                  .post(format!("{}/v1/chat/completions", endpoint))
-          '@
-          $floorplanClientNew = @'
-              let response = local_ai_http_client(std::time::Duration::from_secs(120))?
-                  .post(format!("{}/v1/chat/completions", endpoint))
-          '@
-          Replace-Required -Name 'floorplan redirect policy' -Old $floorplanClientOld -New $floorplanClientNew
-
-          $testAnchor = @'
-              #[test]
-              fn mistral_endpoint_origin_is_loopback_only() {
-          '@
-          $tests = @'
-              #[test]
-              fn local_ai_image_budget_rejects_oversized_payloads() {
-                  let oversized = vec![0_u8; crate::perception::MAX_VWM_PERCEPTION_IMAGE_BYTES + 1];
-                  let error = validate_local_ai_image_budget(&oversized)
-                      .unwrap_err()
-                      .to_string();
-                  assert!(error.contains("compressed-byte budget"));
-              }
-
-              #[tokio::test]
-              async fn local_ai_http_client_does_not_follow_redirects() {
-                  use tokio::io::AsyncWriteExt;
-
-                  let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-                      .await
-                      .unwrap();
-                  let address = listener.local_addr().unwrap();
-                  let server = tokio::spawn(async move {
-                      let (mut stream, _) = listener.accept().await.unwrap();
-                      stream
-                          .write_all(
-                              b"HTTP/1.1 302 Found\r\nLocation: http://example.com/\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
-                          )
-                          .await
-                          .unwrap();
-                  });
-
-                  let response = local_ai_http_client(std::time::Duration::from_secs(5))
-                      .unwrap()
-                      .get(format!("http://{address}"))
-                      .send()
-                      .await
-                      .unwrap();
-                  assert!(response.status().is_redirection());
-                  server.await.unwrap();
-              }
-
-              #[test]
-              fn mistral_endpoint_origin_is_loopback_only() {
-          '@
-          Replace-Required -Name 'local AI regression tests' -Old $testAnchor -New $tests
-
-          Set-Content -LiteralPath $path -Value $content -Encoding utf8 -NoNewline
-          cargo fmt --all
-          if ($LASTEXITCODE -ne 0) { throw "rustfmt failed with exit code $LASTEXITCODE" }
-          cargo test --locked local_ai_image_budget_rejects_oversized_payloads -- --nocapture
-          if ($LASTEXITCODE -ne 0) { throw "Local AI image-budget test failed with exit code $LASTEXITCODE" }
-          cargo test --locked local_ai_http_client_does_not_follow_redirects -- --nocapture
-          if ($LASTEXITCODE -ne 0) { throw "Local AI redirect test failed with exit code $LASTEXITCODE" }
-
-      - name: Commit local-AI hardening when required
-        shell: pwsh
-        run: |
-          $changes = @(git status --porcelain)
-          if ($changes.Count -eq 0) {
-            Write-Host 'No hardening commit is required.'
-            exit 0
-          }
-          $changedPaths = @($changes | ForEach-Object { $_.Substring(3).Replace('\', '/') })
-          if ($changedPaths.Count -ne 1 -or $changedPaths[0] -ne 'src/ai_vision.rs') {
-            throw "Unexpected hardening changes: $($changedPaths -join ', ')"
-          }
-          git config user.name '3DMk CI'
-          git config user.email '3dmk-ci@users.noreply.github.com'
-          git add -- src/ai_vision.rs
-          git commit -m 'fix: prevent local AI redirects and decompression abuse'
-          if ($LASTEXITCODE -ne 0) { throw "Hardening commit failed with exit code $LASTEXITCODE" }
-          git push origin HEAD:agent/spatial-vwm-feature-integration
-          if ($LASTEXITCODE -ne 0) { throw "Hardening push failed with exit code $LASTEXITCODE" }
 
       - name: Cache Rust artifacts
         uses: Swatinem/rust-cache@v2

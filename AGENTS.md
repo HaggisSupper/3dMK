@@ -8,7 +8,8 @@ Deliver a production-grade 3DMk system in which:
 - the complete supported system is CUDA-first and requires supported NVIDIA hardware;
 - Mistral.rs is local, headless, CUDA-backed, and advisory;
 - every mutation is reviewable, recoverable, provenance-complete, and verified before publication;
-- the Tauri application works offline after installation;
+- the Tauri application works offline after installation for deterministic core workflows;
+- optional product-runtime intelligence escalation may use explicitly approved local or cloud providers only under the Veritas policy, privacy, resource, and authority contracts defined by ADR-004;
 - completion is based on fresh evidence, not scaffolding, routes, prose, or agent assertions.
 
 ## Governing documents
@@ -19,13 +20,19 @@ Read these in order before implementation, review, or verification:
 2. `docs/superpowers/specs/2026-08-07-3dmk-world-class-quality-standard.md`
 3. `docs/superpowers/specs/2026-08-07-3dmk-cuda-first-system-design.md`
 4. `docs/architecture/decisions/`
-5. `docs/superpowers/plans/2026-07-31-vwm-authoritative-revision-workflow.md`
-6. `docs/superpowers/plans/2026-08-07-3dmk-foundation-batch.md`
-7. `docs/superpowers/plans/2026-08-07-3dmk-world-class-program.md`
-8. `docs/agent-execution/VWM_PROGRESS.md`
-9. `docs/agent-execution/CUDA_FOUNDATION_PROGRESS.md`
+5. `docs/architecture/CAPABILITY_FRAMEWORK_AGENT_GOVERNANCE.md`
+6. `docs/architecture/CAPABILITY_FRAMEWORK_MASTER_SPEC.md`
+7. `docs/architecture/IMPLEMENTATION_GUARDRAILS.md`
+8. `docs/architecture/NON_NEGOTIABLE_ACCEPTANCE_GATES.md`
+9. `docs/superpowers/plans/2026-07-31-vwm-authoritative-revision-workflow.md`
+10. `docs/superpowers/plans/2026-08-07-3dmk-foundation-batch.md`
+11. `docs/superpowers/plans/2026-08-07-3dmk-world-class-program.md`
+12. `docs/agent-execution/VWM_PROGRESS.md`
+13. `docs/agent-execution/CUDA_FOUNDATION_PROGRESS.md`
 
 When an older implementation detail conflicts with a governing document, the higher document in this list controls. Do not re-plan the product into a smaller interpretation.
+
+Explicitly approved, rejected, superseded, deferred, hypothesis, and riff dispositions SHALL be reflected in governing repository documentation according to `docs/architecture/CAPABILITY_FRAMEWORK_AGENT_GOVERNANCE.md`. Conversation state SHALL NOT remain stronger than repository authority.
 
 ## Active executor
 
@@ -47,7 +54,9 @@ Before model-driven work begins, the controller must prove:
 - the exact Mistral.rs process is observed as a CUDA compute process;
 - the model profile fits the approved VRAM budget.
 
-CPU LLM inference and cloud inference fallback are prohibited.
+CPU LLM inference and cloud inference fallback are prohibited for the active autonomous development executor.
+
+This development-executor prohibition SHALL NOT be interpreted as a product-runtime prohibition. Product-runtime intelligence escalation, when separately implemented and validated under ADR-004, MAY escalate from deterministic context to optional embedded ML, optional local LLM/VLM/multimodal inference, and then an approved OpenAI-compatible cloud endpoint. Such escalation SHALL remain optional, policy-controlled, data-minimized, fail-closed, and non-authoritative; deterministic 3DMk core workflows SHALL remain usable without cloud access.
 
 ## Platform and stack
 

@@ -17,7 +17,9 @@
 - the canonical `VWM-Repo-Implicit` Rust workspace for I/O, geometry, perception, and implicit reconstruction;
 - a mandatory CUDA-first target architecture and a CUDA-only local Mistral.rs development executor.
 
-Cloud accounts and hosted processing are outside the current product. OpenCode is not part of the active workflow.
+Cloud accounts and hosted processing are outside the **implemented current product runtime**. ADR-004 approves a future optional, policy-gated OpenAI-compatible cloud intelligence-escalation tier, but no such cloud provider, credential path, network path, escalation contract, or product-runtime integration is implemented. Deterministic core workflows remain required to operate offline.
+
+OpenCode is not part of the active workflow.
 
 ## 2. Implemented runtime surfaces
 
@@ -126,8 +128,9 @@ Not implemented or not production-integrated:
 Accepted system requirement:
 
 - the complete supported system requires a compatible NVIDIA CUDA GPU;
-- Mistral.rs must run through CUDA; CPU or cloud inference fallback is prohibited;
-- eligible heavy product compute is CUDA-primary after parity, determinism, fault, memory, and performance gates pass.
+- the **active autonomous development executor** must run Mistral.rs through CUDA; CPU or cloud inference fallback is prohibited for that executor;
+- eligible heavy product compute is CUDA-primary after parity, determinism, fault, memory, and performance gates pass;
+- ADR-004's approved optional product-runtime intelligence escalation is a target architecture decision, not implemented runtime truth. It does not authorize current product code to bypass existing local-only security boundaries, and it does not weaken the requirement that deterministic core workflows operate offline.
 
 Implemented now:
 
@@ -147,7 +150,8 @@ Product CUDA runtime not implemented:
 - supervised product CUDA worker;
 - pinned staging and device caches;
 - CUDA geometry, reconstruction, image, and perception kernels;
-- product-visible accelerator APIs and UI.
+- product-visible accelerator APIs and UI;
+- Veritas-owned intelligence-escalation runtime, competence contracts, or any cloud inference provider.
 
 Therefore, the repository has a CUDA-first architecture and CUDA-only development executor, but not a complete CUDA-first product runtime.
 
@@ -181,7 +185,8 @@ The next dependency-ready product work remains Authoritative Task 1, tracked by 
 5. Mistral.rs is not supervised as a product process; the new startup helper is operator-run and does not replace product supervision.
 6. Perception lacks packaged production model assets and complete source-linked multiview integration.
 7. Browser-owned production compute/export paths and external frontend dependencies remain.
-8. Installer, offline packaging, session security, upgrade/rollback, fault matrix, long soak, and clean-machine deployment validation remain incomplete.
+8. Veritas canonical child-domain/provider/escalation contracts required by ADR-004 are not yet implemented or pinned in 3DMk.
+9. Installer, offline packaging, session security, upgrade/rollback, fault matrix, long soak, and clean-machine deployment validation remain incomplete.
 
 ## 8. Completion rule
 
