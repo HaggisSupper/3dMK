@@ -1,0 +1,13 @@
+{
+  "contract_version": 1,
+  "default_enabled": false,
+  "provider_protocol": "openai_compatible",
+  "invariants": {
+    "request_authorization_required": true,
+    "provider_configuration_required": true,
+    "protected_project_bytes_require_explicit_authorization": true,
+    "redaction_report_required": true,
+    "audit_record_required": true,
+    "response_is_advisory": true
+  }
+}

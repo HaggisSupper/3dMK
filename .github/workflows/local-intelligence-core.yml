@@ -1,0 +1,48 @@
+name: Local Intelligence Core
+
+on:
+  pull_request:
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - src/lib.rs
+      - src/main.rs
+      - src/local_intelligence.rs
+      - contracts/local-intelligence-routing.v1.json
+      - tests/local_intelligence_contract.rs
+      - .github/workflows/local-intelligence-core.yml
+  push:
+    branches:
+      - main
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - src/lib.rs
+      - src/main.rs
+      - src/local_intelligence.rs
+      - contracts/local-intelligence-routing.v1.json
+      - tests/local_intelligence_contract.rs
+      - .github/workflows/local-intelligence-core.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Diagnose formatting without masking compile or test failures
+        continue-on-error: true
+        run: cargo fmt --all -- --check
+      - name: Run unit contract and governor tests
+        run: cargo test --lib local_intelligence -- --nocapture
+      - name: Run public contract boundary tests
+        run: cargo test --test local_intelligence_contract -- --nocapture
+      - name: Exercise contract-backed CLI route
+        run: |
+          cargo run -- intelligence-route vision-adjudication --input-bytes 1024
+          cargo run -- intelligence-route general-assistance --input-bytes 1024
