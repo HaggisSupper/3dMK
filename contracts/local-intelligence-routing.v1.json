@@ -1,0 +1,29 @@
+{
+  "contract_version": 1,
+  "component": "3dMK local intelligence routing",
+  "operations": {
+    "deterministic": [
+      "metadata_inspection",
+      "geometry_validation",
+      "evidence_summarization"
+    ],
+    "mistralrs_primary": [
+      "vision_adjudication",
+      "floorplan_interpretation"
+    ],
+    "blocked": [
+      "general_assistance"
+    ]
+  },
+  "limits": {
+    "maximum_request_bytes": 16777216
+  },
+  "invariants": {
+    "deterministic_first": true,
+    "mistralrs_primary": true,
+    "llamacpp_automatic_fallback": false,
+    "cloud_egress_default_enabled": false,
+    "local_cpu_inference_allowed": false,
+    "ai_can_publish_authoritative_state": false
+  }
+}
