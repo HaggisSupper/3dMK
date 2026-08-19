@@ -42,10 +42,9 @@ foreach ($term in $requiredTerms) {
     }
 }
 
-$forbidden = @("TODO", "FIXME", "Docker", "Podman", "WSL", "Electron")
-foreach ($term in $forbidden) {
-    if ($skill -match "(?i)\b$([regex]::Escape($term))\b" -and $term -notin @("Docker", "Podman", "WSL", "Electron")) {
-        throw "Unexpected placeholder in toolkit: $term"
+foreach ($placeholder in @("TODO", "FIXME")) {
+    if ($skill -match "(?i)\b$([regex]::Escape($placeholder))\b") {
+        throw "Unexpected placeholder in toolkit: $placeholder"
     }
 }
 
