@@ -29,11 +29,15 @@ When an older implementation detail conflicts with a governing document, the hig
 
 ## Active executor
 
-The active autonomous executor is the local Mistral.rs harness documented in:
+The active authoritative executor remains the local Mistral.rs harness documented in:
 
 `docs/agent-execution/MISTRALRS_LOCAL_AGENT.md`
 
-OpenCode is removed from the active repository workflow and must not be invoked. No OpenCode API key, action, agent, command, configuration, or runbook is part of the current execution path.
+OpenCode is permitted only as an optional, owner-triggered GitHub Actions delegation lane documented in:
+
+`docs/agent-execution/OPENCODE_GITHUB_AGENT.md`
+
+That lane is branch-and-pull-request-only. It does not replace the local Mistral.rs executor, may not publish directly to `main`, and may not bypass the repository's review, validation, CUDA-first, transaction, or immutable-contract requirements. The local implementation harness must not invoke OpenCode.
 
 Before model-driven work begins, the controller must prove:
 
@@ -47,7 +51,7 @@ Before model-driven work begins, the controller must prove:
 - the exact Mistral.rs process is observed as a CUDA compute process;
 - the model profile fits the approved VRAM budget.
 
-CPU LLM inference and cloud inference fallback are prohibited.
+CPU LLM inference and cloud inference fallback are prohibited for the authoritative local execution lane. The optional OpenCode GitHub Actions lane is separately governed by the documented delegation contract and is not an authority source.
 
 ## Platform and stack
 
