@@ -1,5 +1,7 @@
 # 3DMk Agent Contract
 
+3DMK is a child repository of the Veritas capability framework. Veritas guardrails, capability specifications, validation and release expectations, and immutable concrete-contract culture are mandatory. Stricter 3DMK invariants remain in force; any divergence must be explicit, justified, versioned, documented, and machine-detectable where practical.
+
 ## Mission
 
 Deliver a production-grade 3DMk system in which:
@@ -15,7 +17,8 @@ Deliver a production-grade 3DMk system in which:
 
 Read these in order before implementation, review, or verification:
 
-1. `docs/CURRENT_STATE.md`
+1. `contracts/veritas-child-conformance.v1.json`
+2. `docs/CURRENT_STATE.md`
 2. `docs/superpowers/specs/2026-08-07-3dmk-world-class-quality-standard.md`
 3. `docs/superpowers/specs/2026-08-07-3dmk-cuda-first-system-design.md`
 4. `docs/architecture/decisions/`
