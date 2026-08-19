@@ -241,9 +241,9 @@ impl LocalIntelligenceRoutingContract {
 pub fn parse_contract(
     json: &str,
 ) -> Result<LocalIntelligenceRoutingContract, IntelligenceContractError> {
-    serde_json::from_str(json)
-        .map_err(|error| IntelligenceContractError::InvalidJson(error.to_string()))?
-        .validate()
+    let parsed: LocalIntelligenceRoutingContract = serde_json::from_str(json)
+        .map_err(|error| IntelligenceContractError::InvalidJson(error.to_string()))?;
+    parsed.validate()
 }
 
 pub fn embedded_contract() -> Result<LocalIntelligenceRoutingContract, IntelligenceContractError> {
