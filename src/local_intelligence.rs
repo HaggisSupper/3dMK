@@ -178,16 +178,22 @@ impl IntelligenceGovernor {
             | IntelligenceTier::OpenAiCompatibleCloud => {}
         }
 
-        if !capacity.cuda_ready {
-            return Err(IntelligenceAdmissionBlockReason::CudaUnavailable);
-        }
+        let requires_local_cuda = matches!(
+            decision.tier,
+            IntelligenceTier::MistralRs | IntelligenceTier::LlamaCpp
+        );
+        if requires_local_cuda {
+            if !capacity.cuda_ready {
+                return Err(IntelligenceAdmissionBlockReason::CudaUnavailable);
+            }
 
-        let required_vram = self
-            .config
-            .minimum_inference_vram_mib
-            .saturating_add(self.config.interactive_safety_reserve_mib);
-        if capacity.available_vram_mib < required_vram {
-            return Err(IntelligenceAdmissionBlockReason::InsufficientVram);
+            let required_vram = self
+                .config
+                .minimum_inference_vram_mib
+                .saturating_add(self.config.interactive_safety_reserve_mib);
+            if capacity.available_vram_mib < required_vram {
+                return Err(IntelligenceAdmissionBlockReason::InsufficientVram);
+            }
         }
 
         let mut active = self.active_inference.load(std::sync::atomic::Ordering::Acquire);
