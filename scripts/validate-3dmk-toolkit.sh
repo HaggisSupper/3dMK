@@ -4,6 +4,8 @@ set -euo pipefail
 repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 required_files=(
   "AGENTS.md"
+  "contracts/veritas-child-conformance.v1.json"
+  "scripts/validate-veritas-child-contract.sh"
   "docs/CURRENT_STATE.md"
   ".codex/skills/3dmk-dev/SKILL.md"
   ".codex/skills/3dmk-dev/references/authority-map.md"
@@ -46,5 +48,6 @@ if grep -Ein '\b(TODO|FIXME)\b' "$skill_path"; then
   exit 1
 fi
 
+bash "$repository_root/scripts/validate-veritas-child-contract.sh" "$repository_root"
 bash "$repository_root/scripts/validate-3dmk-exec-router-contract.sh" "$repository_root"
 printf '3DMK toolkit validation: PASS\n'
