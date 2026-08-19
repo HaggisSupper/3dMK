@@ -28,7 +28,7 @@ enum Commands {
         #[arg(short, long)]
         input: String,
     },
-    /// Inspect the deterministic-first local intelligence route for one typed request.
+    /// Inspect the immutable local-intelligence policy for one typed request.
     IntelligenceRoute {
         #[arg(value_enum)]
         operation: local_intelligence::IntelligenceOperation,
@@ -84,10 +84,8 @@ async fn main() -> Result<()> {
                 input_bytes: *input_bytes,
                 requires_authoritative_state: *requires_authoritative_state,
             };
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&local_intelligence::route_request(&request))?
-            );
+            let decision = local_intelligence::evaluate_request(&request)?;
+            println!("{}", serde_json::to_string_pretty(&decision)?);
         }
         Commands::Serve { port } => {
             let current_dir = std::env::current_dir()?;
