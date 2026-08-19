@@ -3,6 +3,7 @@ pub mod api;
 pub mod cad_engine;
 pub mod image_refinement;
 pub mod jobs;
+pub mod local_intelligence;
 pub mod packages;
 pub mod perception;
 pub mod point_cloud;
