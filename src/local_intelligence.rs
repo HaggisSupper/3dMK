@@ -69,7 +69,7 @@ impl IntelligenceDecision {
 }
 
 /// Routes a request without starting processes, allocating GPU memory, or publishing state.
-pub const fn route_request(request: &IntelligenceRequest) -> IntelligenceDecision {
+pub fn route_request(request: &IntelligenceRequest) -> IntelligenceDecision {
     if request.contract_version != LOCAL_INTELLIGENCE_CONTRACT_VERSION {
         return IntelligenceDecision::blocked(
             request.operation,
