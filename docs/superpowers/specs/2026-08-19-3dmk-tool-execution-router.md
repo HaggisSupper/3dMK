@@ -22,9 +22,13 @@ The router is a small standalone Rust 2021 CLI under `tools/3dmk-exec-router`. I
 | `cuda-probe` | `nvidia-smi` | none | `nvidia-smi` resolves |
 | `mistralrs-agent` | PowerShell 7 | Windows PowerShell | Windows host, PowerShell, and `scripts/run-mistralrs-vwm-task.ps1` |
 
+## Immutable contract artifact
+
+`tools/3dmk-exec-router/contract.json` is versioned and declares the profiles, exit codes, and non-negotiable process-safety invariants. `scripts/validate-3dmk-exec-router-contract.sh` validates the implementation against it; `scripts/test-3dmk-exec-router-contract.sh` proves that an unsafe PowerShell execution-policy bypass is rejected.
+
 ## Contract
 
-`3dmk-exec-router probe <profile>` emits one JSON record to stdout and returns:
+`3dmk-exec-router probe <profile>` emits one JSON record to stdout including `contract_version` and returns:
 
 - `0`: profile is runnable;
 - `2`: unknown profile or invalid arguments;
