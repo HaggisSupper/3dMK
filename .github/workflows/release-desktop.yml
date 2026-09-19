@@ -22,6 +22,7 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  RELEASE_LABEL: 2.0.0-alpha.1
 
 jobs:
   windows:
@@ -58,13 +59,15 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path artifacts/windows | Out-Null
-          Copy-Item src-tauri/target/release/three-dmk-desktop.exe artifacts/windows/3DMk.exe
-          Copy-Item src-tauri/target/release/bundle/msi/*.msi artifacts/windows/
+          Copy-Item src-tauri/target/release/three-dmk-desktop.exe "artifacts/windows/3DMk-$env:RELEASE_LABEL-Windows-x64.exe"
+          $msi = Get-ChildItem src-tauri/target/release/bundle/msi/*.msi | Select-Object -First 1
+          if (-not $msi) { throw "MSI artifact not found" }
+          Copy-Item $msi.FullName "artifacts/windows/3DMk-$env:RELEASE_LABEL-Windows-x64.msi"
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: 3DMk-Windows-x64
+          name: 3DMk-${{ env.RELEASE_LABEL }}-Windows-x64
           if-no-files-found: error
           path: artifacts/windows/*
 
@@ -103,12 +106,12 @@ jobs:
       - name: Stage macOS artifacts
         run: |
           mkdir -p artifacts/macos
-          cp -R src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app artifacts/macos/
-          cp src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg artifacts/macos/
+          cp -R src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app "artifacts/macos/3DMk-${RELEASE_LABEL}-macOS-universal.app"
+          cp src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg "artifacts/macos/3DMk-${RELEASE_LABEL}-macOS-universal.dmg"
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: 3DMk-macOS-universal
+          name: 3DMk-${{ env.RELEASE_LABEL }}-macOS-universal
           if-no-files-found: error
           path: artifacts/macos/
