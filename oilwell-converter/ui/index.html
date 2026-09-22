@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Oilwell Converter</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-dark: #121212;
+      --bg-panel: #1e1e1e;
+      --bg-input: #2a2a2a;
+      --bg-hover: #333333;
+      --text-primary: #f2f2f2;
+      --text-secondary: #b8b8b8;
+      --border-color: #3d3d3d;
+      --teal-accent: #14b8a6;
+      --teal-strong: #0f9488;
+      --error: #ff9b91;
+      --focus: #54d6c8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      font: 13px/1.45 "Segoe UI", Arial, sans-serif;
+    }
+
+    button, input { font: inherit; }
+
+    .app-shell {
+      width: min(100%, 1040px);
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      min-height: 38px;
+      padding: 0 0 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--text-primary);
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: .01em;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(310px, .75fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .panel {
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-panel);
+    }
+
+    .panel-heading {
+      display: flex;
+      align-items: center;
+      min-height: 38px;
+      margin: 0;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--teal-accent);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .panel-body { padding: 12px; }
+
+    .source-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .file-drop {
+      min-height: 132px;
+      padding: 12px;
+      border: 1px dashed #535353;
+      border-radius: 4px;
+      background: var(--bg-input);
+      transition: border-color 120ms ease, background 120ms ease;
+    }
+
+    .file-drop.drag {
+      border-color: var(--teal-accent);
+      background: #202f2d;
+    }
+
+    .file-name {
+      display: block;
+      overflow: hidden;
+      min-height: 38px;
+      margin: 8px 0;
+      color: var(--text-secondary);
+      text-overflow: ellipsis;
+      word-break: break-all;
+    }
+
+    .optional { color: var(--text-secondary); font-size: 11px; font-weight: 400; }
+
+    .field { display: block; margin: 0 0 12px; }
+
+    .field-label {
+      display: block;
+      margin: 0 0 5px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .035em;
+      text-transform: uppercase;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      min-height: 36px;
+      padding: 7px 9px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      outline: none;
+      background: var(--bg-input);
+      color: var(--text-primary);
+    }
+
+    input[readonly] { color: var(--text-secondary); }
+
+    .button {
+      min-height: 34px;
+      padding: 6px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: var(--bg-input);
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    .button:hover { border-color: #5a5a5a; background: var(--bg-hover); }
+
+    .button.primary {
+      border-color: var(--teal-strong);
+      background: var(--teal-accent);
+      color: #062c28;
+      font-weight: 700;
+    }
+
+    .button.primary:hover { border-color: var(--teal-accent); background: #24c7b5; }
+
+    .button.wide { width: 100%; }
+
+    .choice-set {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+
+    .choice-set legend {
+      width: 100%;
+      margin-bottom: 5px;
+      padding: 0;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .035em;
+      text-transform: uppercase;
+    }
+
+    .choice-set label {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      margin: 0;
+      padding: 5px 9px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: var(--bg-input);
+      color: var(--text-secondary);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .choice-set input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+      clip-path: inset(50%);
+    }
+
+    .choice-set label:has(input:checked) {
+      border-color: var(--teal-strong);
+      background: #163a36;
+      color: var(--text-primary);
+    }
+
+    .choice-set label:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+    .divider { height: 1px; margin: 12px 0; background: var(--border-color); }
+
+    #status {
+      min-height: 19px;
+      margin: 10px 0 0;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+    }
+
+    #status.error { color: var(--error); }
+
+    button:focus-visible, input:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    @media (max-width: 760px) {
+      .workspace, .source-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="app-header">
+      <h1>Oilwell Converter</h1>
+    </header>
+
+    <div class="workspace">
+      <section class="panel" aria-labelledby="sources-heading">
+        <h2 id="sources-heading" class="panel-heading">Source tables</h2>
+        <div class="panel-body">
+          <div class="source-grid">
+            <div id="surveyDrop" class="file-drop">
+              <strong>Survey CSV</strong>
+              <span id="surveyLabel" class="file-name">Drop a CSV here or choose a file.</span>
+              <button class="button" data-path="survey" type="button">Choose survey CSV</button>
+            </div>
+            <div id="sectionsDrop" class="file-drop">
+              <strong>Well bore sections CSV</strong>
+              <span id="sectionsLabel" class="file-name">Drop a CSV here or choose a file.</span>
+              <button class="button" data-path="sections" type="button">Choose sections CSV</button>
+            </div>
+            <div id="bhaDrop" class="file-drop">
+              <strong>BHA CSV <span class="optional">optional</span></strong>
+              <span id="bhaLabel" class="file-name">Drop a CSV here or choose a file.</span>
+              <button class="button" data-path="bha" type="button">Choose BHA CSV</button>
+            </div>
+            <div id="formationDrop" class="file-drop">
+              <strong>Formation tops CSV <span class="optional">optional</span></strong>
+              <span id="formationLabel" class="file-name">Drop a CSV here or choose a file.</span>
+              <button class="button" data-path="formation" type="button">Choose formation CSV</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="export-heading">
+        <h2 id="export-heading" class="panel-heading">Export settings</h2>
+        <div class="panel-body">
+          <label class="field">
+            <span class="field-label">Output folder</span>
+            <input id="outputFolder" type="text" readonly aria-label="Output folder">
+          </label>
+          <button id="chooseFolder" class="button wide" type="button">Choose output folder</button>
+
+          <div class="divider"></div>
+
+          <label class="field">
+            <span class="field-label">Output name</span>
+            <input id="outputName" type="text" value="oilwell_pad">
+          </label>
+
+          <fieldset id="format" class="choice-set">
+            <legend>Export format</legend>
+            <label><input type="radio" name="format" value="glb" checked>GLB</label>
+            <label><input type="radio" name="format" value="obj">OBJ</label>
+            <label><input type="radio" name="format" value="ply">PLY</label>
+            <label><input type="radio" name="format" value="stl">STL</label>
+          </fieldset>
+
+          <div class="divider"></div>
+
+          <fieldset id="interpolation" class="choice-set">
+            <legend>Survey interpolation</legend>
+            <label><input type="radio" name="interpolation" value="minimum-curvature" checked>Minimum curvature</label>
+            <label><input type="radio" name="interpolation" value="linear-direction-blend">Linear blend</label>
+          </fieldset>
+
+          <div class="divider"></div>
+
+          <label class="field">
+            <span class="field-label">Diameter exaggeration</span>
+            <input id="scale" type="number" value="36" min="0.1" step="1">
+          </label>
+          <button id="export" class="button primary wide" type="button">Export model</button>
+          <p id="status" role="status">Ready.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const invoke = (name, args = {}) => window.__TAURI__.core.invoke(name, args);
+    const fileKeys = ["survey", "sections", "bha", "formation"];
+    const settingKeys = ["outputFolder", "outputName", "format", "interpolation", "scale"];
+    const paths = Object.fromEntries(fileKeys.map(key => [key, ""]));
+
+    const valueFor = key => {
+      if (fileKeys.includes(key)) return paths[key];
+      if (key === "format" || key === "interpolation") {
+        return document.querySelector("#" + key + " input:checked").value;
+      }
+      return $(key).value;
+    };
+
+    const restoreValue = (key, value) => {
+      if (fileKeys.includes(key)) {
+        paths[key] = value;
+        $(key + "Label").textContent = value || "Drop a CSV here or choose a file.";
+        return;
+      }
+      if (key === "format" || key === "interpolation") {
+        const option = document.querySelector("#" + key + " input[value=\"" + value + "\"]");
+        if (option) option.checked = true;
+        return;
+      }
+      $(key).value = value;
+    };
+
+    const save = () => {
+      [...fileKeys, ...settingKeys].forEach(key => localStorage.setItem("oilwell." + key, valueFor(key)));
+    };
+
+    [...fileKeys, ...settingKeys].forEach(key => {
+      const saved = localStorage.getItem("oilwell." + key);
+      if (saved !== null) restoreValue(key, saved);
+    });
+
+    settingKeys.forEach(key => {
+      const element = $(key);
+      element.addEventListener("change", save);
+      element.addEventListener("input", save);
+    });
+
+    const setPath = (key, path) => {
+      paths[key] = path;
+      $(key + "Label").textContent = path;
+      save();
+    };
+
+    document.querySelectorAll("[data-path]").forEach(button => {
+      button.addEventListener("click", async () => {
+        const path = await invoke("choose_csv_file");
+        if (path) setPath(button.dataset.path, path);
+      });
+    });
+
+    const pathFromDrop = event => event.dataTransfer && event.dataTransfer.files[0] && event.dataTransfer.files[0].path;
+    [["surveyDrop", "survey"], ["sectionsDrop", "sections"], ["bhaDrop", "bha"], ["formationDrop", "formation"]].forEach(([dropId, key]) => {
+      const drop = $(dropId);
+      ["dragenter", "dragover"].forEach(name => drop.addEventListener(name, event => {
+        event.preventDefault();
+        drop.classList.add("drag");
+      }));
+      ["dragleave", "drop"].forEach(name => drop.addEventListener(name, event => {
+        event.preventDefault();
+        drop.classList.remove("drag");
+      }));
+      drop.addEventListener("drop", event => {
+        const path = pathFromDrop(event);
+        if (path) setPath(key, path);
+      });
+    });
+
+    $("chooseFolder").addEventListener("click", async () => {
+      const path = await invoke("choose_output_folder");
+      if (path) {
+        $("outputFolder").value = path;
+        save();
+      }
+    });
+
+    $("export").addEventListener("click", async () => {
+      const status = $("status");
+      const format = valueFor("format");
+      const folder = valueFor("outputFolder");
+      const baseName = valueFor("outputName").replace(/\.(glb|obj|ply|stl)$/i, "");
+      if (!folder || !paths.survey || !paths.sections) {
+        status.className = "error";
+        status.textContent = "Choose the survey, well bore sections, and an output folder.";
+        return;
+      }
+
+      status.className = "";
+      status.textContent = "Exporting…";
+      try {
+        const result = await invoke("convert_model", {
+          request: {
+            surveyPath: paths.survey,
+            sectionsPath: paths.sections,
+            bhaPath: paths.bha || null,
+            formationPath: paths.formation || null,
+            outputPath: folder + "\\" + baseName + "." + format,
+            outputFormat: format,
+            diameterScale: Number(valueFor("scale")),
+            smoothStepMd: 75,
+            interpolationMethod: valueFor("interpolation"),
+            colourPalette: {}
+          }
+        });
+        status.textContent = "Exported " + result.wells + " well(s), " + result.meshes + " mesh(es) to " + result.outputPath;
+      } catch (error) {
+        status.className = "error";
+        status.textContent = error.message || String(error);
+      }
+    });
+  </script>
+</body>
+</html>
