@@ -1,0 +1,117 @@
+name: Build 3DMk desktop artifacts
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "src/**"
+      - "src-tauri/**"
+      - "public/**"
+      - "VWM-Repo-Implicit/**"
+      - ".github/workflows/release-desktop.yml"
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RELEASE_LABEL: 2.0.0-alpha.1
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            src-tauri -> src-tauri/target
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Build Windows executable
+        working-directory: src-tauri
+        run: cargo tauri build --no-bundle --ci
+
+      - name: Build Windows MSI
+        working-directory: src-tauri
+        run: cargo tauri bundle --bundles msi --ci
+
+      - name: Stage Windows artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts/windows | Out-Null
+          Copy-Item src-tauri/target/release/three-dmk-desktop.exe "artifacts/windows/3DMk-$env:RELEASE_LABEL-Windows-x64.exe"
+          $msi = Get-ChildItem src-tauri/target/release/bundle/msi/*.msi | Select-Object -First 1
+          if (-not $msi) { throw "MSI artifact not found" }
+          Copy-Item $msi.FullName "artifacts/windows/3DMk-$env:RELEASE_LABEL-Windows-x64.msi"
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3DMk-${{ env.RELEASE_LABEL }}-Windows-x64
+          if-no-files-found: error
+          path: artifacts/windows/*
+
+  macos:
+    name: macOS Universal
+    runs-on: macos-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable with Apple targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            src-tauri -> src-tauri/target
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Build universal macOS executable
+        working-directory: src-tauri
+        run: cargo tauri build --no-bundle --target universal-apple-darwin --ci
+
+      - name: Build macOS app and DMG
+        working-directory: src-tauri
+        run: cargo tauri bundle --bundles app,dmg --target universal-apple-darwin --ci --no-sign
+
+      - name: Stage macOS artifacts
+        run: |
+          mkdir -p artifacts/macos
+          cp -R src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app "artifacts/macos/3DMk-${RELEASE_LABEL}-macOS-universal.app"
+          cp src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg "artifacts/macos/3DMk-${RELEASE_LABEL}-macOS-universal.dmg"
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3DMk-${{ env.RELEASE_LABEL }}-macOS-universal
+          if-no-files-found: error
+          path: artifacts/macos/
