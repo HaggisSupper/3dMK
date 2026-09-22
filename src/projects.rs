@@ -1448,7 +1448,7 @@ fn write_new_json(path: &Path, value: &impl Serialize) -> Result<()> {
     Ok(())
 }
 
-fn write_json_recoverable(path: &Path, value: &impl Serialize) -> Result<()> {
+pub(crate) fn write_json_recoverable(path: &Path, value: &impl Serialize) -> Result<()> {
     let temp = path.with_extension(format!("{}.tmp", Uuid::new_v4()));
     let backup = path.with_extension("json.backup");
     write_new_json(&temp, value)?;
@@ -1472,7 +1472,7 @@ fn write_json_recoverable(path: &Path, value: &impl Serialize) -> Result<()> {
     Ok(())
 }
 
-fn recover_json_file(path: &Path) -> Result<()> {
+pub(crate) fn recover_json_file(path: &Path) -> Result<()> {
     let backup = path.with_extension("json.backup");
     match (path.exists(), backup.exists()) {
         (false, true) => fs::rename(backup, path)?,

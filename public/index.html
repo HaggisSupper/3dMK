@@ -8,6 +8,7 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="domain-config.js" defer></script>
 
     <script type="importmap">
         {
@@ -330,6 +331,34 @@
             .canvas-empty-state { width: min(420px, calc(100vw - 32px)); padding: 22px; }
         }
         @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; } }
+        .domain-feature-hidden { display: none !important; }
+        #domainDialog { color-scheme: dark; width: min(640px, calc(100vw - 32px)); max-height: min(82vh, 820px); margin: auto; padding: 0; overflow: hidden; border: 1px solid #505050; border-radius: 8px; background: #202020; color: #f1f1f1; box-shadow: 0 20px 60px #000b; }
+        #domainDialog::backdrop { background: #000a; }
+        .domain-dialog-head, .domain-dialog-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; background: #202020; }
+        .domain-dialog-head { border-bottom: 1px solid #414141; }
+        .domain-dialog-foot { border-top: 1px solid #414141; justify-content: flex-end; }
+        .domain-dialog-head h2 { font-size: 17px; font-weight: 650; }
+        .domain-dialog-body { padding: 18px 20px; display: grid; gap: 16px; max-height: calc(82vh - 130px); overflow: auto; }
+        .domain-dialog-body section { display: grid; gap: 8px; }
+        .domain-dialog-body h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #22b8a7; }
+        .domain-dialog-body p, .domain-dialog-body small { color: #b8b8b8; line-height: 1.5; }
+        .domain-dialog-body select, .domain-dialog-body button { font: inherit; }
+        .domain-dialog-body select { width: 100%; min-height: 38px; padding: 7px 10px; color: #f1f1f1; background: #2b2b2b; border: 1px solid #555; border-radius: 4px; }
+        .domain-dialog-body select:focus-visible, #domainDialog button:focus-visible { outline: 2px solid #22b8a7; outline-offset: 2px; }
+        .domain-dialog-body .domain-rows { display: grid; gap: 6px; }
+        .domain-dialog-body details, .domain-dialog-body .domain-feature { padding: 9px 11px; border: 1px solid #444; border-radius: 4px; background: #292929; }
+        .domain-dialog-body summary { cursor: pointer; font-weight: 600; }
+        .domain-dialog-body .domain-property { margin-top: 7px; color: #bbb; font-size: 11px; }
+        .domain-dialog-body .domain-feature { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
+        .domain-dialog-body .domain-feature span:last-child { color: #22b8a7; }
+        .domain-dialog-body .domain-drop { padding: 14px; border: 1px dashed #666; border-radius: 4px; background: #252525; text-align: center; }
+        .domain-dialog-body .domain-drop.drag-over { border-color: #22b8a7; background: #27332f; }
+        .domain-dialog-body .domain-status { min-height: 18px; font-size: 12px; color: #b8b8b8; }
+        .domain-dialog-body .domain-status.error { color: #ff9b9b; }
+        #domainDialog button { min-height: 34px; padding: 6px 12px; border: 1px solid #555; border-radius: 4px; background: #303030; color: #eee; cursor: pointer; }
+        #domainDialog button:hover { border-color: #22b8a7; }
+        #domainApplyBtn { background: #126d65 !important; border-color: #188d82 !important; }
+        #domainApplyBtn:disabled { opacity: .45; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -344,6 +373,9 @@
         <button id="viewToggleBtn" class="history-btn" aria-label="Toggle view settings" aria-controls="viewDrawer" aria-expanded="false" title="View">
             <svg viewBox="0 0 24 24" class="stroke-icon"><line x1="4" y1="6" x2="20" y2="6"></line><circle cx="9" cy="6" r="2"></circle><line x1="4" y1="12" x2="20" y2="12"></line><circle cx="15" cy="12" r="2"></circle><line x1="4" y1="18" x2="20" y2="18"></line><circle cx="11" cy="18" r="2"></circle></svg>
         </button>
+        <button id="domainConfigBtn" class="history-btn" aria-label="Configure application domain" title="Domain configuration">
+            <svg viewBox="0 0 24 24" class="stroke-icon"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
+        </button>
         <button id="helpToggleBtn" class="history-btn" aria-label="Toggle help" aria-controls="helpDrawer" aria-expanded="false" title="Help">
             <svg viewBox="0 0 24 24" class="stroke-icon"><circle cx="12" cy="12" r="9"></circle><path d="M9.7 9a2.4 2.4 0 1 1 4.6 1c-.4 1.1-1.8 1.4-2.3 2.3-.2.3-.3.7-.3 1.1"></path><circle cx="12" cy="16.8" r=".8" fill="currentColor" stroke="none"></circle></svg>
         </button>
@@ -353,6 +385,18 @@
         <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
     </button>
     <div id="drawerScrim" aria-hidden="true"></div>
+
+    <dialog id="domainDialog" aria-labelledby="domainDialogTitle">
+        <div class="domain-dialog-head"><h2 id="domainDialogTitle">Domain configuration</h2><button id="domainCloseBtn" type="button" aria-label="Close domain configuration">Close</button></div>
+        <div class="domain-dialog-body">
+            <section><h3>Application domain</h3><label for="domainSelect">Active workspace profile</label><select id="domainSelect" aria-describedby="domainSelectionHelp"></select><small id="domainSelectionHelp">This preference applies across the application. Existing project geometry is not changed.</small></section>
+            <section><h3>Object classes and properties</h3><div id="domainClassList" class="domain-rows" aria-live="polite"></div></section>
+            <section><h3>Workstation features</h3><div id="domainFeatureList" class="domain-rows" aria-live="polite"></div></section>
+            <section><h3>Import a domain profile</h3><div id="domainDropZone" class="domain-drop">Drop a JSON profile here, or <button id="domainBrowseBtn" type="button">Browse files</button></div><input id="domainFileInput" type="file" accept=".json,application/json" hidden><small>Profiles are validated before installation. Importing does not switch the active domain until Apply.</small></section>
+            <p id="domainStatus" class="domain-status" role="status" aria-live="polite"></p>
+        </div>
+        <div class="domain-dialog-foot"><button id="domainCancelBtn" type="button">Cancel</button><button id="domainApplyBtn" type="button">Apply</button></div>
+    </dialog>
 
     <div id="errorModal" role="alertdialog" aria-modal="true" aria-labelledby="errorModalTitle" aria-describedby="errorModalMsg">
         <h3 id="errorModalTitle">Processing could not be completed</h3>
@@ -482,8 +526,8 @@
                                         <small class="inline-note">Rotate the loaded scene and the XYZ indicator together.</small>
                                     </div>
                                     <button id="resetSceneRotationBtn" class="action-btn">Reset scene rotation</button>
-                                    <div class="inline-note">Visible layers are listed below.</div>
-                                    <div id="sceneGraphTree"><div class="tree-item" style="color: var(--text-muted); font-style: italic; padding: 4px;">No layers loaded</div></div>
+                                    <div id="sceneTreePanel"><div class="inline-note">Visible layers are listed below.</div>
+                                    <div id="sceneGraphTree"><div class="tree-item" style="color: var(--text-muted); font-style: italic; padding: 4px;">No layers loaded</div></div></div>
                                 </section>
                             </div>
                         </div>
