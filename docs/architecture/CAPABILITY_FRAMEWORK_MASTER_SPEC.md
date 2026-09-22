@@ -204,6 +204,8 @@ When 3DMk needs a new concept:
 
 ## 13. Known upstream compatibility gap
 
+An approved 3DMK product direction is application-wide domain selection. The selected default domain SHALL be an application preference, and a later deployment profile MAY lock that selection. Domain definitions SHALL describe class and instance hierarchy, typed properties, embedded 3D asset references, and typed dimensional inputs. A validated domain feature configuration SHALL select workstation presentation only after intersection with registered capabilities and active policy. Generic domain-object and composition contracts SHALL be defined, versioned, and fingerprinted in Veritas before 3DMK implements the consuming adapter. Existing project objects SHALL retain explicit class identity so an application preference change cannot reinterpret their geometry or provenance. The proposed contract and acceptance sequence are specified in `docs/superpowers/specs/2026-09-22-configurable-domain-objects-design.md`; the exact schema shape remains a hypothesis until upstream validation.
+
 Current 3DMk target requirements include in-process execution for lightweight embedded intelligence, while existing Veritas governance also contains processor-server lifecycle assumptions. 3DMk SHALL NOT locally override or fork that generic policy.
 
 Before intelligence implementation begins, Veritas SHALL resolve the generic host contract so a child domain can use an approved in-process provider where justified while preserving Veritas resource governance. Until then, the escalation architecture is a target boundary, not implemented compatibility.

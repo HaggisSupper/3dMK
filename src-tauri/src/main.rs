@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
 const FRONTEND_HTML: &str = include_str!("../../public/index.html");
+const DOMAIN_CONFIG_JS: &str = include_str!("../../public/domain-config.js");
 
 fn prepare_app_directories(app: &tauri::AppHandle) -> anyhow::Result<(PathBuf, PathBuf, PathBuf)> {
     let data_dir = app.path().app_data_dir()?;
@@ -14,6 +15,7 @@ fn prepare_app_directories(app: &tauri::AppHandle) -> anyhow::Result<(PathBuf, P
     std::fs::create_dir_all(&public_dir)?;
     std::fs::create_dir_all(&output_dir)?;
     std::fs::write(public_dir.join("index.html"), FRONTEND_HTML)?;
+    std::fs::write(public_dir.join("domain-config.js"), DOMAIN_CONFIG_JS)?;
 
     Ok((data_dir, public_dir, output_dir))
 }

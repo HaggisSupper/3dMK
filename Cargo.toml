@@ -10,6 +10,7 @@ tokio = { version = "1.32", features = ["full"] }
 tokio-util = { version = "0.7", features = ["io"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+federated-rag-contract-governance = { git = "https://github.com/HaggisSupper/Veritas.git", rev = "01bbb77" }
 reqwest = { version = "0.11", features = ["json"] }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 sha2 = "0.10"

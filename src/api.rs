@@ -3,11 +3,11 @@ use axum::{
     extract::{multipart::Field, DefaultBodyLimit, Multipart, Path as AxumPath, State},
     http::{
         header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE},
-        Request, StatusCode,
+        HeaderMap, Request, StatusCode,
     },
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::{get, post, put},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -23,7 +23,11 @@ use tower_http::services::ServeDir;
 use uuid::Uuid;
 
 use crate::{
-    ai_vision, cad_engine, image_refinement,
+    ai_vision, cad_engine,
+    domain_preferences::{
+        DomainPreferenceError, DomainPreferenceStore, DomainSelection, DomainState,
+    },
+    image_refinement,
     jobs::{JobError, JobRegistry},
     packages::{self, ArchiveInventory, ArchiveLimits, PackageError},
     perception, point_cloud,
@@ -50,17 +54,33 @@ pub fn create_router(
     output_dir: PathBuf,
     public_dir: PathBuf,
     project_data_dir: PathBuf,
-    _port: u16,
-) -> crate::projects::Result<Router> {
+    port: u16,
+) -> anyhow::Result<Router> {
+    let domains = DomainPreferenceStore::open(&project_data_dir)?;
     let projects = ProjectStore::open(project_data_dir)?;
     let state = AppState {
         output_dir,
         public_dir,
         jobs: JobRegistry::open(projects.clone(), 2)?,
         projects,
+        domains,
+        config_port: port,
+        config_session_token: Uuid::new_v4().to_string(),
     };
 
     Ok(Router::new()
+        .route("/api/v1/config-session", get(handle_config_session))
+        .route(
+            "/api/v1/domains",
+            get(handle_list_domains)
+                .post(handle_install_domain)
+                .layer(DefaultBodyLimit::max(1024 * 1024)),
+        )
+        .route(
+            "/api/v1/domains/:domain_id/:version",
+            get(handle_get_domain),
+        )
+        .route("/api/v1/domain-preference", put(handle_select_domain))
         .route("/api/v1/capabilities", get(handle_capabilities))
         .route(
             "/api/v1/projects",
@@ -151,7 +171,142 @@ struct AppState {
     output_dir: PathBuf,
     public_dir: PathBuf,
     projects: ProjectStore,
+    domains: DomainPreferenceStore,
     jobs: JobRegistry,
+    config_port: u16,
+    config_session_token: String,
+}
+
+#[derive(Serialize)]
+struct ConfigSession {
+    token: String,
+}
+
+async fn handle_config_session(State(state): State<AppState>) -> Json<ConfigSession> {
+    Json(ConfigSession {
+        token: state.config_session_token,
+    })
+}
+
+async fn handle_list_domains(
+    State(state): State<AppState>,
+) -> std::result::Result<Json<DomainState>, ApiErrorResponse> {
+    state.domains.state().map(Json).map_err(domain_api_error)
+}
+
+async fn handle_get_domain(
+    State(state): State<AppState>,
+    AxumPath((domain_id, version)): AxumPath<(String, String)>,
+) -> std::result::Result<Json<federated_rag_contract_governance::DomainProfile>, ApiErrorResponse> {
+    state
+        .domains
+        .profile(&domain_id, &version)
+        .map(Json)
+        .map_err(domain_api_error)
+}
+
+async fn handle_install_domain(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    source: String,
+) -> std::result::Result<Json<federated_rag_contract_governance::DomainProfile>, ApiErrorResponse> {
+    require_config_action(&headers, &state)?;
+    state
+        .domains
+        .preview_profile(&source)
+        .map(Json)
+        .map_err(domain_api_error)
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ApplyDomainRequest {
+    #[serde(flatten)]
+    selection: DomainSelection,
+    profile_source: Option<String>,
+}
+
+async fn handle_select_domain(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(request): Json<ApplyDomainRequest>,
+) -> std::result::Result<Json<DomainState>, ApiErrorResponse> {
+    require_config_action(&headers, &state)?;
+    state
+        .domains
+        .apply_profile(
+            &request.selection.domain_id,
+            &request.selection.domain_version,
+            request.profile_source.as_deref(),
+        )
+        .map(Json)
+        .map_err(domain_api_error)
+}
+
+fn require_config_action(
+    headers: &HeaderMap,
+    state: &AppState,
+) -> std::result::Result<(), ApiErrorResponse> {
+    let expected_host = format!("127.0.0.1:{}", state.config_port);
+    let alternate_host = format!("localhost:{}", state.config_port);
+    let host = headers.get("host").and_then(|value| value.to_str().ok());
+    let origin = headers.get("origin").and_then(|value| value.to_str().ok());
+    let valid_origin = match host {
+        Some(host) if host == expected_host || host == alternate_host => {
+            origin == Some(format!("http://{host}").as_str())
+        }
+        _ => false,
+    };
+    if valid_origin
+        && headers
+            .get("x-3dmk-session")
+            .and_then(|value| value.to_str().ok())
+            == Some(state.config_session_token.as_str())
+        && headers
+            .get("x-3dmk-config-action")
+            .and_then(|value| value.to_str().ok())
+            == Some("1")
+    {
+        Ok(())
+    } else {
+        Err(ApiErrorResponse::new(
+            StatusCode::FORBIDDEN,
+            "config_action_required",
+            "A valid local application session and origin are required.",
+            false,
+        ))
+    }
+}
+
+fn domain_api_error(error: DomainPreferenceError) -> ApiErrorResponse {
+    match error {
+        DomainPreferenceError::Contract(_)
+        | DomainPreferenceError::Unsupported(_)
+        | DomainPreferenceError::Json(_) => ApiErrorResponse::new(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "invalid_domain_profile",
+            error.to_string(),
+            false,
+        ),
+        DomainPreferenceError::NotFound => ApiErrorResponse::new(
+            StatusCode::NOT_FOUND,
+            "domain_not_found",
+            "The selected domain profile is not installed.",
+            false,
+        ),
+        DomainPreferenceError::Lock => ApiErrorResponse::new(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "domain_store_busy",
+            "Domain preferences are temporarily unavailable.",
+            true,
+        ),
+        DomainPreferenceError::Storage(_) | DomainPreferenceError::Io(_) => ApiErrorResponse::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "domain_store_error",
+            "Domain preference storage failed.",
+            true,
+        ),
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -274,7 +429,7 @@ async fn stream_multipart_file(
 #[derive(Debug, Serialize)]
 struct ApiErrorBody {
     code: &'static str,
-    message: &'static str,
+    message: String,
     retryable: bool,
 }
 
@@ -285,12 +440,17 @@ struct ApiErrorResponse {
 }
 
 impl ApiErrorResponse {
-    fn new(status: StatusCode, code: &'static str, message: &'static str, retryable: bool) -> Self {
+    fn new(
+        status: StatusCode,
+        code: &'static str,
+        message: impl Into<String>,
+        retryable: bool,
+    ) -> Self {
         Self {
             status,
             body: ApiErrorBody {
                 code,
-                message,
+                message: message.into(),
                 retryable,
             },
         }
@@ -3325,6 +3485,180 @@ mod tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[tokio::test]
+    async fn domain_preference_routes_require_explicit_action_and_persist() {
+        let directory = TestApiDir::new();
+        let output = directory.0.join("output");
+        let public = directory.0.join("public");
+        let data = directory.0.join("data");
+        std::fs::create_dir(&output).unwrap();
+        std::fs::create_dir(&public).unwrap();
+        let app = create_router(output.clone(), public.clone(), data.clone(), 0).unwrap();
+
+        let initial = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/domains")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(initial.status(), StatusCode::OK);
+        let initial: serde_json::Value = serde_json::from_slice(
+            &axum::body::to_bytes(initial.into_body(), 1024 * 1024)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(initial["effective"]["domain_id"], "general_geometry");
+        assert!(initial["active"].is_null());
+        let session = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/config-session")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let session: serde_json::Value = serde_json::from_slice(
+            &axum::body::to_bytes(session.into_body(), 1024)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        let token = session["token"].as_str().unwrap();
+
+        let selection =
+            json!({"domain_id":"general_geometry","domain_version":"1.0.0"}).to_string();
+        let denied = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/api/v1/domain-preference")
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(selection.clone()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(denied.status(), StatusCode::FORBIDDEN);
+
+        let forged = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/api/v1/domain-preference")
+                    .header(CONTENT_TYPE, "application/json")
+                    .header("x-3dmk-config-action", "1")
+                    .header("host", "127.0.0.1:0")
+                    .header("origin", "https://other.example")
+                    .header("x-3dmk-session", token)
+                    .body(Body::from(selection.clone()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(forged.status(), StatusCode::FORBIDDEN);
+
+        let accepted = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/api/v1/domain-preference")
+                    .header(CONTENT_TYPE, "application/json")
+                    .header("x-3dmk-config-action", "1")
+                    .header("host", "127.0.0.1:0")
+                    .header("origin", "http://127.0.0.1:0")
+                    .header("x-3dmk-session", token)
+                    .body(Body::from(selection))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(accepted.status(), StatusCode::OK);
+
+        let mut imported: serde_json::Value =
+            serde_json::from_str(crate::domain_preferences::DEFAULT_PROFILE).unwrap();
+        imported["domain"]["id"] = json!("api_preview");
+        let source = imported.to_string();
+        let preview = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/domains")
+                    .header("x-3dmk-config-action", "1")
+                    .header("host", "127.0.0.1:0")
+                    .header("origin", "http://127.0.0.1:0")
+                    .header("x-3dmk-session", token)
+                    .body(Body::from(source.clone()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(preview.status(), StatusCode::OK);
+        let before_apply = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/domains")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let before_apply: serde_json::Value = serde_json::from_slice(
+            &axum::body::to_bytes(before_apply.into_body(), 1024 * 1024)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(before_apply["profiles"].as_array().unwrap().len(), 1);
+        let apply = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/api/v1/domain-preference")
+                    .header(CONTENT_TYPE, "application/json")
+                    .header("x-3dmk-config-action", "1")
+                    .header("host", "127.0.0.1:0")
+                    .header("origin", "http://127.0.0.1:0")
+                    .header("x-3dmk-session", token)
+                    .body(Body::from(json!({"domain_id":"api_preview","domain_version":"1.0.0","profile_source":source}).to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(apply.status(), StatusCode::OK);
+
+        let reopened = create_router(output, public, data, 0).unwrap();
+        let persisted = reopened
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/domains")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let persisted: serde_json::Value = serde_json::from_slice(
+            &axum::body::to_bytes(persisted.into_body(), 1024 * 1024)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(persisted["active"]["domain_id"], "api_preview");
+        assert_eq!(persisted["profiles"].as_array().unwrap().len(), 2);
     }
 
     #[test]
