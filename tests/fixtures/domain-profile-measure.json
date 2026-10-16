@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "domain": {"id": "measurement_review", "version": "1.0.0", "label": "Measurement review"},
+  "composition_id": null,
+  "classes": [
+    {
+      "id": "survey_area",
+      "label": "Survey area",
+      "parent_class_id": null,
+      "allowed_child_class_ids": ["reference_mesh"],
+      "properties": [
+        {"id": "description", "label": "Description", "kind": "text", "required": false}
+      ]
+    },
+    {
+      "id": "reference_mesh",
+      "label": "Reference mesh",
+      "parent_class_id": null,
+      "allowed_child_class_ids": [],
+      "properties": [
+        {"id": "geometry", "label": "Geometry", "kind": "geometry_source", "required": true,
+         "allowed_sources": ["embedded_asset", "dimensional_definition"]}
+      ]
+    }
+  ],
+  "features": {
+    "workstation_panels": ["import", "scene_tree", "measure"],
+    "capability_ids": [],
+    "default_visible_panels": ["import", "scene_tree", "measure"]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "contract_version": 1,
+  "component": "3dMK local intelligence routing",
+  "operations": [
+    { "operation": "metadata_inspection", "primary_tier": "deterministic", "explicit_fallback_tier": null },
+    { "operation": "geometry_validation", "primary_tier": "deterministic", "explicit_fallback_tier": null },
+    { "operation": "evidence_summarization", "primary_tier": "deterministic", "explicit_fallback_tier": null },
+    { "operation": "vision_adjudication", "primary_tier": "mistral_rs", "explicit_fallback_tier": "llama_cpp" },
+    { "operation": "floorplan_interpretation", "primary_tier": "mistral_rs", "explicit_fallback_tier": "llama_cpp" },
+    { "operation": "general_assistance", "primary_tier": "blocked", "explicit_fallback_tier": null }
+  ],
+  "limits": {
+    "maximum_request_bytes": 16777216
+  },
+  "invariants": {
+    "deterministic_first": true,
+    "mistralrs_primary": true,
+    "llamacpp_automatic_fallback": false,
+    "llamacpp_explicit_fallback_available": true,
+    "cloud_egress_default_enabled": false,
+    "local_cpu_inference_allowed": false,
+    "ai_can_publish_authoritative_state": false
+  }
+}

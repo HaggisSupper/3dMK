@@ -1,0 +1,102 @@
+name: Advanced Feature Integration
+
+on:
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'public/**'
+      - 'tests/**'
+      - 'VWM-Repo-Implicit/**'
+      - 'scripts/test-documentation.ps1'
+      - 'scripts/test-mistralrs-local-agent-harness.ps1'
+      - '.github/workflows/advanced-feature-integration.yml'
+  push:
+    branches:
+      - agent/spatial-vwm-feature-integration
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: advanced-feature-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust-and-tauri-contracts:
+    name: Rust, VWM, frontend, and Tauri contracts
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - name: Check out the pull-request commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            VWM-Repo-Implicit -> target
+            src-tauri -> target
+
+      - name: Verify root formatting
+        shell: pwsh
+        run: cargo fmt --all -- --check
+
+      - name: Verify canonical VWM formatting
+        shell: pwsh
+        run: cargo fmt --all --manifest-path VWM-Repo-Implicit/Cargo.toml -- --check
+
+      - name: Compile root application and all targets
+        shell: pwsh
+        run: cargo check --all-targets --locked
+
+      - name: Run root unit, contract, integration, and regression tests
+        shell: pwsh
+        run: cargo test --all-targets --locked -- --nocapture
+
+      - name: Run strict root lint
+        shell: pwsh
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: Compile canonical VWM workspace
+        shell: pwsh
+        run: cargo check --workspace --all-targets --locked --manifest-path VWM-Repo-Implicit/Cargo.toml
+
+      - name: Run canonical VWM workspace tests
+        shell: pwsh
+        run: cargo test --workspace --all-targets --locked --manifest-path VWM-Repo-Implicit/Cargo.toml -- --nocapture
+
+      - name: Run strict VWM lint
+        shell: pwsh
+        run: cargo clippy --workspace --all-targets --locked --manifest-path VWM-Repo-Implicit/Cargo.toml -- -D warnings
+
+      - name: Compile Tauri desktop application
+        shell: pwsh
+        run: cargo check --locked --manifest-path src-tauri/Cargo.toml
+
+      - name: Compile release binaries
+        shell: pwsh
+        run: |
+          cargo build --release --locked
+          if ($LASTEXITCODE -ne 0) { throw "Root release build failed with exit code $LASTEXITCODE" }
+          cargo build --release --locked --manifest-path src-tauri/Cargo.toml
+          if ($LASTEXITCODE -ne 0) { throw "Tauri release build failed with exit code $LASTEXITCODE" }
+
+      - name: Validate current documentation contracts
+        shell: pwsh
+        run: pwsh -NoLogo -NoProfile -File scripts/test-documentation.ps1
+
+      - name: Validate CUDA-only Mistral.rs harness contracts
+        shell: pwsh
+        run: pwsh -NoLogo -NoProfile -File scripts/test-mistralrs-local-agent-harness.ps1

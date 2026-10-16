@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>3DMk — Surface reconstruction review</title>
+  <style>
+    :root {
+      --bg: oklch(0.175 0.012 240);
+      --surface: oklch(0.215 0.013 235);
+      --surface-raised: oklch(0.245 0.014 232);
+      --canvas: oklch(0.145 0.009 235);
+      --fg: oklch(0.92 0.012 210);
+      --muted: oklch(0.68 0.015 220);
+      --subtle: oklch(0.5 0.014 225);
+      --border: oklch(0.31 0.014 230);
+      --accent: oklch(0.72 0.105 190);
+      --accent-soft: oklch(0.3 0.043 190);
+      --success: oklch(0.7 0.13 145);
+      --warn: oklch(0.76 0.13 80);
+      --danger: oklch(0.66 0.17 25);
+      --font-display: "Segoe UI Variable Display", "Segoe UI", sans-serif;
+      --font-body: "Segoe UI Variable Text", "Segoe UI", Tahoma, sans-serif;
+      --font-mono: "Cascadia Mono", Consolas, monospace;
+      --split: 52%;
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-width: 320px; min-height: 100%; margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .app-shell { min-height: 100vh; display: grid; grid-template-rows: 42px minmax(0, 1fr); overflow: hidden; }
+    .topbar { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 0 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .brand { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+    .brand strong { font-family: var(--font-display); font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+    .crumb { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .topbar .spacer { flex: 1; }
+    .source-state { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .state-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px color-mix(in oklch, var(--success) 15%, transparent); }
+
+    .workspace { min-height: 0; display: grid; grid-template-columns: minmax(224px, 252px) minmax(420px, 1fr) minmax(275px, 310px); }
+    .rail, .dock { min-width: 0; background: var(--surface); }
+    .rail { border-right: 1px solid var(--border); overflow: auto; }
+    .dock { border-left: 1px solid var(--border); overflow: auto; }
+    .center { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: var(--canvas); }
+
+    .section-title { margin: 0; padding: 12px 13px 9px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+    .project-row { display: flex; align-items: center; gap: 9px; padding: 9px 13px 12px; border-bottom: 1px solid var(--border); }
+    .project-glyph { width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid var(--border); color: var(--accent); background: var(--surface-raised); }
+    .project-name { min-width: 0; flex: 1; }
+    .project-name b { display: block; font-size: 12px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .project-name span { display: block; margin-top: 2px; color: var(--muted); font: 10px var(--font-mono); }
+
+    .nav-group { border-bottom: 1px solid var(--border); padding: 7px 0; }
+    .nav-label { display: flex; align-items: center; gap: 8px; padding: 7px 13px; color: var(--muted); font-size: 12px; font-weight: 550; }
+    .chevron { font-size: 14px; line-height: 1; color: var(--subtle); }
+    .task-link { width: 100%; display: flex; align-items: center; gap: 9px; padding: 8px 13px 8px 34px; border: 0; border-left: 2px solid transparent; background: transparent; color: var(--muted); text-align: left; font-size: 12px; }
+    .task-link[aria-current="page"] { border-left-color: var(--accent); background: color-mix(in oklch, var(--accent) 9%, transparent); color: var(--fg); }
+    .task-link .nav-icon { width: 15px; color: var(--accent); }
+    .task-link .availability { margin-left: auto; color: var(--subtle); font: 10px var(--font-mono); }
+
+    .workflow { padding: 12px 13px 14px; }
+    .workflow h2 { margin: 0 0 10px; font-family: var(--font-display); font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+    .step { position: relative; display: grid; grid-template-columns: 22px 1fr; gap: 9px; min-height: 40px; }
+    .step:not(:last-child)::after { content: ""; position: absolute; left: 10px; top: 23px; bottom: 0; border-left: 1px solid var(--border); }
+    .step-index { position: relative; z-index: 1; width: 21px; height: 21px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 50%; color: var(--muted); background: var(--surface); font: 10px var(--font-mono); }
+    .step.done .step-index { border-color: var(--success); color: var(--success); }
+    .step.active .step-index { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .step.fail .step-index { border-color: var(--danger); color: var(--danger); }
+    .step b { display: block; padding-top: 2px; font-size: 12px; font-weight: 550; }
+    .step small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+
+    details { border-top: 1px solid var(--border); }
+    summary { position: relative; padding: 11px 28px 11px 13px; color: var(--fg); cursor: pointer; font-size: 12px; font-weight: 550; list-style: none; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: "+"; position: absolute; right: 14px; color: var(--muted); font-size: 16px; line-height: 14px; }
+    details[open] summary::after { content: "–"; }
+    .detail-body { padding: 0 13px 13px; }
+    .preset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    .preset { min-height: 52px; padding: 7px 6px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface-raised); color: var(--muted); text-align: left; font-size: 11px; line-height: 1.2; }
+    .preset.active { border-color: var(--accent); color: var(--fg); background: color-mix(in oklch, var(--accent) 9%, var(--surface-raised)); }
+    .preset span { display: block; margin-top: 4px; color: var(--subtle); font-size: 9px; }
+    .compact-control { display: flex; align-items: center; gap: 9px; padding: 9px 0; border-bottom: 1px solid color-mix(in oklch, var(--border) 65%, transparent); }
+    .compact-control:last-child { border-bottom: 0; }
+    .compact-control b { display: block; font-size: 11px; font-weight: 550; }
+    .compact-control small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; line-height: 1.3; }
+    .switch { position: relative; width: 29px; height: 17px; flex: 0 0 auto; border: 1px solid var(--border); border-radius: 9px; background: var(--canvas); appearance: none; }
+    .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 11px; height: 11px; border-radius: 50%; background: var(--subtle); transition: transform .16s ease, background .16s ease; }
+    .switch:checked { border-color: var(--accent); background: var(--accent-soft); }
+    .switch:checked::after { transform: translateX(12px); background: var(--accent); }
+    .advanced-note { margin: 9px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+
+    .canvas-toolbar { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .mode-set { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+    .mode { min-height: 29px; padding: 0 10px; border: 0; border-right: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 11px; }
+    .mode:last-child { border-right: 0; }
+    .mode.active { background: var(--accent-soft); color: var(--fg); }
+    .canvas-toolbar .spacer { flex: 1; }
+    .split-control { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; }
+    .split-control input { width: 104px; accent-color: var(--accent); }
+    .view-reset { min-height: 29px; padding: 0 9px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface-raised); color: var(--fg); font-size: 11px; }
+
+    .canvas-wrap { position: relative; min-height: 340px; overflow: hidden; }
+    .view-label { position: absolute; z-index: 3; top: 13px; left: 14px; padding: 4px 7px; border: 1px solid color-mix(in oklch, var(--border) 70%, transparent); background: color-mix(in oklch, var(--canvas) 85%, transparent); color: var(--muted); font: 10px var(--font-mono); }
+    .viewport { height: 100%; display: grid; grid-template-columns: var(--split) 1fr; }
+    .pane { position: relative; min-width: 0; overflow: hidden; border-right: 1px solid color-mix(in oklch, var(--accent) 45%, var(--border)); }
+    .pane:last-child { border-right: 0; }
+    .pane-title { position: absolute; z-index: 2; top: 13px; right: 13px; color: var(--muted); font: 10px var(--font-mono); }
+    .mesh-pane .pane-title { color: var(--warn); }
+    .scene { width: 100%; height: 100%; display: block; background: var(--canvas); }
+    .split-handle { position: absolute; z-index: 4; top: 0; bottom: 0; left: var(--split); width: 11px; transform: translateX(-5px); pointer-events: none; }
+    .split-handle::before { content: ""; position: absolute; left: 5px; top: 0; bottom: 0; border-left: 1px solid var(--accent); }
+    .split-handle::after { content: "⇄"; position: absolute; top: 50%; left: -7px; width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid var(--accent); border-radius: 50%; background: var(--surface-raised); color: var(--accent); font-size: 12px; }
+    .canvas-legend { position: absolute; z-index: 3; bottom: 14px; left: 14px; display: grid; gap: 5px; padding: 8px 9px; border: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 92%, transparent); font-size: 10px; color: var(--muted); }
+    .legend-item { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .swatch { width: 12px; height: 6px; display: inline-block; }
+    .swatch.residual { background: var(--danger); }
+    .swatch.fill { background: color-mix(in oklch, var(--warn) 60%, transparent); }
+    .swatch.hole { border: 1px dashed var(--fg); }
+    .swatch.fragment { background: var(--warn); }
+    .canvas-note { position: absolute; z-index: 3; right: 14px; bottom: 14px; max-width: 255px; color: var(--muted); font-size: 10px; line-height: 1.45; text-align: right; }
+    .canvas-wrap[data-mode="source"] .mesh-pane, .canvas-wrap[data-mode="source"] .split-handle { display: none; }
+    .canvas-wrap[data-mode="source"] .viewport { display: block; }
+    .canvas-wrap[data-mode="source"] .source-pane { height: 100%; border: 0; }
+    .canvas-wrap[data-mode="preview"] .source-pane, .canvas-wrap[data-mode="preview"] .split-handle { display: none; }
+    .canvas-wrap[data-mode="preview"] .viewport { display: block; }
+    .canvas-wrap[data-mode="preview"] .mesh-pane { height: 100%; border: 0; }
+
+    .actionbar { display: flex; align-items: center; gap: 8px; min-height: 68px; padding: 9px 12px; border-top: 1px solid var(--border); background: var(--surface); }
+    .action-copy { min-width: 0; flex: 1; }
+    .action-copy b { display: block; color: var(--danger); font-size: 11px; font-weight: 550; }
+    .action-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+    .action-button { min-height: 31px; padding: 0 10px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface-raised); color: var(--fg); font-size: 11px; white-space: nowrap; }
+    .action-button.reject { color: oklch(0.8 0.08 25); }
+    .action-button.primary { border-color: var(--accent); background: var(--accent); color: oklch(0.19 0.02 210); font-weight: 600; box-shadow: 0 2px 7px color-mix(in oklch, var(--accent) 20%, transparent); }
+    .action-button:disabled { cursor: not-allowed; border-color: var(--border); background: var(--surface); color: var(--subtle); box-shadow: none; }
+
+    .dock-tabs { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--border); }
+    .dock-tab { min-height: 40px; border: 0; border-right: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 11px; }
+    .dock-tab:last-child { border-right: 0; }
+    .dock-tab.active { color: var(--fg); box-shadow: inset 0 -2px 0 var(--accent); }
+    .dock-panel { display: none; }
+    .dock-panel.active { display: block; }
+    .dock-head { padding: 13px; border-bottom: 1px solid var(--border); }
+    .dock-head h2 { margin: 0; font-family: var(--font-display); font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+    .dock-head p { margin: 5px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+    .status-strip { display: flex; align-items: center; gap: 7px; padding: 8px 13px; border-bottom: 1px solid var(--border); color: oklch(0.84 0.08 25); background: color-mix(in oklch, var(--danger) 8%, transparent); font-size: 11px; font-weight: 550; }
+    .status-mark { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+    .metrics { margin: 0; }
+    .metric { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 9px 13px; border-bottom: 1px solid color-mix(in oklch, var(--border) 80%, transparent); }
+    .metric dt { color: var(--muted); font-size: 10px; }
+    .metric dd { margin: 0; color: var(--fg); font: 11px var(--font-mono); text-align: right; }
+    .metric dd.fail { color: oklch(0.8 0.1 25); }
+    .metric dd.warn { color: var(--warn); }
+    .quality-block { padding: 13px; border-bottom: 1px solid var(--border); }
+    .quality-block h3 { margin: 0 0 8px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+    .fail-region { display: grid; grid-template-columns: 8px 1fr; gap: 8px; padding: 6px 0; color: var(--fg); font-size: 11px; line-height: 1.35; }
+    .fail-region i { width: 8px; height: 8px; margin-top: 3px; border-radius: 50%; background: var(--danger); }
+    .fail-region small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+    .warning-choice { display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; padding: 9px 13px 13px; border-top: 1px solid var(--border); color: var(--muted); font-size: 10px; line-height: 1.4; }
+    .warning-choice input { margin: 1px 0 0; accent-color: var(--accent); }
+    .help-list { margin: 0; padding: 4px 13px 13px 29px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .help-list strong { color: var(--fg); font-weight: 550; }
+    .view-control { display: flex; justify-content: space-between; align-items: center; padding: 10px 13px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; }
+    .view-control kbd { padding: 2px 4px; border: 1px solid var(--border); background: var(--surface-raised); color: var(--fg); font: 10px var(--font-mono); }
+
+    .run-state { display: none; position: absolute; z-index: 6; inset: 15% 50% auto 50%; width: min(370px, calc(100% - 32px)); transform: translateX(-50%); border: 1px solid var(--border); background: var(--surface); box-shadow: 0 16px 40px oklch(0.08 0.01 230 / .55); }
+    .run-state.visible { display: block; }
+    .run-head { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); }
+    .run-head b { font-size: 12px; font-weight: 600; }
+    .run-head span { color: var(--accent); font: 11px var(--font-mono); }
+    .progress-track { height: 4px; margin: 12px; background: var(--canvas); overflow: hidden; }
+    .progress-track i { display: block; width: 68%; height: 100%; background: var(--accent); transition: width .3s ease; }
+    .run-steps { list-style: none; margin: 0; padding: 0 12px 7px; }
+    .run-steps li { display: flex; justify-content: space-between; padding: 6px 0; color: var(--muted); font-size: 11px; }
+    .run-steps li.done { color: var(--fg); }
+    .run-steps li.active { color: var(--accent); }
+    .run-foot { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-top: 1px solid var(--border); }
+    .run-foot small { max-width: 205px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+    .notice { position: fixed; z-index: 20; right: 18px; bottom: 18px; max-width: 330px; padding: 10px 12px; border: 1px solid var(--border); background: var(--surface-raised); color: var(--fg); box-shadow: 0 10px 30px oklch(0.08 0.01 230 / .4); font-size: 11px; opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .18s ease, transform .18s ease; }
+    .notice.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 1024px) {
+      .workspace { grid-template-columns: 224px minmax(360px, 1fr) 275px; }
+      .canvas-note { display: none; }
+      .action-copy { display: none; }
+    }
+    @media (max-width: 800px) {
+      .app-shell { overflow: auto; }
+      .workspace { grid-template-columns: 1fr; grid-template-rows: auto minmax(510px, 1fr) auto; }
+      .rail { border-right: 0; border-bottom: 1px solid var(--border); max-height: 330px; }
+      .dock { border-left: 0; border-top: 1px solid var(--border); }
+      .center { min-height: 590px; }
+      .canvas-toolbar { flex-wrap: wrap; }
+      .canvas-toolbar .spacer { display: none; }
+      .split-control { margin-left: auto; }
+    }
+    @media (max-width: 480px) {
+      .topbar { gap: 8px; padding: 0 10px; }
+      .source-state { display: none; }
+      .actionbar { flex-wrap: wrap; }
+      .action-button { flex: 1 1 42%; }
+      .viewport { grid-template-columns: 1fr; }
+      .source-pane { display: none; }
+      .mesh-pane { display: block; height: 100%; border: 0; }
+      .split-handle, .split-control { display: none; }
+      .canvas-legend { max-width: calc(100% - 28px); }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell" data-od-id="surface-reconstruction-workflow">
+    <header class="topbar" data-od-id="app-topbar">
+      <div class="brand"><strong>3DMk</strong><span class="crumb">Scan workspace / Warehouse room</span></div>
+      <div class="spacer"></div>
+      <div class="source-state"><i class="state-dot"></i> Point cloud loaded · 255,330 points</div>
+    </header>
+
+    <section class="workspace" aria-label="Surface reconstruction workspace">
+      <aside class="rail" data-od-id="task-rail">
+        <p class="section-title">Current model</p>
+        <div class="project-row">
+          <div class="project-glyph" aria-hidden="true">◇</div>
+          <div class="project-name"><b>Warehouse room scan</b><span>iphone-lidar.ply</span></div>
+        </div>
+
+        <nav aria-label="Model tasks" data-od-id="left-navigation">
+          <div class="nav-group">
+            <div class="nav-label"><span class="chevron">⌄</span> Derive</div>
+            <button class="task-link" aria-current="page" data-od-id="surface-reconstruction-nav"><span class="nav-icon">◒</span> Surface reconstruction <span class="availability">loaded</span></button>
+          </div>
+          <div class="nav-group">
+            <div class="nav-label"><span class="chevron">›</span> Inspect</div>
+          </div>
+        </nav>
+
+        <section class="workflow" aria-labelledby="workflow-heading" data-od-id="reconstruction-stages">
+          <h2 id="workflow-heading">Surface reconstruction</h2>
+          <div class="step done"><span class="step-index">✓</span><div><b>Prepare scan</b><small>Room detail selected; cleanup is ready.</small></div></div>
+          <div class="step done"><span class="step-index">✓</span><div><b>Reconstruct preview</b><small>Completed in 6.083 s.</small></div></div>
+          <div class="step active"><span class="step-index">3</span><div><b>Compare</b><small>Quality review required before a revision can be created.</small></div></div>
+          <div class="step fail"><span class="step-index">!</span><div><b>Accept as new revision</b><small>Blocked by failed required checks.</small></div></div>
+        </section>
+
+        <details open data-od-id="prepare-scan-accordion">
+          <summary>Prepare scan</summary>
+          <div class="detail-body">
+            <div class="preset-grid" aria-label="Preparation presets">
+              <button class="preset active" data-preset="Room detail">Room detail<span>retain boundaries</span></button>
+              <button class="preset" data-preset="Balanced">Balanced<span>general cleanup</span></button>
+              <button class="preset" data-preset="Fast preview">Fast preview<span>quick review</span></button>
+            </div>
+            <label class="compact-control"><input class="switch" type="checkbox" checked><span><b>Trim detached fragments</b><small>Exclude isolated scan pieces from the preview.</small></span></label>
+            <label class="compact-control"><input class="switch" type="checkbox" checked><span><b>Balance point density</b><small>Reduce uneven sampling before reconstruction.</small></span></label>
+            <label class="compact-control"><input class="switch" type="checkbox" checked><span><b>Validate and orient normals</b><small>Find invalid normals before running.</small></span></label>
+            <label class="compact-control"><input class="switch" type="checkbox" checked><span><b>Preserve point colours</b><small>Transfer scan colours when a surface supports it.</small></span></label>
+            <p class="advanced-note">Advanced settings are available after preparation review. They do not change the source scan.</p>
+          </div>
+        </details>
+        <details data-od-id="advanced-settings-accordion"><summary>Advanced settings</summary><div class="detail-body"><p class="advanced-note">Open only when the preparation outcomes above need targeted adjustment.</p></div></details>
+      </aside>
+
+      <section class="center" data-od-id="reconstruction-canvas-region">
+        <div class="canvas-toolbar" data-od-id="canvas-controls">
+          <div class="mode-set" role="group" aria-label="Canvas mode">
+            <button class="mode" data-mode="source">Source</button>
+            <button class="mode" data-mode="preview">Preview</button>
+            <button class="mode active" data-mode="difference">Difference</button>
+          </div>
+          <div class="spacer"></div>
+          <label class="split-control">Split <input id="split-range" type="range" min="25" max="75" value="52" aria-label="Comparison split"><output id="split-value">52%</output></label>
+          <button class="view-reset" id="reset-view" data-od-id="reset-view-button">Reset view</button>
+        </div>
+
+        <div class="canvas-wrap" data-mode="difference" data-od-id="comparison-canvas">
+          <span class="view-label">Difference review · perspective</span>
+          <div class="viewport">
+            <div class="pane source-pane">
+              <span class="pane-title">SOURCE POINTS</span>
+              <svg class="scene" viewBox="0 0 600 480" role="img" aria-label="Oriented coloured point cloud showing an indoor room with detached fragments">
+                <defs>
+                  <pattern id="grid-a" width="34" height="34" patternUnits="userSpaceOnUse"><path d="M 34 0 L 0 0 0 34" fill="none" stroke="oklch(0.32 0.012 225)" stroke-width=".5" opacity=".45"/></pattern>
+                  <filter id="soft-a"><feGaussianBlur stdDeviation=".8"/></filter>
+                </defs>
+                <rect width="600" height="480" fill="url(#grid-a)"/>
+                <path d="M70 395 L281 305 L530 370 L330 447 Z" fill="oklch(0.20 0.02 205)" opacity=".62"/>
+                <path d="M72 96 L282 42 L282 305 L70 395 Z" fill="oklch(0.23 0.026 212)" opacity=".65"/>
+                <path d="M282 42 L535 109 L530 370 L282 305 Z" fill="oklch(0.19 0.026 198)" opacity=".72"/>
+                <g fill="none" stroke="oklch(0.76 0.07 188)" stroke-width="2" opacity=".75"><path d="M72 96 L282 42 L535 109 L530 370 L330 447 L70 395 Z"/><path d="M282 42 L282 305"/><path d="M70 395 L282 305 L530 370"/></g>
+                <g fill="oklch(0.81 .1 188)" opacity=".86">
+                  <circle cx="99" cy="128" r="2"/><circle cx="114" cy="122" r="2"/><circle cx="132" cy="118" r="1.7"/><circle cx="148" cy="110" r="2.2"/><circle cx="165" cy="104" r="1.5"/><circle cx="184" cy="98" r="2"/><circle cx="201" cy="91" r="1.8"/><circle cx="220" cy="83" r="1.5"/><circle cx="243" cy="74" r="2.2"/>
+                  <circle cx="112" cy="153" r="1.7"/><circle cx="132" cy="143" r="2.2"/><circle cx="153" cy="139" r="1.7"/><circle cx="175" cy="130" r="2"/><circle cx="202" cy="124" r="2.2"/><circle cx="230" cy="114" r="1.6"/><circle cx="250" cy="105" r="2"/>
+                  <circle cx="102" cy="191" r="2"/><circle cx="124" cy="181" r="1.5"/><circle cx="146" cy="171" r="2.2"/><circle cx="170" cy="163" r="1.7"/><circle cx="198" cy="153" r="2.1"/><circle cx="225" cy="145" r="1.6"/><circle cx="250" cy="135" r="2"/>
+                  <circle cx="98" cy="230" r="1.8"/><circle cx="122" cy="220" r="2.2"/><circle cx="147" cy="207" r="1.6"/><circle cx="173" cy="197" r="2"/><circle cx="199" cy="189" r="1.5"/><circle cx="228" cy="178" r="2"/><circle cx="250" cy="168" r="1.8"/>
+                  <circle cx="93" cy="265" r="2.2"/><circle cx="119" cy="252" r="1.5"/><circle cx="145" cy="242" r="2"/><circle cx="170" cy="232" r="1.6"/><circle cx="199" cy="220" r="2"/><circle cx="225" cy="209" r="1.7"/><circle cx="250" cy="198" r="2"/>
+                </g>
+                <g fill="oklch(.72 .10 44)" opacity=".9">
+                  <circle cx="308" cy="80" r="2"/><circle cx="331" cy="88" r="1.7"/><circle cx="356" cy="95" r="2.2"/><circle cx="384" cy="101" r="1.7"/><circle cx="410" cy="108" r="2"/><circle cx="438" cy="115" r="1.5"/><circle cx="466" cy="122" r="2"/><circle cx="494" cy="131" r="1.7"/>
+                  <circle cx="309" cy="117" r="1.5"/><circle cx="336" cy="124" r="2"/><circle cx="365" cy="132" r="1.5"/><circle cx="393" cy="140" r="2.1"/><circle cx="425" cy="147" r="1.6"/><circle cx="453" cy="156" r="2"/><circle cx="485" cy="164" r="1.7"/>
+                  <circle cx="312" cy="155" r="2"/><circle cx="341" cy="163" r="1.6"/><circle cx="371" cy="171" r="2.2"/><circle cx="402" cy="180" r="1.6"/><circle cx="435" cy="189" r="2"/><circle cx="467" cy="197" r="1.8"/><circle cx="498" cy="205" r="2"/>
+                  <circle cx="314" cy="197" r="1.7"/><circle cx="345" cy="205" r="2.1"/><circle cx="379" cy="215" r="1.5"/><circle cx="413" cy="223" r="2"/><circle cx="447" cy="233" r="1.7"/><circle cx="483" cy="243" r="2"/>
+                  <circle cx="316" cy="242" r="2"/><circle cx="352" cy="253" r="1.5"/><circle cx="388" cy="264" r="2.1"/><circle cx="425" cy="276" r="1.6"/><circle cx="462" cy="287" r="2"/><circle cx="500" cy="299" r="1.7"/>
+                </g>
+                <g fill="oklch(.7 .08 145)" opacity=".85"><circle cx="115" cy="378" r="2"/><circle cx="148" cy="365" r="1.5"/><circle cx="184" cy="350" r="2.2"/><circle cx="221" cy="336" r="1.5"/><circle cx="260" cy="322" r="2"/><circle cx="301" cy="320" r="1.7"/><circle cx="343" cy="333" r="2"/><circle cx="388" cy="344" r="1.6"/><circle cx="434" cy="355" r="2"/><circle cx="481" cy="366" r="1.7"/></g>
+                <g fill="oklch(.74 .13 80)" opacity=".9"><circle cx="474" cy="65" r="3"/><circle cx="489" cy="72" r="2.2"/><circle cx="505" cy="62" r="2.6"/><circle cx="520" cy="78" r="2"/><circle cx="470" cy="81" r="2"/><circle cx="501" cy="90" r="2.5"/><circle cx="537" cy="58" r="2"/><circle cx="552" cy="76" r="2.7"/></g>
+                <text x="458" y="45" fill="oklch(.78 .12 80)" font-family="Cascadia Mono, monospace" font-size="10">detached scan fragments</text>
+                <line x1="500" y1="50" x2="503" y2="63" stroke="oklch(.78 .12 80)" stroke-width="1"/>
+                <g stroke="oklch(.8 .07 188)" stroke-width="1" opacity=".65"><path d="M145 255 l8 -5"/><path d="M202 150 l9 -4"/><path d="M393 178 l8 5"/><path d="M454 275 l8 4"/></g>
+              </svg>
+            </div>
+            <div class="pane mesh-pane">
+              <span class="pane-title">PREVIEW SURFACE</span>
+              <svg class="scene" viewBox="0 0 600 480" role="img" aria-label="Failed mesh preview with unsupported filled regions, holes, residual areas and detached components">
+                <defs><pattern id="grid-b" width="34" height="34" patternUnits="userSpaceOnUse"><path d="M 34 0 L 0 0 0 34" fill="none" stroke="oklch(0.32 0.012 225)" stroke-width=".5" opacity=".45"/></pattern><pattern id="mesh-lines" width="28" height="25" patternUnits="userSpaceOnUse"><path d="M0 25 L14 0 28 25M0 25H28" fill="none" stroke="oklch(.47 .018 215)" stroke-width=".7"/></pattern></defs>
+                <rect width="600" height="480" fill="url(#grid-b)"/>
+                <path d="M65 393 C104 365 185 323 279 307 C342 296 420 326 535 372 L331 447 Z" fill="oklch(.25 .025 206)" stroke="oklch(.46 .02 210)" stroke-width="1.2"/>
+                <path d="M65 92 C111 86 175 59 279 43 L284 307 C206 323 133 361 65 393 Z" fill="oklch(.27 .028 210)" stroke="oklch(.46 .02 210)" stroke-width="1.2"/>
+                <path d="M279 43 C342 62 455 81 540 111 L535 372 C437 333 353 304 284 307 Z" fill="oklch(.22 .025 201)" stroke="oklch(.46 .02 210)" stroke-width="1.2"/>
+                <path d="M65 92 C111 86 175 59 279 43 C342 62 455 81 540 111 L279 43 Z" fill="oklch(.34 .03 205)" stroke="oklch(.5 .025 210)" stroke-width="1"/>
+                <path d="M79 379 L283 302 L522 365 L330 433 Z" fill="url(#mesh-lines)" opacity=".75"/>
+                <path d="M83 111 C135 103 204 74 267 58 L269 269 C188 286 125 326 83 356 Z" fill="url(#mesh-lines)" opacity=".6"/>
+                <path d="M294 60 C362 78 452 98 526 121 L521 353 C437 321 354 298 298 296 Z" fill="url(#mesh-lines)" opacity=".6"/>
+                <path d="M343 89 C398 92 457 106 514 127 L515 257 C463 241 406 222 361 211 Z" fill="oklch(.65 .11 80 / .38)" stroke="oklch(.76 .13 80)" stroke-width="1.5" stroke-dasharray="5 4"/>
+                <text x="382" y="151" fill="oklch(.8 .13 80)" font-family="Cascadia Mono, monospace" font-size="10">unsupported fill</text>
+                <path d="M124 181 C149 160 184 152 206 164 C220 176 211 207 190 222 C158 233 133 220 124 199 Z" fill="oklch(.14 .009 235)" stroke="oklch(.9 .012 210)" stroke-width="1.3" stroke-dasharray="4 3"/>
+                <text x="99" y="246" fill="oklch(.9 .012 210)" font-family="Cascadia Mono, monospace" font-size="10">hole / boundary</text>
+                <path d="M92 282 C118 253 142 246 158 258 C174 273 165 305 139 324 C115 333 91 316 92 282 Z" fill="oklch(.68 .16 25 / .36)" stroke="oklch(.74 .16 25)" stroke-width="1.6"/>
+                <text x="64" y="348" fill="oklch(.8 .1 25)" font-family="Cascadia Mono, monospace" font-size="10">high residual</text>
+                <g fill="oklch(.45 .032 205)" stroke="oklch(.76 .13 80)" stroke-width="1.2"><path d="M474 57 l34 10 15 27-33 12-28-17z"/><path d="M522 120 l27 11 7 23-26 9-20-17z"/><path d="M451 128 l18 9 8 18-20 7-16-13z"/></g>
+                <text x="446" y="40" fill="oklch(.8 .13 80)" font-family="Cascadia Mono, monospace" font-size="10">detached components</text>
+                <path d="M474 45 L488 60" stroke="oklch(.8 .13 80)" stroke-width="1"/>
+                <g fill="oklch(.66 .15 25)" opacity=".92"><circle cx="101" cy="286" r="3"/><circle cx="113" cy="274" r="2"/><circle cx="131" cy="265" r="2.4"/><circle cx="146" cy="272" r="2"/><circle cx="159" cy="294" r="2.6"/><circle cx="139" cy="313" r="2"/></g>
+              </svg>
+            </div>
+          </div>
+          <i class="split-handle" aria-hidden="true"></i>
+          <div class="canvas-legend" aria-label="Difference mode legend">
+            <span class="legend-item"><i class="swatch residual"></i> high source-to-surface residual</span>
+            <span class="legend-item"><i class="swatch fill"></i> unsupported filled region</span>
+            <span class="legend-item"><i class="swatch hole"></i> hole / open boundary</span>
+            <span class="legend-item"><i class="swatch fragment"></i> detached component</span>
+          </div>
+          <div class="canvas-note">Controls: left-drag orbit · wheel / pinch zoom · right-drag or two-finger pan</div>
+          <section class="run-state" id="run-state" aria-live="polite" data-od-id="reconstruction-running-state">
+            <div class="run-head"><b>Reconstructing preview</b><span id="run-elapsed">00:02.7</span></div>
+            <div class="progress-track"><i id="run-progress"></i></div>
+            <ul class="run-steps"><li class="done"><span>Preparing cleaned scan</span><span>done</span></li><li class="done"><span>Checking normals</span><span>done</span></li><li class="active"><span>Building preview surface</span><span>running</span></li><li><span>Measuring quality</span><span>next</span></li></ul>
+            <div class="run-foot"><small>The original scan remains unchanged.</small><button class="action-button reject" id="cancel-run">Cancel</button></div>
+          </section>
+        </div>
+
+        <footer class="actionbar" data-od-id="revision-actions">
+          <div class="action-copy"><b>Quality check failed</b><span>Multiple disconnected masses need review. The source stays unchanged in every outcome.</span></div>
+          <button class="action-button reject" id="reject-preview" data-od-id="reject-preview-button">Reject preview</button>
+          <button class="action-button" id="adjust-prep" data-od-id="adjust-preparation-button">Adjust preparation</button>
+          <button class="action-button" id="run-preview" data-od-id="run-preview-button">Run preview</button>
+          <button class="action-button primary" id="accept-revision" data-od-id="accept-revision-button" disabled>Accept as new revision</button>
+        </footer>
+      </section>
+
+      <aside class="dock" data-od-id="right-review-dock">
+        <div class="dock-tabs" role="tablist" aria-label="Review dock">
+          <button class="dock-tab" role="tab" aria-selected="false" aria-controls="view-panel" id="view-tab">View</button>
+          <button class="dock-tab active" role="tab" aria-selected="true" aria-controls="selection-panel" id="selection-tab">Selection</button>
+          <button class="dock-tab" role="tab" aria-selected="false" aria-controls="help-panel" id="help-tab">Help</button>
+        </div>
+
+        <section class="dock-panel" id="view-panel" role="tabpanel" aria-labelledby="view-tab" data-od-id="view-dock-panel">
+          <div class="dock-head"><h2>View</h2><p>Canvas navigation remains available during review.</p></div>
+          <div class="view-control"><span>Orbit</span><kbd>left drag</kbd></div>
+          <div class="view-control"><span>Zoom</span><kbd>wheel / pinch</kbd></div>
+          <div class="view-control"><span>Pan</span><kbd>right drag / two fingers</kbd></div>
+          <div class="view-control"><span>Difference split</span><kbd>52%</kbd></div>
+        </section>
+
+        <section class="dock-panel active" id="selection-panel" role="tabpanel" aria-labelledby="selection-tab" data-od-id="quality-evidence-panel">
+          <div class="dock-head"><h2>Preview quality</h2><p>Evidence for the current reconstruction preview.</p></div>
+          <div class="status-strip"><i class="status-mark"></i> Quality check failed</div>
+          <dl class="metrics">
+            <div class="metric"><dt>Source points</dt><dd>255,330</dd></div>
+            <div class="metric"><dt>Sampled for preview</dt><dd>3,990</dd></div>
+            <div class="metric"><dt>Output vertices</dt><dd>3,134</dd></div>
+            <div class="metric"><dt>Triangles</dt><dd>6,256</dd></div>
+            <div class="metric"><dt>Reconstruction</dt><dd>6.083 s</dd></div>
+            <div class="metric"><dt>Coverage</dt><dd class="fail">failed review</dd></div>
+            <div class="metric"><dt>Median residual</dt><dd class="warn">needs measure</dd></div>
+            <div class="metric"><dt>P95 residual</dt><dd class="warn">needs measure</dd></div>
+            <div class="metric"><dt>Connected components</dt><dd class="fail">multiple masses</dd></div>
+            <div class="metric"><dt>Holes / boundaries</dt><dd class="fail">present</dd></div>
+            <div class="metric"><dt>Colour transfer</dt><dd class="warn">requested only</dd></div>
+          </dl>
+          <section class="quality-block" aria-labelledby="thresholds-title">
+            <h3 id="thresholds-title">Required checks failing</h3>
+            <div class="fail-region"><i></i><div><b>Right wall</b><small>Unsupported filled surface exceeds the observed scan.</small></div></div>
+            <div class="fail-region"><i></i><div><b>Left wall</b><small>High source-to-surface residual and an open boundary.</small></div></div>
+            <div class="fail-region"><i></i><div><b>Upper scan fragments</b><small>Multiple detached masses remain after preparation.</small></div></div>
+          </section>
+          <label class="warning-choice"><input id="accept-warning" type="checkbox"><span><strong>Accept with warnings</strong><br>Explicitly create a separate revision despite failed checks. This never overwrites the source.</span></label>
+        </section>
+
+        <section class="dock-panel" id="help-panel" role="tabpanel" aria-labelledby="help-tab" data-od-id="reconstruction-help-panel">
+          <div class="dock-head"><h2>Review guidance</h2><p>Surface reconstruction and scan cleanup only.</p></div>
+          <ul class="help-list">
+            <li><strong>Source</strong> keeps the original point cloud visible for inspection.</li>
+            <li><strong>Preview</strong> is a disposable surface result until accepted as a new revision.</li>
+            <li><strong>Difference</strong> exposes unsupported fills, holes, detached parts, and residual areas.</li>
+            <li><strong>Point colours</strong> may transfer to a new surface. UVs and textures are not silently preserved.</li>
+            <li><strong>Textured mesh remeshing</strong> requires a separate, explicit rebake workflow.</li>
+            <li>This task does not recognise rooms, plans, or objects.</li>
+          </ul>
+        </section>
+      </aside>
+    </section>
+  </main>
+  <div class="notice" id="notice" role="status" aria-live="polite"></div>
+
+  <script>
+    const canvas = document.querySelector('.canvas-wrap');
+    const modes = document.querySelectorAll('.mode');
+    const split = document.getElementById('split-range');
+    const splitValue = document.getElementById('split-value');
+    const tabButtons = document.querySelectorAll('.dock-tab');
+    const dockPanels = document.querySelectorAll('.dock-panel');
+    const notice = document.getElementById('notice');
+    const warningChoice = document.getElementById('accept-warning');
+    const acceptButton = document.getElementById('accept-revision');
+    const runState = document.getElementById('run-state');
+    const runProgress = document.getElementById('run-progress');
+    const runElapsed = document.getElementById('run-elapsed');
+    let noticeTimer;
+    let runTimer;
+    let elapsed = 2.7;
+
+    function showNotice(message) {
+      notice.textContent = message;
+      notice.classList.add('show');
+      clearTimeout(noticeTimer);
+      noticeTimer = setTimeout(() => notice.classList.remove('show'), 3300);
+    }
+
+    modes.forEach((button) => button.addEventListener('click', () => {
+      modes.forEach((item) => item.classList.toggle('active', item === button));
+      canvas.dataset.mode = button.dataset.mode;
+      document.querySelector('.split-control').style.visibility = button.dataset.mode === 'difference' ? 'visible' : 'hidden';
+    }));
+
+    split.addEventListener('input', () => {
+      document.documentElement.style.setProperty('--split', `${split.value}%`);
+      splitValue.value = `${split.value}%`;
+      splitValue.textContent = `${split.value}%`;
+    });
+
+    tabButtons.forEach((button) => button.addEventListener('click', () => {
+      tabButtons.forEach((item) => {
+        const active = item === button;
+        item.classList.toggle('active', active);
+        item.setAttribute('aria-selected', String(active));
+      });
+      dockPanels.forEach((panel) => panel.classList.toggle('active', panel.id === button.getAttribute('aria-controls')));
+    }));
+
+    document.querySelectorAll('.preset').forEach((button) => button.addEventListener('click', () => {
+      document.querySelectorAll('.preset').forEach((item) => item.classList.toggle('active', item === button));
+      showNotice(`${button.dataset.preset} preparation selected. The source scan is unchanged.`);
+    }));
+
+    warningChoice.addEventListener('change', () => {
+      acceptButton.disabled = !warningChoice.checked;
+      acceptButton.textContent = warningChoice.checked ? 'Accept with warnings' : 'Accept as new revision';
+    });
+
+    document.getElementById('reject-preview').addEventListener('click', () => showNotice('Preview rejected. The original 255,330-point scan remains unchanged.'));
+    document.getElementById('adjust-prep').addEventListener('click', () => {
+      document.querySelector('[data-od-id="prepare-scan-accordion"]').open = true;
+      showNotice('Preparation controls are ready for adjustment.');
+    });
+    document.getElementById('reset-view').addEventListener('click', () => {
+      split.value = 52;
+      split.dispatchEvent(new Event('input'));
+      showNotice('Comparison view reset.');
+    });
+    acceptButton.addEventListener('click', () => {
+      if (!warningChoice.checked) return;
+      showNotice('A separate warning-marked revision would be created. The source remains untouched.');
+    });
+
+    function stopRun(message) {
+      clearInterval(runTimer);
+      runState.classList.remove('visible');
+      if (message) showNotice(message);
+    }
+
+    document.getElementById('run-preview').addEventListener('click', () => {
+      clearInterval(runTimer);
+      elapsed = 2.7;
+      runProgress.style.width = '68%';
+      runElapsed.textContent = '00:02.7';
+      runState.classList.add('visible');
+      runTimer = setInterval(() => {
+        elapsed += .2;
+        runElapsed.textContent = `00:0${elapsed.toFixed(1)}`;
+        runProgress.style.width = `${Math.min(93, 68 + (elapsed - 2.7) * 7)}%`;
+      }, 200);
+    });
+    document.getElementById('cancel-run').addEventListener('click', () => stopRun('Preview run cancelled. The original scan is unchanged.'));
+  </script>
+</body>
+</html>

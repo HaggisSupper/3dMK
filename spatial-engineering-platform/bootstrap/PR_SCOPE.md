@@ -1,0 +1,1 @@
+This publication is limited to the bounded Spatial Engineering Platform payload, its extraction mechanism, integration plan, and subsystem boundary documentation. It does not modify the existing root application behavior.

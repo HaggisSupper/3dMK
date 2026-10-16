@@ -1,0 +1,25 @@
+{
+  "model_id": "yolo-seg-onnx",
+  "model_file": "model.onnx",
+  "input": {
+    "width": 640,
+    "height": 640,
+    "mean": [0.0, 0.0, 0.0],
+    "std": [1.0, 1.0, 1.0]
+  },
+  "labels": ["class_0", "class_1"],
+  "confidence_threshold": 0.25,
+  "mask_threshold": 0.5,
+  "nms_iou_threshold": 0.45,
+  "output": {
+    "kind": "yolo_proto_v1",
+    "predictions_output": 0,
+    "prototypes_output": 1,
+    "class_count": 2,
+    "mask_coefficients": 32,
+    "has_objectness": false,
+    "prediction_layout": "channels_first",
+    "coordinates_normalized": false,
+    "scores_are_logits": false
+  }
+}

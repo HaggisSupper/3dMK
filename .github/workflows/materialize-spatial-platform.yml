@@ -1,0 +1,65 @@
+name: Materialize spatial platform
+
+on:
+  push:
+    branches:
+      - agent/materialize-spatial-platform
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Expand committed transport archive
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $payload = Join-Path $PWD 'spatial-engineering-platform/bootstrap/spatial-engineering-platform.tar.gz.b64'
+          if (-not (Test-Path -LiteralPath $payload)) {
+            throw "Missing transport payload: $payload"
+          }
+
+          $tempRoot = Join-Path $env:RUNNER_TEMP 'spatial-platform-materialize'
+          $archive = Join-Path $env:RUNNER_TEMP 'spatial-engineering-platform.tar.gz'
+          Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $tempRoot | Out-Null
+
+          $base64 = (Get-Content -LiteralPath $payload -Raw).Trim()
+          [System.IO.File]::WriteAllBytes($archive, [Convert]::FromBase64String($base64))
+          tar -xzf $archive -C $tempRoot
+          if ($LASTEXITCODE -ne 0) { throw "tar extraction failed: $LASTEXITCODE" }
+
+          $source = Join-Path $tempRoot 'spatial-engineering-platform'
+          $target = Join-Path $PWD 'spatial-engineering-platform'
+          if (-not (Test-Path -LiteralPath $source)) { throw 'Archive did not contain spatial-engineering-platform/' }
+
+          robocopy $source $target /E /PURGE /XD bootstrap
+          if ($LASTEXITCODE -gt 7) { throw "robocopy failed: $LASTEXITCODE" }
+          Remove-Item -LiteralPath (Join-Path $target 'bootstrap') -Recurse -Force -ErrorAction SilentlyContinue
+
+      - name: Verify materialized source
+        shell: pwsh
+        run: |
+          python .\spatial-engineering-platform\scripts\verify_repo.py
+          python -m unittest discover -s .\spatial-engineering-platform\reference_py\tests -v
+          if (Test-Path .\spatial-engineering-platform\bootstrap) { throw 'Bootstrap directory remains' }
+          $count = (Get-ChildItem .\spatial-engineering-platform -File -Recurse).Count
+          if ($count -lt 60) { throw "Expected at least 60 source files, found $count" }
+
+      - name: Commit materialized source
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A spatial-engineering-platform
+          if (git diff --cached --quiet) { exit 0 }
+          git commit -m 'Materialize spatial engineering platform source tree'
+          git push origin HEAD:agent/materialize-spatial-platform

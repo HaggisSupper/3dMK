@@ -1,0 +1,1 @@
+This directory is a temporary GitHub transport layer. It must not remain the canonical source representation after the encoded archive has been materialized and committed as normal files.

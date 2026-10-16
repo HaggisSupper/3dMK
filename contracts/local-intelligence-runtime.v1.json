@@ -1,0 +1,17 @@
+{
+  "contract_version": 1,
+  "primary_runtime": "mistralrs",
+  "fallback_runtime": "llamacpp",
+  "invariants": {
+    "loopback_only": true,
+    "cuda_required": true,
+    "cpu_inference_allowed": false,
+    "automatic_fallback_allowed": false,
+    "supervisor_owns_process_lifecycle": true,
+    "runtime_output_is_advisory": true
+  },
+  "health_protocol": {
+    "models_path": "/v1/models",
+    "completion_path": "/v1/responses"
+  }
+}

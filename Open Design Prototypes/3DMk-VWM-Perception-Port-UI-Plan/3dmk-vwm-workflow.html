@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>3DMk — VWM processing workflow concept</title>
+  <style>
+    :root {
+      --bg: oklch(0.1822 0 89.9);
+      --surface: oklch(0.2350 0 89.9);
+      --surface-raised: oklch(0.285 0.006 185);
+      --surface-hover: oklch(0.32 0.01 185);
+      --fg: oklch(0.9668 0.0044 179.7);
+      --muted: oklch(0.7182 0.0139 184.9);
+      --border: oklch(0.3630 0.0173 185.1);
+      --accent: oklch(0.7038 0.1230 182.5);
+      --accent-soft: color-mix(in oklch, var(--accent) 13%, transparent);
+      --accent-strong: oklch(0.79 0.123 182.5);
+      --warning: oklch(0.78 0.14 78);
+      --danger: oklch(0.66 0.18 28);
+      --success: oklch(0.72 0.13 153);
+      --mask: oklch(0.73 0.16 197 / 0.2);
+      --plane: oklch(0.79 0.13 82);
+      --font-display: "Segoe UI Variable", "Segoe UI", Tahoma, sans-serif;
+      --font-body: "Segoe UI Variable", "Segoe UI", Tahoma, sans-serif;
+      --font-mono: "Cascadia Mono", Consolas, monospace;
+      --shadow: 0 12px 26px oklch(0 0 0 / 0.24);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; min-width: 1040px; height: 100%; margin: 0; overflow: hidden; background: var(--bg); }
+    body { color: var(--fg); font-family: var(--font-body); font-size: 13px; line-height: 1.4; }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .app-shell { display: grid; grid-template-rows: 50px minmax(0, 1fr); height: 100%; }
+    .topbar { display: flex; align-items: center; gap: 12px; padding: 0 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .mark { display: flex; align-items: center; gap: 9px; min-width: 250px; }
+    .mark-badge { width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid var(--accent); color: var(--accent); font: 600 11px/1 var(--font-mono); }
+    .mark strong { font: 600 15px/1 var(--font-display); letter-spacing: -0.01em; }
+    .document-path { min-width: 0; color: var(--muted); font: 11px/1.2 var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .topbar-spacer { flex: 1; }
+    .mode-label { color: var(--muted); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px color-mix(in oklch, var(--success) 14%, transparent); }
+    .header-button { min-height: 32px; border: 1px solid var(--border); background: var(--surface-raised); padding: 0 10px; cursor: pointer; transition: background .16s, border-color .16s; }
+    .header-button:hover, .header-button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+
+    .workspace { display: grid; grid-template-columns: 278px minmax(440px, 1fr) 316px; min-height: 0; }
+    .left-rail, .right-rail { min-height: 0; overflow: auto; background: var(--surface); }
+    .left-rail { border-right: 1px solid var(--border); padding: 12px; }
+    .right-rail { border-left: 1px solid var(--border); }
+    .rail-heading { margin: 0 0 8px; color: var(--muted); font-size: 10px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; }
+
+    details { border: 1px solid var(--border); background: var(--bg); margin-bottom: 8px; }
+    summary { position: relative; display: flex; align-items: center; min-height: 40px; padding: 0 34px 0 10px; cursor: pointer; color: var(--fg); font-size: 12px; font-weight: 600; letter-spacing: .02em; list-style: none; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: "+"; position: absolute; right: 12px; color: var(--muted); font: 18px/1 var(--font-mono); }
+    details[open] > summary { color: var(--accent-strong); border-bottom: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 80%, var(--accent) 4%); }
+    details[open] > summary::after { content: "–"; }
+    .details-body { padding: 10px; }
+    .nested { margin: 7px 0 0; border-color: color-mix(in oklch, var(--border) 80%, transparent); background: var(--surface); }
+    .nested summary { min-height: 34px; font-size: 11px; color: var(--muted); }
+    .nested .details-body { padding: 8px; }
+
+    .package-name { display: block; font: 600 12px/1.35 var(--font-mono); overflow-wrap: anywhere; }
+    .package-meta, .supporting { color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .package-meta { margin-top: 4px; }
+    .validation-list { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+    .validation-list li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 7px; align-items: center; color: var(--muted); font-size: 11px; }
+    .validation-list b { color: var(--fg); font-weight: 550; }
+    .check { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+    .check.warn { background: var(--warning); }
+    .badge { display: inline-flex; min-height: 20px; align-items: center; padding: 0 6px; border: 1px solid var(--border); color: var(--muted); font: 10px/1 var(--font-mono); }
+    .badge.ok { color: var(--success); border-color: color-mix(in oklch, var(--success) 55%, var(--border)); }
+    .button { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; border: 1px solid var(--border); background: var(--surface-raised); padding: 0 10px; font-size: 11px; font-weight: 600; letter-spacing: .02em; cursor: pointer; transition: transform .12s, background .16s, border-color .16s; }
+    .button:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+    .button:active:not(:disabled) { transform: translateY(1px); }
+    .button:disabled { color: color-mix(in oklch, var(--muted) 62%, var(--surface)); cursor: not-allowed; }
+    .button.primary { border-color: var(--accent); color: var(--accent-strong); background: color-mix(in oklch, var(--accent) 12%, var(--surface-raised)); box-shadow: 0 4px 10px oklch(0 0 0 / .15); }
+    .button.primary:hover:not(:disabled) { background: color-mix(in oklch, var(--accent) 22%, var(--surface-raised)); }
+    .button.danger { color: color-mix(in oklch, var(--danger) 78%, white); }
+    .full { width: 100%; }
+    .inline-status { min-height: 20px; margin: 7px 0 0; color: var(--muted); font-size: 10px; }
+    .inline-status.done { color: var(--success); }
+    .scope-list { display: grid; gap: 5px; }
+    .scope-row { display: flex; align-items: flex-start; gap: 7px; color: var(--muted); font-size: 11px; }
+    .scope-row input { margin: 2px 0 0; accent-color: var(--accent); }
+    .scope-row b { display: block; color: var(--fg); font-weight: 550; }
+    .scope-row small { display: block; margin-top: 1px; color: var(--muted); font-size: 10px; }
+
+    .review-gate[hidden], .inspection-gate[hidden] { display: none; }
+    .review-summary { margin: 0 0 8px; color: var(--muted); font-size: 10px; }
+    .review-list { display: grid; gap: 6px; }
+    .review-row { width: 100%; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: 7px; align-items: center; padding: 8px; border: 1px solid transparent; background: var(--surface); color: var(--fg); text-align: left; cursor: pointer; }
+    .review-row:hover, .review-row.selected { border-color: var(--accent); background: var(--accent-soft); }
+    .review-row strong { display: block; font-size: 11px; font-weight: 600; }
+    .review-row span { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+    .review-state { width: 8px; height: 8px; border-radius: 50%; background: var(--warning); }
+    .review-state.keep { background: var(--success); }
+    .review-state.remove { background: var(--danger); }
+    .review-count { color: var(--muted); font: 10px/1 var(--font-mono); }
+
+    .canvas-region { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--bg); }
+    .canvas-region::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(color-mix(in oklch, var(--border) 34%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklch, var(--border) 34%, transparent) 1px, transparent 1px); background-size: 44px 44px; opacity: .48; pointer-events: none; }
+    .canvas-toolbar { position: absolute; z-index: 3; top: 12px; left: 14px; display: flex; align-items: center; gap: 7px; }
+    .view-chip { min-height: 28px; border: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 88%, transparent); padding: 0 8px; color: var(--muted); font: 10px/1 var(--font-mono); }
+    .view-chip.active { border-color: var(--accent); color: var(--accent-strong); }
+    .canvas-legend { position: absolute; z-index: 3; top: 56px; left: 14px; width: 185px; padding: 9px; border: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 90%, transparent); box-shadow: var(--shadow); }
+    .legend-title { margin: 0 0 6px; color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+    .legend-item { display: flex; align-items: center; gap: 7px; min-height: 20px; color: var(--fg); font-size: 10px; }
+    .legend-key { width: 16px; height: 8px; border: 1px solid var(--accent); background: var(--accent-soft); }
+    .legend-key.plane { border-color: var(--plane); background: color-mix(in oklch, var(--plane) 24%, transparent); }
+    .legend-key.source { border-color: var(--muted); background: transparent; }
+    .legend-key.points { width: 14px; border: 0; background: radial-gradient(circle, var(--fg) 0 1px, transparent 2px) 0 0 / 5px 5px; }
+    .scene-stage { position: absolute; inset: 0; display: grid; place-items: center; }
+    .scene-svg { width: min(100%, 1000px); height: min(100%, 760px); filter: drop-shadow(0 28px 20px oklch(0 0 0 / .26)); }
+    .mask-layer { fill: var(--mask); stroke: color-mix(in oklch, var(--accent) 82%, white); stroke-width: 2; stroke-dasharray: 8 6; }
+    .plane-layer { fill: color-mix(in oklch, var(--plane) 11%, transparent); stroke: var(--plane); stroke-width: 2.3; }
+    .source-frame { fill: color-mix(in oklch, var(--surface) 48%, transparent); stroke: var(--muted); stroke-width: 1.2; }
+    .source-face { fill: var(--accent); stroke: var(--fg); stroke-width: 1; }
+    .mesh-line { fill: none; stroke: color-mix(in oklch, var(--fg) 35%, transparent); stroke-width: .7; }
+    .point-cloud { fill: color-mix(in oklch, var(--fg) 78%, var(--muted)); opacity: .78; }
+    .candidate-outline { fill: none; stroke: var(--accent-strong); stroke-width: 2.8; }
+    .candidate-outline.selected { stroke: var(--warning); }
+    .canvas-label { fill: var(--fg); font: 600 11px var(--font-body); paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+    .canvas-label.meta { fill: var(--muted); font: 10px var(--font-mono); }
+    .canvas-bottom { position: absolute; z-index: 3; right: 14px; bottom: 12px; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 10px; }
+    .mouse-controls { display: flex; gap: 7px; align-items: center; padding: 7px 9px; border: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 90%, transparent); }
+    .axis { display: grid; grid-template-columns: repeat(3, 1fr); width: 48px; gap: 2px; font: 9px/1 var(--font-mono); text-align: center; }
+    .axis span { padding: 2px; border: 1px solid var(--border); }
+    .axis .x { color: var(--danger); }.axis .y { color: var(--success); }.axis .z { color: var(--accent-strong); }
+    .canvas-note { position: absolute; z-index: 3; bottom: 12px; left: 14px; max-width: 340px; color: var(--muted); font-size: 10px; }
+    .canvas-note strong { color: var(--fg); font-weight: 600; }
+
+    .right-tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .right-tab { min-height: 42px; border: 0; border-right: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+    .right-tab:last-child { border-right: 0; }
+    .right-tab[aria-selected="true"] { color: var(--accent-strong); background: var(--accent-soft); box-shadow: inset 0 -2px 0 var(--accent); }
+    .dock-panel { display: none; padding: 12px; }
+    .dock-panel.active { display: block; }
+    .dock-title { margin: 0 0 10px; font: 600 14px/1.2 var(--font-display); letter-spacing: -.01em; }
+    .dock-section { padding: 12px 0; border-top: 1px solid var(--border); }
+    .dock-section:first-of-type { padding-top: 0; border-top: 0; }
+    .dock-section h3 { margin: 0 0 7px; color: var(--muted); font-size: 10px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+    .segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+    .segmented button { min-height: 30px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); cursor: pointer; font-size: 10px; }
+    .segmented button.active { color: var(--accent-strong); border-color: var(--accent); background: var(--accent-soft); }
+    .setting-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; min-height: 33px; color: var(--muted); font-size: 11px; }
+    .setting-row label { color: var(--fg); }
+    .setting-row input { width: 104px; accent-color: var(--accent); }
+    .toggle { position: relative; width: 34px; height: 18px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; }
+    .toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 10px; height: 10px; background: var(--muted); transition: transform .16s, background .16s; }
+    .toggle.active { border-color: var(--accent); background: var(--accent-soft); }
+    .toggle.active::after { transform: translateX(15px); background: var(--accent-strong); }
+    .inspector { border-top: 1px solid var(--border); background: color-mix(in oklch, var(--bg) 84%, var(--accent) 3%); padding: 12px; }
+    .inspector-header { display: flex; justify-content: space-between; gap: 8px; }
+    .inspector-kicker { margin: 0 0 4px; color: var(--accent-strong); font-size: 10px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+    .inspector h2 { margin: 0; font: 600 15px/1.2 var(--font-display); letter-spacing: -.01em; }
+    .confidence { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 44px; border: 1px solid var(--warning); color: var(--warning); font: 600 11px/1 var(--font-mono); }
+    .confidence small { display: block; margin-top: 2px; color: var(--muted); font: 8px/1 var(--font-body); text-transform: uppercase; }
+    .provenance { display: grid; gap: 5px; margin: 10px 0; padding: 8px; border: 1px solid var(--border); background: var(--surface); }
+    .provenance div { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 10px; }
+    .provenance b { color: var(--fg); font: 10px/1.25 var(--font-mono); text-align: right; }
+    .inspector-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+    .inspector-actions .full-row { grid-column: 1 / -1; }
+    .adjudication { margin-top: 8px; color: var(--muted); font-size: 10px; }
+    .adjudication strong { color: var(--warning); }
+    .result-actions { padding: 12px; border-top: 1px solid var(--border); background: var(--surface); }
+    .result-actions h2 { margin: 0 0 4px; font: 600 13px/1.25 var(--font-display); }
+    .result-actions p { margin: 0 0 8px; color: var(--muted); font-size: 10px; }
+    .button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .implementation-rationale { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+    @media (max-width: 1200px) {
+      .workspace { grid-template-columns: 250px minmax(400px, 1fr) 286px; }
+      .document-path { display: none; }
+      .mark { min-width: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell" data-od-id="3dmk-workflow-concept">
+    <header class="topbar" data-od-id="app-topbar">
+      <div class="mark"><span class="mark-badge">3D</span><strong>3DMk</strong></div>
+      <span class="document-path">/scans/iphone-lidar/atrium-west.zip</span>
+      <span class="mode-label">Review workspace</span><span class="status-dot" title="Package ready"></span>
+      <div class="topbar-spacer"></div>
+      <button class="header-button" type="button" data-dock-tab="view" aria-pressed="true" data-od-id="view-settings-button">View settings</button>
+      <button class="header-button" type="button" data-dock-tab="help" aria-pressed="false" data-od-id="help-button">Help</button>
+    </header>
+
+    <section class="workspace" aria-label="3D processing workspace" data-od-id="processing-workspace">
+      <aside class="left-rail" aria-label="Workspace controls" data-od-id="workspace-controls">
+        <p class="rail-heading">Workspace</p>
+        <details open data-od-id="package-validation">
+          <summary>1 · Package validated</summary>
+          <div class="details-body">
+            <span class="package-name">atrium-west_iphone-lidar.zip</span>
+            <p class="package-meta">LiDAR scanner package · 26 calibrated frames · 1 mesh preview</p>
+            <ul class="validation-list">
+              <li><span class="check"></span><span><b>Frame calibration</b><br>26 / 26 matched to capture poses</span><span class="badge ok">ready</span></li>
+              <li><span class="check"></span><span><b>Depth + color</b><br>Aligned source depth and RGB</span><span class="badge ok">ready</span></li>
+              <li><span class="check warn"></span><span><b>Reflective zone</b><br>West glazing is incomplete</span><span class="badge">review</span></li>
+            </ul>
+          </div>
+        </details>
+
+        <details open data-od-id="analysis-workspace">
+          <summary>2 · Analysis</summary>
+          <div class="details-body">
+            <details open class="nested">
+              <summary>What to inspect</summary>
+              <div class="details-body scope-list">
+                <label class="scope-row"><input type="checkbox" checked><span><b>Planes and patches</b><small>Floor, walls, and broken surface regions</small></span></label>
+                <label class="scope-row"><input type="checkbox" checked><span><b>Camera-view evidence</b><small>Use calibrated frames to confirm visibility</small></span></label>
+                <label class="scope-row"><input type="checkbox" checked><span><b>Object candidates</b><small>Segment connected geometry for review</small></span></label>
+                <label class="scope-row"><input type="checkbox" checked><span><b>Source overlays</b><small>Show contributing faces and points</small></span></label>
+              </div>
+            </details>
+            <button id="analysisButton" class="button primary full" type="button" data-od-id="analysis-action">Analysis complete · run again</button>
+            <p id="analysisStatus" class="inline-status done" aria-live="polite">4 planes · 3 object candidates · 2 cleanup items</p>
+          </div>
+        </details>
+
+        <details id="reviewGate" open class="review-gate" data-od-id="cleanup-review">
+          <summary>3 · Cleanup review</summary>
+          <div class="details-body">
+            <p id="reviewSummary" class="review-summary">Choose a disposition before deriving any object.</p>
+            <div class="review-list" role="listbox" aria-label="Review candidates">
+              <button class="review-row" type="button" role="option" aria-selected="false" data-candidate="floor" data-od-id="review-floor-plane"><span class="review-state keep"></span><span><strong>Floor plane</strong><span>Geometry patch · keep</span></span><span class="review-count">0.98</span></button>
+              <button class="review-row" type="button" role="option" aria-selected="false" data-candidate="reflection" data-od-id="review-reflection-artifact"><span class="review-state remove"></span><span><strong>West glazing</strong><span>Reflection artifact · remove</span></span><span class="review-count">0.94</span></button>
+              <button class="review-row selected" type="button" role="option" aria-selected="true" data-candidate="chair" data-od-id="review-chair-candidate"><span id="chairState" class="review-state"></span><span><strong>Side chair cluster</strong><span id="chairSubline">Object candidate · uncertain</span></span><span class="review-count">0.73</span></button>
+            </div>
+          </div>
+        </details>
+      </aside>
+
+      <section class="canvas-region" aria-label="3D canvas showing an analyzed LiDAR capture" data-od-id="central-3d-canvas">
+        <div class="canvas-toolbar" data-od-id="canvas-overlay-toolbar">
+          <span class="view-chip active">Perspective</span><span class="view-chip">Calibrated overlay</span><span class="view-chip">Cut plane off</span>
+        </div>
+        <aside class="canvas-legend" data-od-id="overlay-legend">
+          <p class="legend-title">Visible overlays</p>
+          <div class="legend-item"><span class="legend-key"></span>Object mask / candidate</div>
+          <div class="legend-item"><span class="legend-key plane"></span>Detected plane / patch</div>
+          <div class="legend-item"><span class="legend-key source"></span>Calibrated source frame</div>
+          <div class="legend-item"><span class="legend-key points"></span>Contributing faces / points</div>
+        </aside>
+
+        <div class="scene-stage">
+          <svg class="scene-svg" viewBox="0 0 1000 760" role="img" aria-label="Point cloud workspace with plane, source, and candidate overlays" data-od-id="analysis-overlays">
+            <defs>
+              <linearGradient id="floor-tone" x1="0" x2="1" y1="0" y2="1"><stop stop-color="currentColor" stop-opacity=".08"/><stop offset="1" stop-color="currentColor" stop-opacity=".01"/></linearGradient>
+              <pattern id="point-pattern" width="17" height="17" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="1.2" class="point-cloud"/><circle cx="12" cy="8" r=".8" class="point-cloud"/><circle cx="7" cy="15" r=".9" class="point-cloud"/></pattern>
+            </defs>
+            <g transform="translate(0 10)">
+              <path d="M154 600 L512 434 L868 574 L518 724 Z" fill="url(#point-pattern)" opacity=".82"/>
+              <path class="mesh-line" d="M154 600 L512 434 L868 574 M512 434 L518 724 M154 600 L518 724 M868 574 L518 724"/>
+              <path class="mesh-line" d="M226 568 L574 454 M292 617 L650 490 M352 652 L725 520 M419 682 L789 548 M245 555 L287 625 M327 516 L367 657 M408 478 L450 691 M590 465 L624 680 M681 500 L699 643 M767 536 L773 605"/>
+              <path d="M236 530 L236 236 L535 110 L535 452 Z" fill="url(#point-pattern)" opacity=".62"/>
+              <path d="M535 110 L790 246 L790 548 L535 452 Z" fill="url(#point-pattern)" opacity=".57"/>
+              <path class="mesh-line" d="M236 530 L236 236 L535 110 L790 246 L790 548 M535 110 L535 452 M236 236 L535 452 L790 246"/>
+
+              <path class="plane-layer" d="M170 602 L512 446 L851 578 L518 709 Z"/>
+              <path class="plane-layer" d="M247 519 L247 250 L523 134 L523 447 Z"/>
+              <path class="plane-layer" d="M549 129 L774 249 L774 531 L549 440 Z" opacity=".55"/>
+
+              <g transform="translate(241 239)"><rect class="source-frame" width="92" height="59"/><circle class="source-face" cx="45" cy="29" r="4"/><path class="mesh-line" d="M45 33 L45 55 M16 47 L74 47"/><text class="canvas-label meta" x="0" y="74">F03 · 0.6 m</text></g>
+              <g transform="translate(634 263)"><rect class="source-frame" width="92" height="59"/><circle class="source-face" cx="45" cy="29" r="4"/><path class="mesh-line" d="M45 33 L45 55 M16 47 L74 47"/><text class="canvas-label meta" x="0" y="74">F11 · 1.9 m</text></g>
+              <g transform="translate(428 522)"><rect class="source-frame" width="92" height="59"/><circle class="source-face" cx="45" cy="29" r="4"/><path class="mesh-line" d="M45 33 L45 55 M16 47 L74 47"/><text class="canvas-label meta" x="0" y="74">F18 · 1.2 m</text></g>
+
+              <path class="mask-layer" d="M423 469 L509 438 L598 474 L574 544 L484 562 L412 521 Z"/>
+              <path class="candidate-outline selected" d="M423 469 L509 438 L598 474 L574 544 L484 562 L412 521 Z"/>
+              <path class="mask-layer" d="M650 359 L739 307 L760 404 L678 448 Z" opacity=".42"/>
+              <path class="candidate-outline" d="M650 359 L739 307 L760 404 L678 448 Z" opacity=".66"/>
+
+              <g transform="translate(398 422)"><rect width="145" height="37" fill="var(--surface)" stroke="var(--warning)"/><text class="canvas-label" x="8" y="15">Side chair cluster</text><text class="canvas-label meta" x="8" y="29">0.73 · 18 source faces</text></g>
+              <g transform="translate(612 275)"><rect width="122" height="33" fill="var(--surface)" stroke="var(--accent)"/><text class="canvas-label" x="8" y="15">Glazing artifact</text><text class="canvas-label meta" x="8" y="27">remove · F11</text></g>
+              <text class="canvas-label" x="278" y="210">Wall patch · 0.96</text>
+              <text class="canvas-label" x="650" y="602">Floor plane · 0.98</text>
+            </g>
+          </svg>
+        </div>
+
+        <p class="canvas-note"><strong>Contextual evidence:</strong> select a candidate to keep its mask and contributing calibrated frames visible.</p>
+        <div class="canvas-bottom" data-od-id="mouse-controls">
+          <div class="axis"><span class="x">X</span><span class="y">Y</span><span class="z">Z</span></div>
+          <div class="mouse-controls">Drag orbit · Shift + drag pan · Wheel zoom</div>
+        </div>
+      </section>
+
+      <aside class="right-rail" aria-label="View settings, help, and selected candidate" data-od-id="right-side-dock">
+        <div class="right-tabs" role="tablist" aria-label="Right dock">
+          <button class="right-tab" type="button" role="tab" aria-selected="true" data-tab="view" data-od-id="view-settings-tab">View</button>
+          <button class="right-tab" type="button" role="tab" aria-selected="false" data-tab="help" data-od-id="help-tab">Help</button>
+        </div>
+        <section id="viewPanel" class="dock-panel active" role="tabpanel" data-od-id="view-settings-panel">
+          <h2 class="dock-title">View settings</h2>
+          <div class="dock-section">
+            <h3>Render mode</h3>
+            <div class="segmented"><button class="active" type="button">Solid</button><button type="button">Points</button><button type="button">Edges</button></div>
+          </div>
+          <div class="dock-section">
+            <h3>Overlay visibility</h3>
+            <div class="setting-row"><label>Object masks</label><button class="toggle active" type="button" aria-label="Toggle object masks"></button></div>
+            <div class="setting-row"><label>Planes + patches</label><button class="toggle active" type="button" aria-label="Toggle planes and patches"></button></div>
+            <div class="setting-row"><label>Source faces / points</label><button class="toggle active" type="button" aria-label="Toggle source faces and points"></button></div>
+          </div>
+          <div class="dock-section">
+            <h3>Point density</h3>
+            <div class="setting-row"><label for="density">Display</label><input id="density" type="range" min="20" max="100" value="72"></div>
+          </div>
+        </section>
+        <section id="helpPanel" class="dock-panel" role="tabpanel" data-od-id="help-panel">
+          <h2 class="dock-title">Review help</h2>
+          <div class="dock-section"><h3>Workflow</h3><p class="supporting">Validate the package, run analysis, then resolve review items. A derived result can only be applied after the selected candidate is kept and extracted.</p></div>
+          <div class="dock-section"><h3>Evidence</h3><p class="supporting">Masks show the selected segment. Source frames and points identify the capture evidence behind it. Low-confidence items can request image-based adjudication before you decide.</p></div>
+          <div class="dock-section"><h3>Mouse</h3><p class="supporting">Drag to orbit. Shift + drag pans. The wheel zooms. View settings control display only; they do not change the source package.</p></div>
+        </section>
+
+        <section id="inspector" class="inspector inspection-gate" data-od-id="selected-candidate-inspector">
+          <div class="inspector-header"><div><p class="inspector-kicker">Selected candidate</p><h2 id="candidateName">Side chair cluster</h2></div><div class="confidence"><span id="candidateConfidence">0.73</span><small>confidence</small></div></div>
+          <p id="candidateDescription" class="supporting">Separate connected geometry near the east wall. Keep only if it belongs in the derived object.</p>
+          <div class="provenance" data-od-id="candidate-provenance">
+            <div><span>Captured from</span><b id="sourceFrames">F03 · F11 · F18</b></div>
+            <div><span>Source evidence</span><b id="sourceEvidence">18 faces · 1,284 points</b></div>
+            <div><span>Geometry relation</span><b id="geometryRelation">Detached from floor plane</b></div>
+          </div>
+          <div class="inspector-actions">
+            <button id="keepButton" class="button" type="button" data-od-id="keep-candidate-button">Keep</button>
+            <button id="removeButton" class="button danger" type="button" data-od-id="remove-candidate-button">Remove</button>
+            <button id="adjudicateButton" class="button full-row" type="button" data-od-id="low-confidence-adjudication">Ask image review before deciding</button>
+            <button id="extractButton" class="button primary full-row" type="button" disabled data-od-id="extract-derived-object">Extract derived object</button>
+          </div>
+          <p id="adjudicationNote" class="adjudication"><strong>Optional:</strong> available because confidence is below the review threshold.</p>
+        </section>
+
+        <section class="result-actions" data-od-id="derived-result-actions">
+          <h2>Derived result</h2>
+          <p id="resultStatus">Resolve the selected candidate to enable extraction.</p>
+          <div class="button-row"><button id="applyButton" class="button primary" type="button" disabled data-od-id="apply-derived-result">Apply</button><button id="exportButton" class="button" type="button" disabled data-od-id="export-derived-result">Export</button></div>
+        </section>
+      </aside>
+    </section>
+
+    <section class="implementation-rationale" aria-label="Implementation rationale" data-od-id="implementation-rationale">
+      <h2>Implementation rationale</h2>
+      <p>Keep the existing three-zone Tauri workspace: a dominant renderer, a left accordion for prerequisites, and a mutually exclusive right-side settings/help dock. Package validation is the gate for Analysis; analysis reveals cleanup review; only a kept candidate can be extracted; only an extracted object can be applied and exported. Treat geometry, calibrated camera evidence, segmentation, provenance, and cleanup as contextual outputs around the selected object rather than separate product modes. Low-confidence image adjudication remains an explicit optional action and never silently alters a review decision.</p>
+    </section>
+  </main>
+
+  <script>
+    const state = { selected: "chair", chairDecision: "uncertain", extracted: false, applied: false };
+    const candidates = {
+      floor: { name: "Floor plane", confidence: "0.98", description: "Large connected plane confirmed across calibrated views.", frames: "F01 · F08 · F18", evidence: "42 faces · 8,906 points", relation: "Primary support plane", decision: "keep" },
+      reflection: { name: "West glazing", confidence: "0.94", description: "Reflective geometry around the west glazing; remove from a derived object.", frames: "F11 · F12", evidence: "9 faces · 816 points", relation: "Overlaps glazing edge", decision: "remove" },
+      chair: { name: "Side chair cluster", confidence: "0.73", description: "Separate connected geometry near the east wall. Keep only if it belongs in the derived object.", frames: "F03 · F11 · F18", evidence: "18 faces · 1,284 points", relation: "Detached from floor plane", decision: "uncertain" }
+    };
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+    function selectCandidate(key) {
+      state.selected = key;
+      const candidate = candidates[key];
+      $("#candidateName").textContent = candidate.name;
+      $("#candidateConfidence").textContent = candidate.confidence;
+      $("#candidateDescription").textContent = candidate.description;
+      $("#sourceFrames").textContent = candidate.frames;
+      $("#sourceEvidence").textContent = candidate.evidence;
+      $("#geometryRelation").textContent = candidate.relation;
+      const isChair = key === "chair";
+      $("#keepButton").disabled = !isChair;
+      $("#removeButton").disabled = !isChair;
+      $("#adjudicateButton").hidden = !isChair || state.chairDecision !== "uncertain";
+      $("#adjudicationNote").hidden = !isChair || state.chairDecision !== "uncertain";
+      $("#extractButton").disabled = !isChair || state.chairDecision !== "keep" || state.extracted;
+      $$(".review-row").forEach((row) => { const chosen = row.dataset.candidate === key; row.classList.toggle("selected", chosen); row.setAttribute("aria-selected", String(chosen)); });
+    }
+
+    function updateDecision(decision) {
+      state.chairDecision = decision;
+      const isKeep = decision === "keep";
+      const stateEl = $("#chairState");
+      stateEl.className = `review-state ${isKeep ? "keep" : "remove"}`;
+      $("#chairSubline").textContent = `Object candidate · ${decision}`;
+      $("#reviewSummary").textContent = isKeep ? "Candidate kept. Extract it to create a derived object." : "Candidate removed. Select it again to revisit the decision.";
+      $("#candidateDescription").textContent = isKeep ? "Kept for the derived object. Extract it when you are ready to create an editable result." : "Removed from the derived object. You can change this decision before applying a result.";
+      selectCandidate("chair");
+    }
+
+    function showTab(tab) {
+      $$(".right-tab").forEach((button) => button.setAttribute("aria-selected", String(button.dataset.tab === tab)));
+      $$("[data-dock-tab]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.dockTab === tab)));
+      $("#viewPanel").classList.toggle("active", tab === "view");
+      $("#helpPanel").classList.toggle("active", tab === "help");
+    }
+
+    $("#analysisButton").addEventListener("click", () => {
+      const button = $("#analysisButton");
+      button.disabled = true;
+      button.textContent = "Analysis running…";
+      $("#analysisStatus").className = "inline-status";
+      $("#analysisStatus").textContent = "Updating plane, source, and candidate overlays…";
+      setTimeout(() => {
+        button.disabled = false;
+        button.textContent = "Analysis complete · run again";
+        $("#analysisStatus").className = "inline-status done";
+        $("#analysisStatus").textContent = "4 planes · 3 object candidates · 2 cleanup items";
+      }, 620);
+    });
+    $$(".review-row").forEach((row) => row.addEventListener("click", () => selectCandidate(row.dataset.candidate)));
+    $("#keepButton").addEventListener("click", () => updateDecision("keep"));
+    $("#removeButton").addEventListener("click", () => updateDecision("remove"));
+    $("#adjudicateButton").addEventListener("click", () => {
+      $("#adjudicateButton").disabled = true;
+      $("#adjudicateButton").textContent = "Reviewing calibrated frames…";
+      setTimeout(() => { $("#adjudicateButton").textContent = "Image review suggests: keep, 0.81"; $("#adjudicationNote").innerHTML = "<strong>Suggestion only:</strong> calibrated-frame review increased confidence. The operator still decides."; $("#keepButton").focus(); }, 650);
+    });
+    $("#extractButton").addEventListener("click", () => {
+      state.extracted = true;
+      $("#extractButton").disabled = true;
+      $("#extractButton").textContent = "Derived object ready";
+      $("#applyButton").disabled = false;
+      $("#resultStatus").textContent = "Side chair cluster is ready as a separate editable object.";
+    });
+    $("#applyButton").addEventListener("click", () => {
+      state.applied = true;
+      $("#applyButton").textContent = "Applied";
+      $("#applyButton").disabled = true;
+      $("#exportButton").disabled = false;
+      $("#resultStatus").textContent = "Derived object applied to the workspace. Export is now available.";
+    });
+    $("#exportButton").addEventListener("click", () => { $("#exportButton").textContent = "Export prepared"; $("#resultStatus").textContent = "Export package prepared: derived-object + review evidence."; });
+    $$(".right-tab").forEach((button) => button.addEventListener("click", () => showTab(button.dataset.tab)));
+    $$("[data-dock-tab]").forEach((button) => button.addEventListener("click", () => showTab(button.dataset.dockTab)));
+    $$(".toggle").forEach((button) => button.addEventListener("click", () => button.classList.toggle("active")));
+    $$(".segmented button").forEach((button) => button.addEventListener("click", () => { button.parentElement.querySelectorAll("button").forEach((item) => item.classList.remove("active")); button.classList.add("active"); }));
+    selectCandidate("chair");
+  </script>
+</body>
+</html>

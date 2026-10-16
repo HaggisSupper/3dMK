@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+const code = await fs.readFile(new URL('../public/workspace-panels.js', import.meta.url), 'utf8');
+const {createPanelState, reducePanels, visiblePanels} = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
+let s=createPanelState();
+assert.deepEqual(visiblePanels(s),['workspace']);
+for (const id of ['workspace','view','help']) {
+  let t=createPanelState();
+  t=reducePanels(t,{type:'open',id}); assert.equal(t.panels[id].open,true);
+  t=reducePanels(t,{type:'pin',id,pinned:true});
+  t=reducePanels(t,{type:'escape'}); assert.equal(t.panels[id].open,true,`${id} pin survives Escape`);
+  t=reducePanels(t,{type:'close',id}); assert.equal(t.panels[id].open,false);
+  assert.equal(t.panels[id].pinned,true,`${id} explicit close preserves pin preference`);
+  t=createPanelState(JSON.parse(JSON.stringify(t))); assert.equal(t.panels[id].open,false);
+  t=reducePanels(t,{type:'open',id}); t=reducePanels(t,{type:'pin',id,pinned:false});
+  t=reducePanels(t,{type:'escape'}); assert.equal(t.panels[id].open,false,`${id} unpinned closes`);
+}
+s=reducePanels(s,{type:'open',id:'help'});
+s=reducePanels(s,{type:'pin',id:'help',pinned:true});
+s=reducePanels(s,{type:'open',id:'view'});
+assert.deepEqual(new Set(visiblePanels(s)),new Set(['workspace','help','view']));
+assert.equal(s.panels.help.pinned,true);
+s=reducePanels(s,{type:'escape'});assert.equal(s.panels.view.open,false);assert.equal(s.panels.help.open,true);
+s=reducePanels(s,{type:'pin',id:'help',pinned:false});s=reducePanels(s,{type:'open',id:'view'});
+assert.equal(s.panels.help.open,false,'same-side unpinned panel replaced');
+s=reducePanels(s,{type:'narrow',narrow:true});assert.deepEqual(visiblePanels(s),['view']);
+assert.equal(s.panels.workspace.open,true,'narrow fallback preserves opposite pinned state');
+s=reducePanels(s,{type:'toggle',id:'workspace'});assert.deepEqual(visiblePanels(s),['workspace']);
+s=reducePanels(s,{type:'narrow',narrow:false});assert.ok(visiblePanels(s).includes('view'));
+assert.deepEqual(createPanelState({panels:{evil:{open:true}}}).panels,createPanelState().panels);
+console.log('PASS: all three panels open/close/pin/unpin, Escape order, same-side replacement, pinned coexistence, restart, narrow suspension');

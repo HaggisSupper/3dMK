@@ -1,0 +1,20 @@
+[package]
+name = "vwm-geometry"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+nalgebra.workspace = true
+rayon.workspace = true
+ahash.workspace = true
+smallvec.workspace = true
+vwm-core = { path = "../vwm-core" }
+
+rand = "0.8"
+
+[dev-dependencies]
+approx = "0.5"

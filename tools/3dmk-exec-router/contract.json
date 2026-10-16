@@ -1,0 +1,17 @@
+{
+  "contract_version": 1,
+  "profiles": [
+    "toolkit-check",
+    "windows-toolkit-check",
+    "rust-check",
+    "cuda-probe",
+    "mistralrs-agent"
+  ],
+  "invariants": {
+    "shell_command_strings": false,
+    "execution_policy_bypass": false,
+    "install_or_mutate_tools": false,
+    "blocked_exit_code": 3,
+    "invalid_argument_exit_code": 2
+  }
+}

@@ -1,0 +1,61 @@
+name: macOS Tauri Build
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'public/**'
+      - '.github/workflows/macos-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos-universal:
+    name: Build macOS universal app and DMG
+    runs-on: macos-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable with Apple targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            VWM-Repo-Implicit -> target
+            src-tauri -> target
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version '^2' --locked
+
+      - name: Compile universal macOS Tauri application
+        env:
+          APPLE_SIGNING_IDENTITY: "-"
+        run: >
+          cargo tauri build
+          --target universal-apple-darwin
+          --bundles app,dmg
+          --config '{"bundle":{"active":true}}'
+
+      - name: Upload macOS bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3DMk-0.1.0-macOS-universal
+          if-no-files-found: error
+          path: |
+            src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app
+            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg

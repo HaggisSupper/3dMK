@@ -1,0 +1,19 @@
+{
+  "model_id": "instance-segmenter-direct-v1",
+  "model_file": "model.onnx",
+  "input": {
+    "width": 640,
+    "height": 640,
+    "mean": [0.0, 0.0, 0.0],
+    "std": [1.0, 1.0, 1.0]
+  },
+  "labels": ["object"],
+  "confidence_threshold": 0.25,
+  "mask_threshold": 0.5,
+  "nms_iou_threshold": 0.45,
+  "output": {
+    "kind": "direct_masks_v1",
+    "detections_output": 0,
+    "masks_output": 1
+  }
+}

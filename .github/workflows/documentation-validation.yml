@@ -1,0 +1,25 @@
+name: Documentation Validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - agent/documentation-consolidation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Authoritative documentation contract
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate documentation and local links
+        shell: pwsh
+        run: |
+          pwsh -NoLogo -NoProfile -File scripts/test-documentation.ps1

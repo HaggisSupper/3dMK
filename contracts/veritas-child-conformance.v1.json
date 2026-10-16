@@ -1,0 +1,14 @@
+{
+  "contract_version": 1,
+  "parent_capability_framework": "Veritas",
+  "child_repository": "3dMK",
+  "invariants": {
+    "versioned_machine_readable_contracts": true,
+    "validated_concrete_types_after_ingress": true,
+    "no_silent_fallback": true,
+    "no_undocumented_shared_mutable_state": true,
+    "deterministic_validation": true,
+    "negative_and_regression_tests": true,
+    "evidence_before_completion": true
+  }
+}

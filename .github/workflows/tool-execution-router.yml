@@ -1,0 +1,63 @@
+name: Tool Execution Router
+
+on:
+  pull_request:
+    paths:
+      - tools/3dmk-exec-router/**
+      - scripts/validate-3dmk-toolkit.sh
+      - scripts/validate-3dmk-exec-router-contract.sh
+      - scripts/test-3dmk-exec-router-contract.sh
+      - contracts/veritas-child-conformance.v1.json
+      - scripts/validate-veritas-child-contract.sh
+      - scripts/test-veritas-child-contract.sh
+      - contracts/veritas-child-conformance.v1.json
+      - scripts/validate-veritas-child-contract.sh
+      - scripts/test-veritas-child-contract.sh
+      - scripts/validate-3dmk-exec-router-contract.sh
+      - scripts/test-3dmk-exec-router-contract.sh
+      - .codex/skills/3dmk-dev/**
+      - .github/workflows/tool-execution-router.yml
+  push:
+    branches:
+      - main
+    paths:
+      - tools/3dmk-exec-router/**
+      - scripts/validate-3dmk-toolkit.sh
+      - .codex/skills/3dmk-dev/**
+      - .github/workflows/tool-execution-router.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Run Git Bash-compatible toolkit validation
+        run: bash scripts/validate-3dmk-toolkit.sh
+      - name: Enforce Veritas child conformance
+        run: |
+          bash -n scripts/validate-veritas-child-contract.sh
+          bash -n scripts/test-veritas-child-contract.sh
+          bash scripts/validate-veritas-child-contract.sh
+          bash scripts/test-veritas-child-contract.sh
+
+      - name: Enforce immutable execution-router contract
+        run: |
+          bash -n scripts/validate-3dmk-exec-router-contract.sh
+          bash -n scripts/test-3dmk-exec-router-contract.sh
+          bash scripts/validate-3dmk-exec-router-contract.sh
+          bash scripts/test-3dmk-exec-router-contract.sh
+
+      - name: Format router
+        working-directory: tools/3dmk-exec-router
+        run: cargo fmt --check
+      - name: Test router
+        working-directory: tools/3dmk-exec-router
+        run: cargo test --all-targets

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>3DMK — Image-assisted package import</title>
+  <style>
+    :root {
+      --bg: #0D0D0D; --surface: #141414; --surface-hover: #1A1A1A; --fg: #FFFFFF;
+      --muted: #AAAAAA; --muted-quiet: #828282; --border: #2A2A2A; --accent: #00D4AA;
+      --warning: #FFB800; --danger: #FF4757;
+      --font-display: "JetBrains Mono", ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+      --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+      --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --sidebar-width: 348px;
+    }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; -webkit-font-smoothing: antialiased; }
+    button { font: inherit; color: inherit; }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .app-shell { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); min-height: 100vh; overflow: hidden; }
+    .sidebar { position: relative; z-index: 2; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); }
+    .sidebar-header { display: flex; align-items: center; justify-content: space-between; min-height: 58px; padding: 0 var(--space-4); border-bottom: 1px solid var(--border); }
+    .product-mark, .header-tools { display: flex; align-items: center; gap: 9px; }
+    .product-mark svg { width: 19px; height: 19px; color: var(--fg); }
+    .product-name { font-family: var(--font-display); font-size: 13px; font-weight: 600; letter-spacing: 0.06em; }
+    .header-tools { color: var(--muted); }
+    .icon-button { display: grid; width: 30px; height: 30px; place-items: center; padding: 0; background: transparent; border: 1px solid transparent; cursor: pointer; transition: background 150ms ease, border-color 150ms ease, color 150ms ease; }
+    .icon-button:hover { color: var(--fg); background: var(--surface-hover); border-color: var(--border); }
+    .icon-button svg { width: 16px; height: 16px; }
+    .document-row { display: flex; align-items: center; min-height: 48px; padding: 0 var(--space-4); color: var(--muted); border-bottom: 1px solid var(--border); font-size: 12px; letter-spacing: 0.01em; }
+    .document-row svg { width: 14px; height: 14px; margin-right: var(--space-2); color: var(--muted-quiet); }
+    .accordion { border-bottom: 1px solid var(--border); }
+    .accordion-toggle { display: flex; align-items: center; width: 100%; min-height: 48px; padding: 0 var(--space-4); background: transparent; border: 0; color: var(--fg); cursor: pointer; text-align: left; transition: background 150ms ease; }
+    .accordion-toggle:hover { background: var(--surface-hover); }
+    .accordion-toggle svg { width: 15px; height: 15px; margin-right: var(--space-2); color: var(--muted); transition: transform 150ms ease; }
+    .accordion-toggle[aria-expanded="false"] svg { transform: rotate(-90deg); }
+    .accordion-label { font-size: 13px; font-weight: 550; letter-spacing: 0.02em; }
+    .accordion-meta { margin-left: auto; color: var(--muted-quiet); font-family: var(--font-mono); font-size: 11px; }
+    .accordion-content { padding: 0 var(--space-4) var(--space-4); }
+    .accordion-content[hidden] { display: none; }
+    .accepted-formats { display: flex; gap: 6px; margin-bottom: var(--space-3); }
+    .format-token { padding: 4px 6px; color: var(--muted); border: 1px solid var(--border); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; }
+    .package-card { padding: var(--space-3); background: var(--bg); border: 1px solid var(--border); }
+    .package-card-head { display: flex; gap: var(--space-2); align-items: flex-start; margin-bottom: var(--space-3); }
+    .package-icon { display: grid; flex: 0 0 auto; width: 30px; height: 30px; place-items: center; background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+    .package-icon svg { width: 16px; height: 16px; }
+    .package-heading { margin: 1px 0 3px; font-size: 13px; font-weight: 550; letter-spacing: 0.01em; }
+    .package-subtitle { margin: 0; color: var(--muted-quiet); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; }
+    .package-summary { margin: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .summary-row { display: grid; grid-template-columns: 1fr auto; gap: var(--space-2); align-items: center; min-height: 30px; border-bottom: 1px solid var(--border); }
+    .summary-row:last-child { border-bottom: 0; }
+    .summary-row dt { color: var(--muted); font-size: 12px; }
+    .summary-row dd { margin: 0; color: var(--fg); font-family: var(--font-mono); font-size: 11px; text-align: right; white-space: nowrap; }
+    .quality-line { display: flex; align-items: center; min-height: 32px; color: var(--muted); border-bottom: 1px solid var(--border); font-size: 11px; }
+    .quality-label { margin-right: auto; }
+    .quality-value { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.02em; white-space: nowrap; }
+    .quality-dot { width: 6px; height: 6px; background: currentColor; border-radius: 50%; }
+    .help-copy { margin: var(--space-3) 0; color: var(--muted); font-size: 12px; line-height: 1.5; max-width: 31ch; }
+    .refine-button { display: inline-flex; align-items: center; justify-content: center; width: 100%; min-height: 40px; gap: 8px; padding: 0 var(--space-3); background: var(--accent); border: 1px solid var(--accent); color: var(--bg); cursor: pointer; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; transition: transform 100ms ease, filter 150ms ease; }
+    .refine-button:hover { filter: brightness(1.07); }
+    .refine-button:active { transform: translateY(1px); }
+    .refine-button svg { width: 14px; height: 14px; }
+    .refine-feedback { min-height: 15px; margin: var(--space-2) 0 0; color: var(--muted-quiet); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.02em; }
+    .secondary-accordion { display: flex; align-items: center; justify-content: space-between; min-height: 46px; padding: 0 var(--space-4); color: var(--muted); border-bottom: 1px solid var(--border); font-size: 13px; }
+    .secondary-accordion svg { width: 15px; height: 15px; color: var(--muted-quiet); }
+    .viewport { position: relative; display: grid; min-width: 0; min-height: 100vh; place-items: center; overflow: hidden; background-color: var(--bg); background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 40px 40px; }
+    .viewport::before { position: absolute; inset: 0; content: ""; background: color-mix(in oklch, var(--bg) 72%, transparent); pointer-events: none; }
+    .viewport-topbar, .viewport-state, .viewport-axis { position: absolute; z-index: 1; }
+    .viewport-topbar { top: var(--space-4); right: var(--space-4); display: flex; gap: 6px; }
+    .tool-chip { min-height: 28px; padding: 0 9px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; }
+    .tool-chip:hover { color: var(--fg); background: var(--surface-hover); }
+    .scan-ghost { position: relative; z-index: 1; display: grid; width: min(42vw, 520px); aspect-ratio: 1; place-items: center; border: 1px solid color-mix(in srgb, var(--border) 82%, transparent); transform: rotate(-9deg) skewY(2deg); }
+    .scan-ghost::before, .scan-ghost::after { position: absolute; inset: 12%; content: ""; border: 1px solid color-mix(in srgb, var(--muted-quiet) 35%, transparent); transform: rotate(28deg); }
+    .scan-ghost::after { inset: 22%; transform: rotate(-36deg); }
+    .scan-orb { width: 34%; aspect-ratio: 1; border: 1px solid var(--muted); border-radius: 50%; box-shadow: 0 0 0 18px color-mix(in srgb, var(--muted-quiet) 8%, transparent); }
+    .viewport-state { bottom: var(--space-4); left: var(--space-4); color: var(--muted-quiet); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; }
+    .viewport-axis { right: var(--space-4); bottom: var(--space-4); display: grid; place-items: center; width: 48px; height: 48px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); font-family: var(--font-mono); font-size: 11px; }
+    @media (max-width: 760px) { .app-shell { display: block; overflow: visible; } .sidebar { min-height: auto; border-right: 0; } .viewport { min-height: 360px; } .scan-ghost { width: min(60vw, 380px); } }
+  </style>
+</head>
+<body>
+  <main class="app-shell" aria-label="3DMK scan workspace" data-od-id="scan-workspace">
+    <aside class="sidebar" aria-label="Scan workspace sidebar" data-od-id="scan-workspace-sidebar">
+      <header class="sidebar-header" data-od-id="workspace-header">
+        <div class="product-mark">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2.8 20 7.4v9.2L12 21.2 4 16.6V7.4L12 2.8Z"/><path d="m4.3 7.6 7.7 4.5 7.7-4.5M12 12.2v9"/></svg>
+          <span class="product-name">3DMK / SCAN</span>
+        </div>
+        <div class="header-tools" aria-label="Workspace tools">
+          <button class="icon-button" type="button" aria-label="Search files" data-od-id="search-files-button"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.8" cy="10.8" r="5.9"/><path d="m15.3 15.3 4.2 4.2"/></svg></button>
+          <button class="icon-button" type="button" aria-label="More workspace actions" data-od-id="workspace-more-button"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+        </div>
+      </header>
+      <div class="document-row" data-od-id="active-scan-file"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6.5 3.5h7l4 4v13h-11z"/><path d="M13.5 3.5v4h4"/></svg>cantera_scan.session</div>
+      <section class="accordion" data-od-id="import-accordion">
+        <button class="accordion-toggle" type="button" aria-expanded="true" aria-controls="import-panel" id="import-toggle" data-od-id="import-accordion-toggle"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 9 6 6 6-6"/></svg><span class="accordion-label">Import</span><span class="accordion-meta">1 package</span></button>
+        <div class="accordion-content" id="import-panel">
+          <div class="accepted-formats" aria-label="Accepted formats"><span class="format-token">MODELS</span><span class="format-token">ZIP PACKAGES</span></div>
+          <section class="package-card" aria-labelledby="package-heading" data-od-id="image-assisted-package-card">
+            <div class="package-card-head">
+              <div class="package-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="4.5" width="17" height="15" rx="0.2"/><circle cx="9" cy="9" r="1.5"/><path d="m4 17 5-5 3.5 3 2.3-2.3 5.2 5.2"/></svg></div>
+              <div><h2 class="package-heading" id="package-heading">Image-assisted package</h2><p class="package-subtitle">SCAN_014.ZIP</p></div>
+            </div>
+            <dl class="package-summary" data-od-id="package-upload-summary">
+              <div class="summary-row"><dt>Geometry</dt><dd>1 model</dd></div>
+              <div class="summary-row"><dt>Texture images</dt><dd>8 files</dd></div>
+              <div class="summary-row"><dt>Reference photos</dt><dd>14 files</dd></div>
+            </dl>
+            <div class="quality-line" role="status" aria-live="polite" data-od-id="package-quality-status"><span class="quality-label">Quality check</span><span class="quality-value" id="quality-value"><span class="quality-dot"></span>Ready · poses found</span></div>
+            <p class="help-copy">Images refine texture and color cleanup only when camera poses are present.</p>
+            <button class="refine-button" type="button" id="refine-button" data-od-id="refine-from-package-button">Refine from package<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
+            <p class="refine-feedback" id="refine-feedback" aria-live="polite"></p>
+          </section>
+        </div>
+      </section>
+      <div class="secondary-accordion" data-od-id="alignment-section"><span>Alignment</span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m9 6 6 6-6 6"/></svg></div>
+      <div class="secondary-accordion" data-od-id="export-section"><span>Export</span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m9 6 6 6-6 6"/></svg></div>
+    </aside>
+    <section class="viewport" aria-label="3D scan viewport" data-od-id="scan-viewport">
+      <div class="viewport-topbar" data-od-id="viewport-toolbar"><button class="tool-chip" type="button">SOLID</button><button class="tool-chip" type="button">WIREFRAME</button></div>
+      <div class="scan-ghost" aria-label="3D scan preview"><div class="scan-orb"></div></div>
+      <div class="viewport-state" data-od-id="viewport-state">MESH PREVIEW · 1,846,224 TRIANGLES</div>
+      <div class="viewport-axis" aria-hidden="true">Z↑</div>
+    </section>
+  </main>
+  <script>
+    const importToggle = document.getElementById("import-toggle");
+    const importPanel = document.getElementById("import-panel");
+    const refineButton = document.getElementById("refine-button");
+    const qualityValue = document.getElementById("quality-value");
+    const refineFeedback = document.getElementById("refine-feedback");
+    importToggle.addEventListener("click", () => {
+      const expanded = importToggle.getAttribute("aria-expanded") === "true";
+      importToggle.setAttribute("aria-expanded", String(!expanded));
+      importPanel.hidden = expanded;
+    });
+    refineButton.addEventListener("click", () => {
+      qualityValue.innerHTML = '<span class="quality-dot"></span>Queued · texture pass';
+      refineFeedback.textContent = "Texture and color cleanup queued.";
+    });
+  </script>
+</body>
+</html>
