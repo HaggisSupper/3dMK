@@ -1,0 +1,2082 @@
+{
+  "schema_version": 1,
+  "self_excluding": true,
+  "source_files": 415,
+  "files": [
+    {
+      "path": ".codex/skills/3dmk-dev/SKILL.md",
+      "size": 5625,
+      "sha256": "2debf01d5c2aac04f6b31534bebefd2e2552302b166caa91443100e31cca041f"
+    },
+    {
+      "path": ".codex/skills/3dmk-dev/references/authority-map.md",
+      "size": 2202,
+      "sha256": "bbd30f98c565e458fd45ea12a2ee0c8f6560bc08fd9f6f16544c103d02baf861"
+    },
+    {
+      "path": ".codex/skills/3dmk-dev/references/tool-execution-router.md",
+      "size": 1456,
+      "sha256": "b87e98ca2f6547ace9a1f4f33e5b09bc73a820f5444112192faf9e2289bcfd1b"
+    },
+    {
+      "path": ".codex/skills/3dmk-dev/references/verification-matrix.md",
+      "size": 1862,
+      "sha256": "e893f97178fa3a7691a0db824f5428096f4a16b37227e48043d3e42750c5a020"
+    },
+    {
+      "path": ".github/COPILOT_DEV_INSTRUCTIONS_SETUP.md",
+      "size": 2002,
+      "sha256": "b4da0df89d379479127f66a636a9533b0d02f92789c75bfa66805dfa91d9cb07"
+    },
+    {
+      "path": ".github/DEV_INSTRUCTIONS.md",
+      "size": 1316,
+      "sha256": "b321d7c1a2bcad0f33b25abe680cdcd3fac7b58bc7fe37d0a62fbe106c1eb79c"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "size": 1450,
+      "sha256": "9cc007ae1f7450f41266a6c22b02355172051cf7e49e721bf727d72af5e4821e"
+    },
+    {
+      "path": ".github/workflows/advanced-feature-integration.yml",
+      "size": 3252,
+      "sha256": "a25936d4842693fe31a7174070b8312faff8f11a542eefbe357f6599861cfa39"
+    },
+    {
+      "path": ".github/workflows/apply-local-ai-network-hardening.yml",
+      "size": 7109,
+      "sha256": "b8897cecf3efade8f31288ae0bf0fa77a35ca816060464c65946cd3f5041b9ae"
+    },
+    {
+      "path": ".github/workflows/copilot-dev-instructions.yml",
+      "size": 3274,
+      "sha256": "ea1ac2c81cd5e7840fc17e32ddaa4542f8787dfb3832b9060c68349d8356f2f0"
+    },
+    {
+      "path": ".github/workflows/documentation-validation.yml",
+      "size": 515,
+      "sha256": "1abecd63ec8dc0e8b46a991e641a7ec2fbdac6ba37ea9c62d65d33ad44e5d241"
+    },
+    {
+      "path": ".github/workflows/local-intelligence-core.yml",
+      "size": 1452,
+      "sha256": "f388f2736777ca3818078f66949ecab7b57a6525d5bcd16437a5aa8f648843bf"
+    },
+    {
+      "path": ".github/workflows/macos-build.yml",
+      "size": 1570,
+      "sha256": "4f83351358ea9006b749240a4568ed3cfed0b7ba328d40ef97b81f01df8b60ac"
+    },
+    {
+      "path": ".github/workflows/materialize-spatial-platform.yml",
+      "size": 2811,
+      "sha256": "0d32c03f28f8b4e4a71102a731e8b0066e8de27ebf377710232fb43b25edb6e5"
+    },
+    {
+      "path": ".github/workflows/mistralrs-harness-validation.yml",
+      "size": 2406,
+      "sha256": "b6e46b43fd2baa1a5797c0488769b363325e1f6d3f97f8e9d888f03319a4021c"
+    },
+    {
+      "path": ".github/workflows/release-desktop.yml",
+      "size": 3456,
+      "sha256": "632c466f491e201dcdd986e918fb85953badf2a44ba4f613c7fda3161550bf4f"
+    },
+    {
+      "path": ".github/workflows/tool-execution-router.yml",
+      "size": 2120,
+      "sha256": "8068104c684eeb0bac3f6d65c6e5d9bc236e4cf3e8258b67311a6b909d1d98c8"
+    },
+    {
+      "path": ".gitignore",
+      "size": 554,
+      "sha256": "b3ffa56fce4feabf1334004d122d8680d7952c0423d75749cd8597e3057e23bd"
+    },
+    {
+      "path": "AGENTS.md",
+      "size": 12365,
+      "sha256": "c458ccb300bdc8859d433219c6cf035cb0a21b5438c5223687ccde533a2d1109"
+    },
+    {
+      "path": "Cargo.lock",
+      "size": 112778,
+      "sha256": "7bf6594eb8ed2513501a21001194c02e99f3ffb8ade3f259238ea57c670749dd"
+    },
+    {
+      "path": "Cargo.toml",
+      "size": 1415,
+      "sha256": "5ffc7962c0edb8c302af8dfe6a4a526316618be2df24c3a80e2d309f728cc669"
+    },
+    {
+      "path": "Open Design Prototypes/3DMk-Implicit-Reconstruction-Workflow/check-surface-reconstruction-workflow.mjs",
+      "size": 736,
+      "sha256": "daa0b3d64f53abf9c109c1f698eaaba8dd1fb873d5631fd6319a73dbb279e5ca"
+    },
+    {
+      "path": "Open Design Prototypes/3DMk-Implicit-Reconstruction-Workflow/surface-reconstruction-workflow.html",
+      "size": 42888,
+      "sha256": "2e5a1da2c5c9c70d9a745e0a1e3ccf26d47395ecdcdabf3c7ec20c4f4c54b9ff"
+    },
+    {
+      "path": "Open Design Prototypes/3DMk-UI_UX-2026-07-17/3dmk-workspace.html",
+      "size": 59074,
+      "sha256": "333a7f53cf07a3659db3312d8750cb1cdc763bc35fabc38c2e6e41688ae852e1"
+    },
+    {
+      "path": "Open Design Prototypes/3DMk-VWM-Perception-Port-UI-Plan/3dmk-vwm-workflow.html",
+      "size": 37817,
+      "sha256": "207f15d8da66321b6edce22012d1fc6af893568c2d94c1fc22f4104422b04f8a"
+    },
+    {
+      "path": "Open Design Prototypes/3DMk-photo-package-import/image-assisted-package-refinement.html",
+      "size": 14766,
+      "sha256": "94131c8cce450d2c180b6a77561864093254ff249fc51b7b3bd1523226d4d26f"
+    },
+    {
+      "path": "Open Design Prototypes/README.md",
+      "size": 1057,
+      "sha256": "c975c4fefd9996c9bbf30b18d534a3f7dea9a7a5e7720547d31396fff577d0c9"
+    },
+    {
+      "path": "README.md",
+      "size": 8735,
+      "sha256": "edb023d2d5c91c6acac38c148edc467664414d4ad01ef8e2fb58bb4aa4834411"
+    },
+    {
+      "path": "REPO_MAP.md",
+      "size": 1373,
+      "sha256": "682e75e7257477578077574f6495913a3130b26d46778e073f5457014c55b42c"
+    },
+    {
+      "path": "SOURCE-BASELINE-STATUS.md",
+      "size": 611,
+      "sha256": "d1b1afe2efe13e2db0443dfe9cd5597f214c8b0b5f9033edb35dec1d7333bf43"
+    },
+    {
+      "path": "VWM-Repo-Implicit/.gitignore",
+      "size": 48,
+      "sha256": "027371e19318f2301f5cc983998a8a2b329134bc79465b04245ffbef1f7c65e9"
+    },
+    {
+      "path": "VWM-Repo-Implicit/BUILD_STATUS.md",
+      "size": 1981,
+      "sha256": "9841f1a6c4aecf511fecae9f79234edf401c57efc5e7f80e5e78fcc13022ecd6"
+    },
+    {
+      "path": "VWM-Repo-Implicit/Cargo.lock",
+      "size": 78086,
+      "sha256": "6f9473f8e46447b0451589323fb6300d659e704a3797374ef1106fed5d384528"
+    },
+    {
+      "path": "VWM-Repo-Implicit/Cargo.toml",
+      "size": 599,
+      "sha256": "df3df0037b2d93f0d03ad7baee0f84985b019b85b485b523d620bbba8fe1905b"
+    },
+    {
+      "path": "VWM-Repo-Implicit/README.md",
+      "size": 3633,
+      "sha256": "2eb26c180b5b3fda172f78582c6d5aa2678a4c4a0646e35705ff03aea3e5b977"
+    },
+    {
+      "path": "VWM-Repo-Implicit/THIRD_PARTY_COMPONENTS.md",
+      "size": 695,
+      "sha256": "af3ff478861e686917c13a041919d426065781313ba68e8a7450bd2af497dea5"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-core/Cargo.toml",
+      "size": 214,
+      "sha256": "dc6f51e7b7250446f2804dcb8d27d1d2ccb00fc1adc66f1c3a9361b22a3a7635"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-core/src/datum.rs",
+      "size": 1206,
+      "sha256": "3ca9ac881e1fab1060efc865758bd9b3488e14a2eaa131920216c73f3819f646"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-core/src/errors.rs",
+      "size": 407,
+      "sha256": "bde82da7fae5e5490b3dc055494cec5a9fa1afc22454ae7f7d9a1f613c41d8f6"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-core/src/lib.rs",
+      "size": 143,
+      "sha256": "47e4814da5a98eca03a7eee8b31eb1970bdb9898e1c2d106653f66486262865b"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-core/src/scene.rs",
+      "size": 2074,
+      "sha256": "1d539ca8218ecd32775737ec1d4b679e127c603cca8c9a86de091b1c3747b949"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-core/src/structure.rs",
+      "size": 1718,
+      "sha256": "da27774bcd8f720992bc440271e01b7212aa83c7828d044c8e6feac941524cf2"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-geometry/Cargo.toml",
+      "size": 380,
+      "sha256": "327f66df59f4f5e7ad17ca767378ef3a787fdeef724ae7bbf5b0a4f9cd9eb578"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-geometry/src/adjacency.rs",
+      "size": 1605,
+      "sha256": "50c31bf3c2cf9d0d1628beffacfd28cfa4b45490cfa1cf6a5acc8559e5feb11c"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-geometry/src/analysis.rs",
+      "size": 2698,
+      "sha256": "d4399d6a15efff7ab3f47a8caac776a24bacac31c8c8df8de196b320e3668acd"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-geometry/src/intersections.rs",
+      "size": 2388,
+      "sha256": "8fcc8095717eab497a485a72ee933fee88d438672b7b5d1db9e34321c00186f5"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-geometry/src/lib.rs",
+      "size": 195,
+      "sha256": "879ee69dc9957fe2d28d4009952920d1660396fb53c91d09d538b33c193b418b"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-geometry/src/math.rs",
+      "size": 2985,
+      "sha256": "3eb1e95a32f8b168ef834dea5cb2f2d5ed8dc4ef35324ce598f4ef5a81866385"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-geometry/src/normals.rs",
+      "size": 1002,
+      "sha256": "61d618f42086af603ca0beb263fb9404935c4310b8209ca25fb929138f672764"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-geometry/src/patches.rs",
+      "size": 2805,
+      "sha256": "11ea348f691a9ad6ff53ee92bd5598ab7cb5272614a0249d90d06aff80c2874c"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-geometry/src/planes.rs",
+      "size": 2922,
+      "sha256": "22afbd27629b17c6402fa9c11bfa043da41d1789508e0ed4bcb339daf1510c89"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-geometry/src/relations.rs",
+      "size": 3692,
+      "sha256": "7fa093a652eafda156141f5d210696a438cb36cb4de337dcd85d6c4cf1ad2cd1"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-geometry/tests/regressions.rs",
+      "size": 1765,
+      "sha256": "5111a2fc66dbbb2b91081144c94726c3c7de0f85b539261187ca43aaec567080"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-geometry/tests/synthetic_room.rs",
+      "size": 2476,
+      "sha256": "5a629ca1f164949fa4020bb9e0968a9c06c146758e70a9087a0cc8cc6aadbf87"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit/Cargo.toml",
+      "size": 363,
+      "sha256": "88376781909d8e0ddc04ced4d515dbc17bf872c75dcb1a3329eee7217cb61d8c"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit/README.md",
+      "size": 1471,
+      "sha256": "7af83178a6480aafcfab931746208076ca57769fb79e7f8ee85e014bde863e92"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit/examples/analytical_sphere.rs",
+      "size": 661,
+      "sha256": "9e5fa3798579c39765d29475573a442213fc2303d61b9cf725bdd87109a34782"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit/examples/reconstruct_scene.rs",
+      "size": 4119,
+      "sha256": "ac798505c55e7ed0210cd828cb77fdcd34a90110c9dec4088fd66e3f8211b3fd"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit/examples/structured_rays.rs",
+      "size": 1223,
+      "sha256": "66699cca0141eabdf698b361673a2285bc6d9a915a68f2f38289e45ae3027e7a"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit/src/lib.rs",
+      "size": 101,
+      "sha256": "a352ead4dce63e97c31a3cf46a4d13bc9783e3ac829152f9aaa7eba35648b0e9"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-core/Cargo.toml",
+      "size": 214,
+      "sha256": "1beca63a6c7b20125dc96863dea796a228805e2045a3c39d079fac96dba5169d"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-core/src/analytical.rs",
+      "size": 2952,
+      "sha256": "ffeb0c3f1aa4d3ef910e6995eb4a5702221c5b7758f23efd41a5dbcad80faaa8"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-core/src/contracts.rs",
+      "size": 12766,
+      "sha256": "00ea3fab5f3fd9ca33be43f4299a70d249dee09866a918931d05fe4ca955ff1c"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-core/src/error.rs",
+      "size": 1740,
+      "sha256": "f72656cf0b46b6412519d7aaad8744ba7e5f802325c3312f39628b23e20f3308"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-core/src/grid.rs",
+      "size": 6973,
+      "sha256": "355c2bfb738624d91d8d073f9815558455368f965e739a030aa777571317390e"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-core/src/lib.rs",
+      "size": 209,
+      "sha256": "70ab54c1bf58691c9fa288c782d169f9810981fadbf4190178e6c8bf9bc3c5f5"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-core/src/mesh.rs",
+      "size": 1719,
+      "sha256": "677164f0e18f3b4b8e3d6a94ccf81004f6efd3fc5ddc427b58f0e3d1642c35c1"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-core/src/ray.rs",
+      "size": 14815,
+      "sha256": "fce4ef7cd08f0e17817948c97b38e87dad89e532ef1fc8ea1caed2e6ea7687db"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-core/tests/contracts.rs",
+      "size": 1328,
+      "sha256": "c30451d8e84a0cf849eee3e63712ca725095af6f2225d1e54f6d0ae023798f43"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-core/tests/grid.rs",
+      "size": 917,
+      "sha256": "dd3131e0f582fa12585f5fbd50708f444cbeaa7f8a0ffe8739e0b5eeb2ebbbff"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-core/tests/ray.rs",
+      "size": 2905,
+      "sha256": "8c07857c8a7a4a92a347ec9ac47716abe3cb2079dad6000ca617b16db59c2395"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-poisson/Cargo.toml",
+      "size": 267,
+      "sha256": "809a5812514adb1366717c0d2e00789325603bc6423ff09e60574a6b28888886"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-poisson/src/lib.rs",
+      "size": 5015,
+      "sha256": "2bef296e38fcac66dff3017457e78c743f5540b9f88429f023f3cc5089d2da5a"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-poisson/tests/reconstruction.rs",
+      "size": 1572,
+      "sha256": "98ef1911ece6c11ff3ffd1676234913771c50869466b6745902e4eacd72d81c1"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-surface-nets/Cargo.toml",
+      "size": 241,
+      "sha256": "c630a02a8b6adc18a2ce14da0fff3662fb3932a75fa704ef405d42b2d52690d0"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-surface-nets/src/lib.rs",
+      "size": 3164,
+      "sha256": "4888a090e76db96f2eac0f07b89f07e96003cd339c9785c2a15b7e601cbabd84"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-implicit-surface-nets/tests/sphere.rs",
+      "size": 731,
+      "sha256": "651d1d9634d912a7f3f04b286b0c2f126b914b703a5154b4ce9d7c26e30f3742"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-io/Cargo.toml",
+      "size": 373,
+      "sha256": "fec5fbfb543ee49c8ce6077b0bd2e4385a92c4d9bff5cac8e44bfa9a812c43b1"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-io/src/convert.rs",
+      "size": 732,
+      "sha256": "7fcc45a94fd765c3b50ea50abf54553028926a3e33b8edad2f4727aa133f371b"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-io/src/format.rs",
+      "size": 907,
+      "sha256": "b8f0cd743cb3f4e5c14c1ff8914cb409a50798943f9d20bcb364ab1fe498a2ef"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-io/src/import.rs",
+      "size": 709,
+      "sha256": "a24b2ea1379b4727c7cf64eda193d6e9d6358beb4a03e6d3303cc9bd9ba4bc47"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-io/src/lib.rs",
+      "size": 129,
+      "sha256": "95d34f85a875fcd22da42958e11ac9b8442c86865bf0f76a2c465e662e489c6a"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-io/src/loaders/gltf.rs",
+      "size": 12061,
+      "sha256": "ff693f2e2439fa0652464d1fbdc779f6d443a2d1a8a79807c33af9479c1b890d"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-io/src/loaders/las.rs",
+      "size": 1429,
+      "sha256": "ca409a98c5a81e8a06da64217722cebad881d44ea2487e380af19612343adc35"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-io/src/loaders/mod.rs",
+      "size": 184,
+      "sha256": "c5ad404b1868815ea2107048a9c753842c44b45df57299eedd29c80209d5f480"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-io/src/loaders/obj.rs",
+      "size": 1686,
+      "sha256": "247d55a876ab4b425c3cee461f2469f9a03a3f880671f4ca115215d618d6d676"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-io/src/loaders/ply.rs",
+      "size": 4434,
+      "sha256": "69491c6e12175e64e475fc331eab4ff2490f9d44dc31d807e6abb6199c5d4795"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-io/src/loaders/stl.rs",
+      "size": 1104,
+      "sha256": "37f286146cd84c41a2443c25ce5b5ee55df6d42015712d6e842fa04634c68083"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-io/tests/loaders.rs",
+      "size": 8213,
+      "sha256": "7b14c763b2295fdad67f38a519425c19138639854f94ab622cee790570a05aa8"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/Cargo.toml",
+      "size": 787,
+      "sha256": "2ed65fa24a854fd384dfa46d1e032899be82eb834bf00a229ccfa60ca5266f66"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/README.md",
+      "size": 2669,
+      "sha256": "f353c73f69815a44aa3ba5805b41fd051cac5f8a7b31716e2f37eb404370881b"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/examples/deterministic_pipeline.rs",
+      "size": 1302,
+      "sha256": "4af5462e4e3677f8b66450912ae9a84e5db92991ea699558dcb916ffcdc2d3fd"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/src/backends/mod.rs",
+      "size": 92,
+      "sha256": "6100b28765078c9a49a017066877e367893e1bf4fdf8d9ab25ae8024251053d6"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/src/backends/tract.rs",
+      "size": 25562,
+      "sha256": "eab06585879253cccebe3d69c90879d61abc7c482f2e05c7b9c533aa084434b6"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/src/backends/vlm_http.rs",
+      "size": 4475,
+      "sha256": "5f01f42a5e55a72ad9fec1dae4eeeefd367309f969c8dab1bfd564074e75851a"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/src/classification.rs",
+      "size": 3679,
+      "sha256": "ef7d41ca4bef7437247beddae68f5791180087e81f41f3716077583543691320"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/src/contracts.rs",
+      "size": 5904,
+      "sha256": "97699c0e74677416793701c3067a1c66b5186bd4a700b4edb80dceebba4d14a2"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/src/errors.rs",
+      "size": 1289,
+      "sha256": "21f07b39a3c0cc48e0996866f224b462e1074f7e560106e4fab843a70a169976"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/src/features.rs",
+      "size": 4364,
+      "sha256": "dda5a903feb7c59999f6832f4e961bae7beaf0d4295266a6da6f1bdf07483b23"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/src/image_ops.rs",
+      "size": 6856,
+      "sha256": "cecb875a80e885fc0bbf6da9f1fb74cab95b6bc348391d8d1b97dc9391e83025"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/src/lib.rs",
+      "size": 433,
+      "sha256": "eaccec8e43d7e01878a381d1f1e229e57d0d41f72dc88290b4e13fcb8b0e1b63"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/src/mask.rs",
+      "size": 3521,
+      "sha256": "28ea2568fb3c5a5fcd5e6eb91ff8b25558f9c84b522b92654603dccab8f1d63e"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/src/pipeline.rs",
+      "size": 5430,
+      "sha256": "7dc1ca0eb764382a456de88c1018df12efa7cc3941b6439c530b55acc3fb2e59"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/src/segmentation.rs",
+      "size": 4727,
+      "sha256": "b7bbf084046fa4593852cfef97b08d259ff381a48b7ecdc85b437468fc480a5d"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/src/slicing.rs",
+      "size": 8846,
+      "sha256": "1deaa3453c5aa9695cdb4577ab592507d1ad64544f90c678e149b458f101550f"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/src/vlm.rs",
+      "size": 2334,
+      "sha256": "c4584e5bd273d1e54e1525bb1fa00727877b655e502a8d51eb7f1de58391f8b3"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/tests/mask_and_slicing.rs",
+      "size": 2587,
+      "sha256": "e198e6a56d9d090c469e04014abd09b941f4c0ec1b553abe073c17b453300b13"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/tests/pipeline.rs",
+      "size": 2686,
+      "sha256": "d05fd64eeee62a93efdda4bb26aa031bc217cc53f13ef88db95304d0cc4abd2f"
+    },
+    {
+      "path": "VWM-Repo-Implicit/crates/vwm-perception/tests/vlm_and_segmentation.rs",
+      "size": 1442,
+      "sha256": "3291297151202c0cebe141f79b4860246ceacaf598cf680c077d28d259f60f0f"
+    },
+    {
+      "path": "VWM-Repo-Implicit/docs/implicit-field-integration.md",
+      "size": 4091,
+      "sha256": "a29d457b5e9a109cb53b6b2964c3fcb599d560cad26b3d836a3aeab1ea06fbdd"
+    },
+    {
+      "path": "VWM-Repo-Implicit/docs/perception-integration.md",
+      "size": 4277,
+      "sha256": "291f54533de2ed9d4a8849c0f17d84bbac9aa5ccbacb1a485d7713369830efb9"
+    },
+    {
+      "path": "VWM-Repo-Implicit/models/README.md",
+      "size": 1898,
+      "sha256": "4b50d5d8e53745908363391199211d11a3e9490bc3bd18475c5fbe7b5bc8f351"
+    },
+    {
+      "path": "VWM-Repo-Implicit/models/examples/classification-manifest.json",
+      "size": 318,
+      "sha256": "5190f5d40f2907a18a456d35ec4bacd1de491c08ea6a467509b087cc52dde4a5"
+    },
+    {
+      "path": "VWM-Repo-Implicit/models/examples/segmentation-direct-manifest.json",
+      "size": 400,
+      "sha256": "1daffa9af1f047b15d4fda58b70f9d7d5ebbab6d5ad1ea95c6c5854a3280fd67"
+    },
+    {
+      "path": "VWM-Repo-Implicit/models/examples/segmentation-yolo-proto-manifest.json",
+      "size": 593,
+      "sha256": "1346918b29210b97e83376ece0f2dbf40de5cdb04c770ea2fb52138f968be62d"
+    },
+    {
+      "path": "VWM-Repo-Implicit/rust-toolchain.toml",
+      "size": 86,
+      "sha256": "0fac3d0eb0431d963d7648ae5ccd9bb612db77b01c7dc796ff73f5ea4529c0d1"
+    },
+    {
+      "path": "VWM-Repo-Implicit/scripts/check.ps1",
+      "size": 175,
+      "sha256": "19c208fde276ac4823d82d2bf2f6fb4e045f5a1cb582722e526b26d5707eb7ef"
+    },
+    {
+      "path": "VWM-Repo-Implicit/scripts/package.ps1",
+      "size": 498,
+      "sha256": "f25b14492134bcc0331e86654672535c3ea734d59f7550914caffbf31d68542b"
+    },
+    {
+      "path": "VWM-Repo-Implicit/scripts/static_validate.py",
+      "size": 7444,
+      "sha256": "ef881cbabfbb889dd739863d0506e593b8fcde5f4761984d162d9a7f5cce0db4"
+    },
+    {
+      "path": "bootstrap_launcher.ps1",
+      "size": 1912,
+      "sha256": "665691cc60d0442f247214c1571ae8c4f7ded4f827b426adfaca049dda873187"
+    },
+    {
+      "path": "build_project.py",
+      "size": 108296,
+      "sha256": "c05d68fe825285ab8c6785ed699d0e218592fedfd90f31e1e04ca1f8c4ffb652"
+    },
+    {
+      "path": "config/default-domain.json",
+      "size": 1492,
+      "sha256": "49add6e98d2e444c18ca6c4747a80c14d65391b490b9e3b9b5d4bf4a0234c6dc"
+    },
+    {
+      "path": "config/geospatial-domain.json",
+      "size": 2186,
+      "sha256": "cf51cff4ba5cb71f898610b9f1408cd7b05e64dfb730520d9d973b0abc871233"
+    },
+    {
+      "path": "config/indoor-domain.json",
+      "size": 2332,
+      "sha256": "0a93dcc4f3f6eb9d08956e4761bdb24c4acf7f68aca50fba462c48551ab371ea"
+    },
+    {
+      "path": "config/product-domain.json",
+      "size": 2397,
+      "sha256": "ac19d05e0e37f578756712282907cea9449ee8ca55d67923f87d9337b90d244b"
+    },
+    {
+      "path": "config/subsurface-domain.json",
+      "size": 3007,
+      "sha256": "c96d08093e6bde8aaf6e8626fbc07a4eaf7a9bf42942f470c99c876a3c3ffc77"
+    },
+    {
+      "path": "contracts/local-intelligence-cloud-egress.v1.json",
+      "size": 387,
+      "sha256": "33fb21e16fad05bfba7a592dc1a70f5817d94e9aac5b5d989a1b21c9becea7f0"
+    },
+    {
+      "path": "contracts/local-intelligence-routing.v1.json",
+      "size": 1132,
+      "sha256": "0129577c6fb00ef62288aa99645ff99b1e7d03e19e5ec576432ae9abc5ac0486"
+    },
+    {
+      "path": "contracts/local-intelligence-runtime.v1.json",
+      "size": 436,
+      "sha256": "2df68c2e9f1dc5724fc5642c1b19ef84770ef5268b41c0838dbde87aaf0a4c19"
+    },
+    {
+      "path": "contracts/veritas-child-conformance.v1.json",
+      "size": 429,
+      "sha256": "28fb7a2fda455e6af5378cbfd165e2d10e17bea85263c569feaf59788d668d94"
+    },
+    {
+      "path": "docs/APP_STYLE_GUIDE.md",
+      "size": 25060,
+      "sha256": "f46a11ff816d41fe44f36044a7cc03f85f0228ccaa344288157a1bd055ccf935"
+    },
+    {
+      "path": "docs/BHA-PLACEMENT-NEXT-SCOPE-2026-10-09.md",
+      "size": 3791,
+      "sha256": "662453152dfdd7f29120b7b076d8ed0fb6ee26de9aaebaa8db522c2f56456493"
+    },
+    {
+      "path": "docs/CURRENT_STATE.md",
+      "size": 11187,
+      "sha256": "33061b765157f7f6e7566167b07e2d022a19e18a6b2fbf2b4ea9c494671a5892"
+    },
+    {
+      "path": "docs/MULTI-GLB-2026-10-09.md",
+      "size": 3706,
+      "sha256": "3f7cf8cd1fb872c3351bbada7adc9f7edbb184ea0f1a8d1f03b308a5067db1f4"
+    },
+    {
+      "path": "docs/README.md",
+      "size": 5843,
+      "sha256": "103beebb63b10dfe8024bd7b412c25d8509df2c7399425afbfc0e9aa385a14d5"
+    },
+    {
+      "path": "docs/REPAIR-2026-10-09.md",
+      "size": 5411,
+      "sha256": "83ade7c55a579bba90d14e78c061d09e873d3aef3c608f379d3885c80e562c5e"
+    },
+    {
+      "path": "docs/SCENE-PANELS-2026-10-09.md",
+      "size": 5795,
+      "sha256": "2f26ae807e12710ff67d02505d05fee76d6258fad55a2ef4f83a53096024ee28"
+    },
+    {
+      "path": "docs/VWM_ADVANCED_WORKFLOWS.md",
+      "size": 3029,
+      "sha256": "be29da8eda2d740db51f0fc41e9f8b0ef84e238c562abfd1f31a340ba80d703d"
+    },
+    {
+      "path": "docs/WINDOWS-CANDIDATE-README.txt",
+      "size": 2139,
+      "sha256": "c35df38b7ebd25410b1b046a32cb06eb752814f6d76b403f3890cb5b5e258648"
+    },
+    {
+      "path": "docs/agent-execution/2026-10-09-repair-scope.md",
+      "size": 2080,
+      "sha256": "e6b7b4cc41c32a0fdfee767003f08efad6e4a796a38719c0c46a58afc298d6cc"
+    },
+    {
+      "path": "docs/agent-execution/2026-10-10-axis-tree-scope.md",
+      "size": 2967,
+      "sha256": "78422e0c8ba6536abc1695c5dfce2cd8cab3e949bd9dadcd7a4fca1d52556110"
+    },
+    {
+      "path": "docs/agent-execution/2026-10-10-scene-actions-scope.md",
+      "size": 4892,
+      "sha256": "de54c93ac8ab22aa880e5d21ab5389b8ad7d751bb126055e03c3c35a1b8598f8"
+    },
+    {
+      "path": "docs/agent-execution/CUDA_FOUNDATION_PROGRESS.md",
+      "size": 1870,
+      "sha256": "1b6f17c3855b798c6dfcf095534ad8136097246efa61d158b08700de561fadc0"
+    },
+    {
+      "path": "docs/agent-execution/DOMAIN_CONFIG_PROGRESS.md",
+      "size": 3768,
+      "sha256": "88dfd7b8bf0567c37f18c95e47b654d9d90520230f8d8b5e9c715619afb18cf3"
+    },
+    {
+      "path": "docs/agent-execution/MISTRALRS_LOCAL_AGENT.md",
+      "size": 8170,
+      "sha256": "1d3a557f37cc0302dcceffa430a8d90e325fa022053044301c4cafc94e20294c"
+    },
+    {
+      "path": "docs/agent-execution/README.md",
+      "size": 3627,
+      "sha256": "ca2c7e0d71f7fc395e88e508dca2b53f6fc3d16bcc208796b73fdc7c5e17b610"
+    },
+    {
+      "path": "docs/agent-execution/VWM_PROGRESS.md",
+      "size": 4201,
+      "sha256": "f653d1143ed68a97a60ef68e7869a971b9a48e8b7e36ab7625858e08567e7219"
+    },
+    {
+      "path": "docs/agent-execution/WORLD_CLASS_ACCEPTANCE_MATRIX.md",
+      "size": 3824,
+      "sha256": "1f92c8abc29c61b8a8371226a886b0a4c7182b27d2f3eb26a5608253b193c5a7"
+    },
+    {
+      "path": "docs/agent-execution/WORLD_CLASS_RISK_REGISTER.md",
+      "size": 4351,
+      "sha256": "22befde11e1a468c72e921c2ec7b196120747247800d971f65880c387d9add7f"
+    },
+    {
+      "path": "docs/architecture/CAPABILITY_FRAMEWORK_AGENT_GOVERNANCE.md",
+      "size": 7595,
+      "sha256": "025512aa91637bcaff0c2568f8a7da566452cbcc7be12e4447b51f4601c3c58e"
+    },
+    {
+      "path": "docs/architecture/CAPABILITY_FRAMEWORK_IMPLEMENTATION_SEQUENCE.md",
+      "size": 6767,
+      "sha256": "bb5c2090f0106db5992e9cfd09fe646761b842cd0c291808317f56c9f16eec6b"
+    },
+    {
+      "path": "docs/architecture/CAPABILITY_FRAMEWORK_MASTER_SPEC.md",
+      "size": 11823,
+      "sha256": "220817d269e14007a4d17055beb6b1bad7540661c3fb9603b6cfea256d605a0d"
+    },
+    {
+      "path": "docs/architecture/HARDWARE_AWARE_EXECUTION_SPEC.md",
+      "size": 4500,
+      "sha256": "b7fde273d0551cb7c65051d04369f940bb6638f5e21d4f038232426e6501391f"
+    },
+    {
+      "path": "docs/architecture/IMPLEMENTATION_GUARDRAILS.md",
+      "size": 8424,
+      "sha256": "6a299fe6025d6dfc330911d1cbf608aba18fc5a7fc2dc1e25d62669c1e0b5bea"
+    },
+    {
+      "path": "docs/architecture/INTELLIGENCE_ESCALATION_SPEC.md",
+      "size": 6454,
+      "sha256": "5466465300120fd2269dcb54c441312c52cc8ac974cb408638a778acd3cf0055"
+    },
+    {
+      "path": "docs/architecture/NON_NEGOTIABLE_ACCEPTANCE_GATES.md",
+      "size": 7924,
+      "sha256": "296585da9077670e388713dcf42a6d423408c5203a1d9bc72073daf299c3ca41"
+    },
+    {
+      "path": "docs/architecture/OUTCOME_EVALUATION_AND_CONVERGENCE_SPEC.md",
+      "size": 6379,
+      "sha256": "185e304c6584a362cdd6f1a214aecef6796d0a101ba1a1d37f0b509e0c2ca67d"
+    },
+    {
+      "path": "docs/architecture/decisions/ADR-001-transactional-project-store.md",
+      "size": 3321,
+      "sha256": "bb7d9542b502528017c302adfb9ae0cf35059fe4ae48cf659a480e45c5877523"
+    },
+    {
+      "path": "docs/architecture/decisions/ADR-002-supervised-cuda-worker.md",
+      "size": 2306,
+      "sha256": "e9065e47c70bf5f41643e7c8f6102f7c3efb9257ce17c727e68f992a4faaabea"
+    },
+    {
+      "path": "docs/architecture/decisions/ADR-003-tiered-cache.md",
+      "size": 2834,
+      "sha256": "edc8313f51a01868fc06476159c759760919861abea66721010e27fdd85266fc"
+    },
+    {
+      "path": "docs/architecture/decisions/ADR-004-capability-domain-convergence-architecture.md",
+      "size": 7234,
+      "sha256": "f06ff7643a71941843118dcc9dbff6c1e72abceb44237c59575e34b3c64a60ef"
+    },
+    {
+      "path": "docs/status/advanced-feature-integration.md",
+      "size": 3291,
+      "sha256": "8ebd5ef9845ae255013502bdd58a3a8d5281678058b6c2e4b1f3349d58ac17a8"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-31-vwm-authoritative-revision-workflow.md",
+      "size": 23665,
+      "sha256": "a3931ccc7377514f78db8c113834c6709ddd728200f469eaa61ff59c9af14c63"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-08-07-3dmk-foundation-batch.md",
+      "size": 11655,
+      "sha256": "3b815aeabcdf9dc2120d02d84e9b4f25a8fe07513c3512f564c5f687e9a14673"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-08-07-3dmk-world-class-program.md",
+      "size": 10661,
+      "sha256": "dee95b7e1cc0aa6d817b6dd68cb1529f3b39db9cb806b774184c65a3be4d1873"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-08-19-3dmk-tool-execution-router.md",
+      "size": 4248,
+      "sha256": "fe59f7088cd7be32f9c2201a9a4f1bedd03a9a0134ca08fe59e270bb86777f09"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-08-19-ultra-small-intelligence-subsystem.md",
+      "size": 7723,
+      "sha256": "7dda043c39540573795fba635be671d7ee5a564db757ee514855175e4662679e"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-08-07-3dmk-cuda-first-system-design.md",
+      "size": 32715,
+      "sha256": "c43c9237665ccfd138ba2ed6ebbbad83d67ac226994979e047a0e3f209e7b4ac"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-08-07-3dmk-world-class-quality-standard.md",
+      "size": 11456,
+      "sha256": "c29670eb008663d6d1e1aa49927c9991ed328596bb7f03c01e600a943ea962cc"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-08-19-3dmk-tool-execution-router.md",
+      "size": 2982,
+      "sha256": "14ba46e0fa1d6875ffb67df8a38c989f2212dd0388e2274b5b101a9dc19266af"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-08-19-ultra-small-intelligence-core-design.md",
+      "size": 5272,
+      "sha256": "d55e5a4193855563686b426c5267d90c12d1cfa23d8c1f36ffb831bf9723835a"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-09-22-configurable-domain-objects-design.md",
+      "size": 11812,
+      "sha256": "f0ab593a40e9b5e77c55a322cdd3ab9d74fd5772095b10758bcf50d0cc94515d"
+    },
+    {
+      "path": "launch.bat",
+      "size": 650,
+      "sha256": "6c025d4c8d85edfdb1d90c08d39f9a9b623b89c73f0709fa8bca1d53a3890580"
+    },
+    {
+      "path": "oilwell-converter/Cargo.lock",
+      "size": 129668,
+      "sha256": "39c75123369803ba5833dac6dab502a2d156ee86eae5dcbe1c1417c156374ca2"
+    },
+    {
+      "path": "oilwell-converter/Cargo.toml",
+      "size": 168,
+      "sha256": "010749f82b20b7ee1493b28482d4e2594c15a66c5ca3eddc53cd37d0c7d84d66"
+    },
+    {
+      "path": "oilwell-converter/crates/oilwell-cli/Cargo.toml",
+      "size": 302,
+      "sha256": "df0fb3e284100b3602e4eb3464fd41b440d0f26c03b56e647dfcfefd7dd52137"
+    },
+    {
+      "path": "oilwell-converter/crates/oilwell-cli/src/main.rs",
+      "size": 2583,
+      "sha256": "12a3d4c4738e2fd5d8e31e4f863ca3fc3096677ef98500654ebb9f93b4a8113b"
+    },
+    {
+      "path": "oilwell-converter/crates/oilwell-core/Cargo.toml",
+      "size": 215,
+      "sha256": "de973a1f45670bbe7da5fff7f38256f04ad3214c4724fdd7e9180c219e683ed2"
+    },
+    {
+      "path": "oilwell-converter/crates/oilwell-core/src/contract.rs",
+      "size": 1191,
+      "sha256": "8cbf643c410355857c4fe2aa7f74c1d53f45c52285bbd3a5c4d39c97504d0f51"
+    },
+    {
+      "path": "oilwell-converter/crates/oilwell-core/src/convert.rs",
+      "size": 869,
+      "sha256": "630d0e28d96c43ae570d7e47d81ec6bf47859fa99dd774460b2ce7ef0066362c"
+    },
+    {
+      "path": "oilwell-converter/crates/oilwell-core/src/csv_input.rs",
+      "size": 3146,
+      "sha256": "58a54d04c0c08ca3d3fe580e69dd4237db2883645cbb07583654a7c3d0a2db4b"
+    },
+    {
+      "path": "oilwell-converter/crates/oilwell-core/src/error.rs",
+      "size": 1128,
+      "sha256": "a21d5a62dd41c5e80a70093cad0db2bf1758856a04579e333fd35c7344f41a7f"
+    },
+    {
+      "path": "oilwell-converter/crates/oilwell-core/src/export.rs",
+      "size": 9055,
+      "sha256": "45ab1a48fd14bace3e327c2ef971b9c076527fe60f11a6e8664f7b814fbed455"
+    },
+    {
+      "path": "oilwell-converter/crates/oilwell-core/src/lib.rs",
+      "size": 418,
+      "sha256": "4174599ae2f7bd1f9c5bbee4d26c8b5489da4f31fe98a4e47165d7c076cece79"
+    },
+    {
+      "path": "oilwell-converter/crates/oilwell-core/src/trajectory.rs",
+      "size": 4023,
+      "sha256": "8ab0ae601da7e1f0d5ef848d3b591bbb1938cb14b4c1f7c189a241bcd1c8c3da"
+    },
+    {
+      "path": "oilwell-converter/crates/oilwell-core/tests/contract.rs",
+      "size": 632,
+      "sha256": "0331ff461f5102fcbdbd8c0e037be7dc35c80a93b5dd0512d27faf3aea62bde0"
+    },
+    {
+      "path": "oilwell-converter/crates/oilwell-core/tests/export.rs",
+      "size": 933,
+      "sha256": "0cf9552102997e01ba08a63fe5948a551d840d751fe96ccf533c6db348e1e973"
+    },
+    {
+      "path": "oilwell-converter/crates/oilwell-core/tests/trajectory.rs",
+      "size": 987,
+      "sha256": "3762d0d35e2d79d0431c8357357b1def472280563e9465e0637c05187c0b82e5"
+    },
+    {
+      "path": "oilwell-converter/docs/2026-09-22-oilwell-converter-design.md",
+      "size": 10601,
+      "sha256": "81aa269aa9dd880ada215211ec48cb9fe5703768ba9197936c9d667694449783"
+    },
+    {
+      "path": "oilwell-converter/docs/superpowers/plans/2026-09-22-standalone-oilwell-converter.md",
+      "size": 27489,
+      "sha256": "eb60cf296cc74d119423bc7a4be2b8caa26fbe1445e507175e139b5eff9da477"
+    },
+    {
+      "path": "oilwell-converter/src-tauri/Cargo.toml",
+      "size": 351,
+      "sha256": "ff5499f5953a742b1becda9837e8caad54673c5a06b9156db509e0892331423b"
+    },
+    {
+      "path": "oilwell-converter/src-tauri/build.rs",
+      "size": 35,
+      "sha256": "8af41c0062014fc594e4bb9899e60ee9930ab57d4cf0c73041ff557d6ec736e6"
+    },
+    {
+      "path": "oilwell-converter/src-tauri/capabilities/default.json",
+      "size": 129,
+      "sha256": "e7de3cb35c5ac08ade68c3a3e8d77370c056f74f129951eb66d87c66db09a5c0"
+    },
+    {
+      "path": "oilwell-converter/src-tauri/gen/schemas/acl-manifests.json",
+      "size": 65934,
+      "sha256": "b8665c2471bd4c59d570c77e226f37410ce396da52525383a15b5cbbff9d786e"
+    },
+    {
+      "path": "oilwell-converter/src-tauri/gen/schemas/capabilities.json",
+      "size": 153,
+      "sha256": "57a37a6c3b3f7486a8c0f83d5d1c83e1d9beb3c92ee54b0349bc141cfe7cecd1"
+    },
+    {
+      "path": "oilwell-converter/src-tauri/gen/schemas/desktop-schema.json",
+      "size": 116049,
+      "sha256": "f68a9c570ecff07ac6826145d33b966d6fc02f7d680967f44437268b08a6ba78"
+    },
+    {
+      "path": "oilwell-converter/src-tauri/gen/schemas/windows-schema.json",
+      "size": 116049,
+      "sha256": "f68a9c570ecff07ac6826145d33b966d6fc02f7d680967f44437268b08a6ba78"
+    },
+    {
+      "path": "oilwell-converter/src-tauri/icons/icon.ico",
+      "size": 25974,
+      "sha256": "90c58f391dec9fd1fabb65157dedae5b79c96cf619389a715aadc93228a868cf"
+    },
+    {
+      "path": "oilwell-converter/src-tauri/src/main.rs",
+      "size": 752,
+      "sha256": "3141dd26418f4b82a788e78406c932a597221d251bbabf5c93fe9f626213611b"
+    },
+    {
+      "path": "oilwell-converter/src-tauri/tauri.conf.json",
+      "size": 406,
+      "sha256": "6405930eecfb34c21b3696d4e80772d07d3950c3173058ee1a34b9203ff21128"
+    },
+    {
+      "path": "oilwell-converter/ui/index.html",
+      "size": 13482,
+      "sha256": "9c5f2f8bb1759ac59cf3b10286956a45f481f6e8dddd46bc42c5e0ad08f52e4e"
+    },
+    {
+      "path": "oilwell-converter/ui/test-ui.mjs",
+      "size": 1061,
+      "sha256": "6f70b3438820b3afa9bb5e59debc708a33a99d5aabc0e745b596f40134b9fbf5"
+    },
+    {
+      "path": "open-design-3dmk-7456 - Shortcut.lnk",
+      "size": 1712,
+      "sha256": "0941fe074e92f243a9ed46860150811f5d47498f90c29580494e3dba478b776b"
+    },
+    {
+      "path": "public/domain-config.js",
+      "size": 14254,
+      "sha256": "b870466c7f2f094e1142d3353d09a49b19b40c8c03f95d49fce13b273ea2538e"
+    },
+    {
+      "path": "public/geometry-integrity.js",
+      "size": 5649,
+      "sha256": "b81cabfac257c4918d77c5b70850514e889dee6c3293136e1df553a5f949ffbe"
+    },
+    {
+      "path": "public/index.html",
+      "size": 468122,
+      "sha256": "0fabb2a156b579e9b004c8b839c9db1d5e075e30960da659d75a93ba7bfb2f99"
+    },
+    {
+      "path": "public/scene-glb.js",
+      "size": 6926,
+      "sha256": "0cd3851276baaea1cb5bea34abbd394bdb9d8c8d074bd5876558d38a0ab08325"
+    },
+    {
+      "path": "public/scene-workspace.js",
+      "size": 27058,
+      "sha256": "960bc14597f11166d1496d7859ec1c9f1e959b2ad0510a746843a742c00fab1b"
+    },
+    {
+      "path": "public/seismic-viewer.js",
+      "size": 7366,
+      "sha256": "8cc2cb7fbdfae2ac041d9668be14f344ec23694d2890c858f376a17c6b492ec7"
+    },
+    {
+      "path": "public/vendor/SHA256SUMS",
+      "size": 5475,
+      "sha256": "1bd89406a5bfaa2a51cfdd4f6e042b89e7e03d90eedd09520254d504ab9ba0fa"
+    },
+    {
+      "path": "public/vendor/THIRD_PARTY_NOTICES.md",
+      "size": 2392,
+      "sha256": "bd9d6254c9eda7d4054878547f8416d04f350a1322e264a3a71f829e76785e31"
+    },
+    {
+      "path": "public/vendor/draco/1.5.6/draco_decoder.js",
+      "size": 719410,
+      "sha256": "30e4d486fa020737af10e3c56197693e5b904bdc05b8bfa5d7b06751dec6da04"
+    },
+    {
+      "path": "public/vendor/draco/1.5.6/draco_decoder.wasm",
+      "size": 285747,
+      "sha256": "c55a594e8ffd18426d36b27fea9618af3df5e173640a3e56d46f09d76f0574f2"
+    },
+    {
+      "path": "public/vendor/draco/1.5.6/draco_wasm_wrapper.js",
+      "size": 58763,
+      "sha256": "e8049906ef3f8f75d3456c22a3f31bfdfe5b5b5bd09ccdec613b9e9a49d554d8"
+    },
+    {
+      "path": "public/vendor/jspdf/2.5.1/jspdf.umd.min.js",
+      "size": 364463,
+      "sha256": "98ccf17aa10c20bb1301762618fcc9b6ab3a4e7f26b6071d64d0b41154df3875"
+    },
+    {
+      "path": "public/vendor/jszip/3.10.1/jszip.min.js",
+      "size": 97630,
+      "sha256": "acc7e41455a80765b5fd9c7ee1b8078a6d160bbbca455aeae854de65c947d59e"
+    },
+    {
+      "path": "public/vendor/licenses/bundled/@babel-helpers-7.10.4-LICENSE",
+      "size": 1106,
+      "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+    },
+    {
+      "path": "public/vendor/licenses/bundled/fflate-0.4.8-LICENSE",
+      "size": 1069,
+      "sha256": "62249119bb7df6e54300f37a37145c26a6d4420410aac8881a119c5b427cf751"
+    },
+    {
+      "path": "public/vendor/licenses/bundled/immediate-3.0.6-LICENSE.txt",
+      "size": 1115,
+      "sha256": "809e66de579fb7d92503848bbe6d1f348f4f6521a71e5d294fe7cc0c87a3b4ff"
+    },
+    {
+      "path": "public/vendor/licenses/bundled/lie-3.3.0-license.md",
+      "size": 1084,
+      "sha256": "5c81b0caa98593408b03125efa25efe622341ed87ae55561968828cd887d64a4"
+    },
+    {
+      "path": "public/vendor/licenses/bundled/pako-1.0.5-LICENSE",
+      "size": 1104,
+      "sha256": "a04665b3b2de56c66730c1f720f528175739e4104f79073614aa611da1e85539"
+    },
+    {
+      "path": "public/vendor/licenses/bundled/setimmediate-1.0.5-LICENSE.txt",
+      "size": 1103,
+      "sha256": "c4b4ad3a5746f1f5249a6dd90396ec519264e1bb02e01e48a6522c48a3a97cb4"
+    },
+    {
+      "path": "public/vendor/licenses/draco-1.5.6-AUTHORS",
+      "size": 317,
+      "sha256": "7399754545fa82fbf402e3e91d50de0b63772870fd807c48dd9af25c042efb10"
+    },
+    {
+      "path": "public/vendor/licenses/draco-1.5.6-LICENSE",
+      "size": 13898,
+      "sha256": "d3709b0fb4b8a94bbb1d02b8a2e484f258b0d9c5c5a01f940391f3fe662cd1a4"
+    },
+    {
+      "path": "public/vendor/licenses/draco-browser-README.md",
+      "size": 1501,
+      "sha256": "8b0bff6aa9c9115318d4c91206d379d4421c0d112526df6e6da9ab4c480e4645"
+    },
+    {
+      "path": "public/vendor/licenses/jspdf-2.5.1-LICENSE",
+      "size": 1142,
+      "sha256": "2d26bfab8a36d2250602c7a7597237e180c5cd3517acc108126e3cb399f483c8"
+    },
+    {
+      "path": "public/vendor/licenses/jspdf-bundled-NOTICES.txt",
+      "size": 44527,
+      "sha256": "1d5d2fc23d202f353d2f1cef2fa498a938f266b4b0e2dc0a4119ecfbcbc94b72"
+    },
+    {
+      "path": "public/vendor/licenses/jszip-3.10.1-LICENSE.markdown",
+      "size": 33753,
+      "sha256": "566c953c6090b1218ca6217dd7359d45dde46581968586dc607d59a78af6a9c4"
+    },
+    {
+      "path": "public/vendor/licenses/jszip-bundled-NOTICES.txt",
+      "size": 1769,
+      "sha256": "f9a4809a1af7ba3dc3dcf6fc2dd0bf0adf76a7daf4426e95e27ada4f38debf5b"
+    },
+    {
+      "path": "public/vendor/licenses/three-0.160.0-LICENSE",
+      "size": 1081,
+      "sha256": "852e0e8699169bf9f6fdc6bda3e682d078dcbc738b5d33e74df594721bff271d"
+    },
+    {
+      "path": "public/vendor/licenses/three-mesh-bvh-0.7.0-LICENSE",
+      "size": 1072,
+      "sha256": "b106ef6198a9862ed2b5b873e944ecf3583c631a84a7462d400ecc1910ce7fee"
+    },
+    {
+      "path": "public/vendor/runtime-assets.json",
+      "size": 12817,
+      "sha256": "d53b3dceae12ecc3a08841beec1e269f06e8028b727b81bdf109cdfc026fa2da"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/build/three.module.js",
+      "size": 1272972,
+      "sha256": "76dea8151bc9352aef3528b4262e249b2604f62543828328db978d060d61a495"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/controls/OrbitControls.js",
+      "size": 29868,
+      "sha256": "5a44a9e86a2a0fb11933eed69bc2cd33c76a496854c1aed6ed776efa87d7b064"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/environments/RoomEnvironment.js",
+      "size": 3735,
+      "sha256": "e21f41b7ef2016f2984a5d27850b42dffa797a6a194a138e288b06576d765a7b"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/exporters/GLTFExporter.js",
+      "size": 77714,
+      "sha256": "f8a6eb87719e68c925fdf445014b5ead49cf779ae14e69c6cc1cb1dd4eae514d"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/exporters/OBJExporter.js",
+      "size": 5370,
+      "sha256": "1f86eb4275fea0eef64e8e85a9acbfe2b7ab76556f8f093d28dbd0a39bb21d66"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/exporters/PLYExporter.js",
+      "size": 12001,
+      "sha256": "89b648a745aa82a321edeb6f842f524a799aad3e9cd4d6aad41a8cb79f235656"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/exporters/STLExporter.js",
+      "size": 3890,
+      "sha256": "d64440877b68a973c9c2fe6a0474c9c9ab996a12f1fa835fbc4ffa29158f176b"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/loaders/DRACOLoader.js",
+      "size": 13628,
+      "sha256": "65c114ecb7b349cdc59c75b2c92d19cca672a138060dba0f60f64262fa40408c"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/loaders/GLTFLoader.js",
+      "size": 108522,
+      "sha256": "d073b438e6a07e1359741dd5d6c76c953420cc0d4fd84eb1bdde94315540e6a3"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/loaders/MTLLoader.js",
+      "size": 10580,
+      "sha256": "990757029142686fdcbbaded27207234151a9942469a1aa5417842b302565174"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/loaders/OBJLoader.js",
+      "size": 21175,
+      "sha256": "022e0334f837c60506276e136faf3e54b21b20aea672eed4a0c50651d4fc0a5d"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/loaders/PLYLoader.js",
+      "size": 16622,
+      "sha256": "5b1f81016923481f66e3cd70cbbdfbe6742e60ae51839bccd8e4a8f7d616db9d"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/loaders/STLLoader.js",
+      "size": 10029,
+      "sha256": "896d006a48b8f125385a485ccae154dadee801a953f0b45ceffe7ddd8a29ca93"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/math/MeshSurfaceSampler.js",
+      "size": 5690,
+      "sha256": "a31e980aee9b16b96568bd61514e78435cf6a50d4b8515fb9a90ae5e88c35ada"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/math/SimplexNoise.js",
+      "size": 14351,
+      "sha256": "9b8d541b77b0ddc79afaa6a1de8941452c191b8b9006f04e7b8fc422e2b263f7"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/postprocessing/EffectComposer.js",
+      "size": 4651,
+      "sha256": "d234e578618fa816955ebdc059c049c577e203e650e33cf22bde3f232c29e669"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/postprocessing/MaskPass.js",
+      "size": 2231,
+      "sha256": "328cf7db0da5d9be83ffe39d54b01d5ac1fddf108cc98182ddbb056f5c8b537f"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/postprocessing/OutputPass.js",
+      "size": 2398,
+      "sha256": "13817fc7a87f662d29d2c5e00f44d3a4588c9afac4a372de0cacb0e44e368ffd"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/postprocessing/Pass.js",
+      "size": 1706,
+      "sha256": "b3c6128340eaa37e40a6a2f1b738e894c855239417d50959759b34a2b5e89f92"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/postprocessing/RenderPass.js",
+      "size": 1915,
+      "sha256": "1c90c085312871c4bcdccfcf519499c6276dd503363fcf7cb7f703add45cf4a2"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/postprocessing/SSAOPass.js",
+      "size": 11421,
+      "sha256": "22ef811aeda777d2ba71d8f70cd332aa843782b9ffc559e6ba0dbfffa003061d"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/postprocessing/ShaderPass.js",
+      "size": 1576,
+      "sha256": "3b28a1ee27e0eb96c0eab137a1f442ccf127a926904eced2d51e125ec44af781"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/shaders/CopyShader.js",
+      "size": 571,
+      "sha256": "4e3346db194db56a596cd074e9bdb39fb5eb52040c333e0d29dc4eb1324d3b1d"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/shaders/OutputShader.js",
+      "size": 1393,
+      "sha256": "53a52e430c27bc36ceaab8ae90a2b4af7b02672d7ee4b29d6ba3c28e09c92c2a"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/shaders/SSAOShader.js",
+      "size": 6478,
+      "sha256": "bd5cda34d6b52941c1121b77947664848af10dc68febd453dfdc56c59e58ba06"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/utils/BufferGeometryUtils.js",
+      "size": 31906,
+      "sha256": "9be041e96308775d00e2695cc607645b9a9b64fd7c0e759dd8f7c00a8d92becb"
+    },
+    {
+      "path": "public/vendor/three/0.160.0/examples/jsm/utils/TextureUtils.js",
+      "size": 2367,
+      "sha256": "1b84a7fde8745dd614f62b6ca8108b592144278c07891a0cbe8cdf8e15796efa"
+    },
+    {
+      "path": "public/vendor/three-mesh-bvh/0.7.0/build/index.module.js",
+      "size": 184559,
+      "sha256": "3520b73c1c5a56648625e670d0656c4e4ea2093f22bb2dc368876cc2fda33da7"
+    },
+    {
+      "path": "public/workspace-panels.js",
+      "size": 5810,
+      "sha256": "8ea2dc0cc11117cba09da6cf8fcde5a6f9df37858e1e0fd3b8dfee14e770fe71"
+    },
+    {
+      "path": "scripts/mistralrs-agent/common.ps1",
+      "size": 21095,
+      "sha256": "1dcb938227b8bca1bc6d5da7423b787c13b199760bfc131e38c8dca97868e6cd"
+    },
+    {
+      "path": "scripts/mistralrs-agent/roles.ps1",
+      "size": 13638,
+      "sha256": "269933970264068d0e2c0aa5b1c62adaf21f5835a6733b53322f47a2e2db5f44"
+    },
+    {
+      "path": "scripts/run-mistralrs-vwm-task.ps1",
+      "size": 9840,
+      "sha256": "911add3f6f47d87433cd4ea525721141f0160e9124bb60a273d8d992bdb6a733"
+    },
+    {
+      "path": "scripts/setup-mistralrs-local-agent.ps1",
+      "size": 10378,
+      "sha256": "58f71cab746d1415185ddab347eebf99231bd76617879b8d88bc9396a0013f9b"
+    },
+    {
+      "path": "scripts/start-mistralrs-vlm.ps1",
+      "size": 1672,
+      "sha256": "988ff6e743fc1a379276d622d942451c5901b250a2983e7d7765dcd5c33a64bf"
+    },
+    {
+      "path": "scripts/test-3dmk-exec-router-contract.sh",
+      "size": 1189,
+      "sha256": "d3fba4792cf9e85122dccd97824142f5853ab8f25941be488cb4a1de705933a6"
+    },
+    {
+      "path": "scripts/test-documentation.ps1",
+      "size": 11892,
+      "sha256": "4bf43165432fb51e8823e86bd88fbcf410172a7ae6edeb65932a585bc77dbad7"
+    },
+    {
+      "path": "scripts/test-local-intelligence-contract.sh",
+      "size": 1256,
+      "sha256": "c9a44772a54607bb68449063902187bd1592f36adc1f5863d345d43ca81d4460"
+    },
+    {
+      "path": "scripts/test-mistralrs-local-agent-harness.ps1",
+      "size": 14942,
+      "sha256": "33126a9c6ec78dcb0dddcffdd80fc08d4e6b9a2e2297e3e80f4bdf0184849420"
+    },
+    {
+      "path": "scripts/test-veritas-child-contract.sh",
+      "size": 947,
+      "sha256": "437b39cbf125c1b056992b83d5697b078ce2c499f7aa4da08990d3730a15f922"
+    },
+    {
+      "path": "scripts/validate-3dmk-exec-router-contract.sh",
+      "size": 2133,
+      "sha256": "6486cdf37af15f363d29cb712cca035173702cd4752050275f112fa4030abd1c"
+    },
+    {
+      "path": "scripts/validate-3dmk-toolkit.ps1",
+      "size": 1416,
+      "sha256": "ee6d1629a69750ca4e028e2c7e87a31f9351490c75c4515f35476d5fd90b0277"
+    },
+    {
+      "path": "scripts/validate-3dmk-toolkit.sh",
+      "size": 1639,
+      "sha256": "d2cd7fddd1995ad5d42865f06d58cc3fc892772d7f9077dbaab7a86446a03da9"
+    },
+    {
+      "path": "scripts/validate-local-intelligence-contract.sh",
+      "size": 2032,
+      "sha256": "f42dac4c9ba317aa78842ab49cbe65ec7337923faabea0f60a5c9edb695d9b40"
+    },
+    {
+      "path": "scripts/validate-veritas-child-contract.sh",
+      "size": 1500,
+      "sha256": "bac0f03629c6f50d662c06a2abdec86bc31fd15abbaeb1b82cb8cdd9ddf82fe5"
+    },
+    {
+      "path": "scripts/verify-fixtures.ps1",
+      "size": 753,
+      "sha256": "efee43055deccb83b02c23bbc5e05083f8d78158f83835737a5ba1afa65ebd83"
+    },
+    {
+      "path": "spatial-engineering-platform/MATERIALIZATION_REQUESTED.md",
+      "size": 281,
+      "sha256": "9c9be0a4e89f8efe68e103dce3a565e02fd5fbcf72bbef6adc8d9bb8dd855245"
+    },
+    {
+      "path": "spatial-engineering-platform/README.md",
+      "size": 1428,
+      "sha256": "ab13be0cf48c0f2a4d4ecae7a59fd77375e5d2411511554771d6b736a7cd6e6d"
+    },
+    {
+      "path": "spatial-engineering-platform/bootstrap/.gitkeep",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "spatial-engineering-platform/bootstrap/ACTUAL_FINAL.txt",
+      "size": 20,
+      "sha256": "d641d380df04fa97c204d527f9ef5b4c3d0bf5fd288771be5a0b6bccce9e0c45"
+    },
+    {
+      "path": "spatial-engineering-platform/bootstrap/ARCHIVE_SHA256.txt",
+      "size": 123,
+      "sha256": "25f60bcce8d300bb4301461b2885018bfe97a308ddede4ec1f0d9fb6b5c386e0"
+    },
+    {
+      "path": "spatial-engineering-platform/bootstrap/DO_NOT_EDIT_ARCHIVE.txt",
+      "size": 124,
+      "sha256": "1bb86080fbbde16a460adfc70c2186c11adac9c940a959d4c264a53698099cdf"
+    },
+    {
+      "path": "spatial-engineering-platform/bootstrap/OPEN_DRAFT_PR.txt",
+      "size": 63,
+      "sha256": "d98a2853c0912d7bcf1903915b08d31a61e366e656cb9f5975a8a120b6a297a4"
+    },
+    {
+      "path": "spatial-engineering-platform/bootstrap/PR_CREATION_PENDING.txt",
+      "size": 27,
+      "sha256": "8c73039cc0facad5617b202746bc33a684b3c6993dd30e7afe82ac15f60b00ac"
+    },
+    {
+      "path": "spatial-engineering-platform/bootstrap/PR_METADATA.txt",
+      "size": 61,
+      "sha256": "40332c571cad4dbc52e8fbd55f85bf112ae9fb3e7660a85adc09d491811a7859"
+    },
+    {
+      "path": "spatial-engineering-platform/bootstrap/PR_READY.txt",
+      "size": 70,
+      "sha256": "74583c2b4bad0d012df3ba35b60976fc303ca1b18998f519b758ab7ef93f0cc8"
+    },
+    {
+      "path": "spatial-engineering-platform/bootstrap/PR_REQUESTED.txt",
+      "size": 45,
+      "sha256": "eba48109ae3d23c398ea11b4148d29ff44636e0aec8d2f7445242db0568c4408"
+    },
+    {
+      "path": "spatial-engineering-platform/bootstrap/PR_SCOPE.md",
+      "size": 222,
+      "sha256": "a888c49dd0264763d4b75ba3094c0ab8ff9c2424771594ac16a618d1f28a1e31"
+    },
+    {
+      "path": "spatial-engineering-platform/bootstrap/README_PR.md",
+      "size": 59,
+      "sha256": "e781d9f25d3346a95faca6a99ffee0ee913b6e34978d72e3099dd4d21e4b2cc3"
+    },
+    {
+      "path": "spatial-engineering-platform/bootstrap/STOP.txt",
+      "size": 62,
+      "sha256": "55592bc45822073a23450eb55370afdce9646d6c102ce59b2680ca1a31cd4c03"
+    },
+    {
+      "path": "spatial-engineering-platform/bootstrap/TRANSPORT_NOTE.md",
+      "size": 187,
+      "sha256": "e8f07076e9eda700dba17263802d94517e7d2515437adc1d6c22c387c1d9f38b"
+    },
+    {
+      "path": "spatial-engineering-platform/bootstrap/spatial-engineering-platform.tar.gz.b64",
+      "size": 10012,
+      "sha256": "e0317b740e0ad08b8e3da20186c3c6c3eae885fcba0653a2515256bb029f8099"
+    },
+    {
+      "path": "src/ai_vision.rs",
+      "size": 36293,
+      "sha256": "550ca07357dff3ec8ca791671ce9210cd66e525da0059fe594da052af1e75758"
+    },
+    {
+      "path": "src/api.rs",
+      "size": 168053,
+      "sha256": "54fa9988e2d7353ac5a7c605d80090ab5e8583ff7676944caccf1c8655c50006"
+    },
+    {
+      "path": "src/cad_engine.rs",
+      "size": 4387,
+      "sha256": "ac45b5b5446288c06b6013d1db45f780434232e4d5222e61ce141c78b00a972f"
+    },
+    {
+      "path": "src/domain_preferences.rs",
+      "size": 20129,
+      "sha256": "c502f36ed60a661bc6f44ad75643d7f9c46490bc67b5fd8ece69a79df7c0d5e5"
+    },
+    {
+      "path": "src/image_refinement.rs",
+      "size": 43223,
+      "sha256": "f7478ab8ddda42cae194473501990715a2fe0ede74b2778e65f687bc0a1a0147"
+    },
+    {
+      "path": "src/jobs.rs",
+      "size": 12818,
+      "sha256": "791c094056fd7c45a5de24ae544e168e30ee07ca423e359b21d1acd9d4a994f2"
+    },
+    {
+      "path": "src/lib.rs",
+      "size": 282,
+      "sha256": "52136d3e2e594716a44f1506b9a8b1b1e3531fba9c7d7419b8e75570f79fb872"
+    },
+    {
+      "path": "src/local_intelligence.rs",
+      "size": 20091,
+      "sha256": "2b40de357e077d782eac8d13c4ef4d67888df14431f130b9645cf190682a070f"
+    },
+    {
+      "path": "src/main.rs",
+      "size": 4080,
+      "sha256": "b9d8678cd64bdaad6035f28b0c7c2f5fbd75a9634db806a050b28e2a126eca03"
+    },
+    {
+      "path": "src/packages.rs",
+      "size": 67309,
+      "sha256": "f508724a6ea2295ae4ee8d1ed5e46c7a174474238ce9887beeb02f586b0aeee9"
+    },
+    {
+      "path": "src/perception.rs",
+      "size": 4536,
+      "sha256": "8d14a4d68bb6fb3698d56887291f184d4f3967b1af8b6995bcd4f29e5b4773d1"
+    },
+    {
+      "path": "src/point_cloud.rs",
+      "size": 60550,
+      "sha256": "00c477e4212eee97895e2512cfd1019206f17413d880870762477fd4a0b6c1da"
+    },
+    {
+      "path": "src/projects.rs",
+      "size": 89469,
+      "sha256": "1c69b358a27fd51372eda8486a1ff9680e7b222c2f084cb04e9f77627ceb884c"
+    },
+    {
+      "path": "src/scene.rs",
+      "size": 55765,
+      "sha256": "d0a2db8277880e22bb071c12f4d98b545ff2a46b1e74ee50cbc7cee0ee7fd5ee"
+    },
+    {
+      "path": "src/scene_document.rs",
+      "size": 41119,
+      "sha256": "526faf89fcc0475a3a95472b6d0c3e0e8bd18025867de163ac02bb5a0152b7d9"
+    },
+    {
+      "path": "src/seismic.rs",
+      "size": 11697,
+      "sha256": "4446604a49b234576540a10e0415ab3c21a1e4bbb039246be49cfa1f74cecf20"
+    },
+    {
+      "path": "src/step_ops.rs",
+      "size": 2753,
+      "sha256": "46ce6cd43325d416b9760ed0478cc18bb2c943e117440c5bb11c68b5d615d722"
+    },
+    {
+      "path": "src-tauri/Cargo.lock",
+      "size": 173543,
+      "sha256": "41179baa533f9fa94f1d8ed6e47f510b226fe196b6f347cb3eb08acc3f48b894"
+    },
+    {
+      "path": "src-tauri/Cargo.toml",
+      "size": 390,
+      "sha256": "75d45e4b02c5eab5c73e5e07b6e036f8ec57afc0bdf153d31de1324319385ae2"
+    },
+    {
+      "path": "src-tauri/build.rs",
+      "size": 1787,
+      "sha256": "d6d3b205d3af56888b5a870d0fd96bf6a8bdef44512fc88b89e70d561b21244d"
+    },
+    {
+      "path": "src-tauri/gen/schemas/acl-manifests.json",
+      "size": 65934,
+      "sha256": "b8665c2471bd4c59d570c77e226f37410ce396da52525383a15b5cbbff9d786e"
+    },
+    {
+      "path": "src-tauri/gen/schemas/capabilities.json",
+      "size": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "src-tauri/gen/schemas/desktop-schema.json",
+      "size": 116049,
+      "sha256": "f68a9c570ecff07ac6826145d33b966d6fc02f7d680967f44437268b08a6ba78"
+    },
+    {
+      "path": "src-tauri/gen/schemas/windows-schema.json",
+      "size": 116049,
+      "sha256": "f68a9c570ecff07ac6826145d33b966d6fc02f7d680967f44437268b08a6ba78"
+    },
+    {
+      "path": "src-tauri/icons/128x128.png",
+      "size": 6443,
+      "sha256": "1c5e475048474987c0931f62a40d227211f091c988b6289ee114029516223fe8"
+    },
+    {
+      "path": "src-tauri/icons/128x128@2x.png",
+      "size": 13334,
+      "sha256": "d527ef3cfa8cecd4b2cb0a81dfdf285ebfab7d08f463dc906f3cce788721466d"
+    },
+    {
+      "path": "src-tauri/icons/32x32.png",
+      "size": 1363,
+      "sha256": "2fd26645b04f19a7de4b05753ca5bde79b8a5c8a28aee4da362bdc32ca75c405"
+    },
+    {
+      "path": "src-tauri/icons/64x64.png",
+      "size": 3043,
+      "sha256": "e2cd03cb07d1fe41ab429b46e612dc7c769c0234604fad3c484e5dfd50e4c676"
+    },
+    {
+      "path": "src-tauri/icons/Square107x107Logo.png",
+      "size": 5268,
+      "sha256": "0bf0755f2a6f29b9f0453173a4483f00996cc33fedbf289a9f5ced09e2b9e52d"
+    },
+    {
+      "path": "src-tauri/icons/Square142x142Logo.png",
+      "size": 7083,
+      "sha256": "20441a78b442d4f73ea30bb71d9ac7db8fc7b92e5c5590057f8cc39b78079003"
+    },
+    {
+      "path": "src-tauri/icons/Square150x150Logo.png",
+      "size": 7421,
+      "sha256": "cc78e418acbb5a85bd3d3bb57d8323d7bad38f0d4a16491fd871b11f4bc054cc"
+    },
+    {
+      "path": "src-tauri/icons/Square284x284Logo.png",
+      "size": 15146,
+      "sha256": "f52539e092677b6aa40ede96fd3fe42a1e281d68f1567b891bf42f1ae5f75ede"
+    },
+    {
+      "path": "src-tauri/icons/Square30x30Logo.png",
+      "size": 1261,
+      "sha256": "df6cad5a93d2f8c69451eef7a003820279ade0a4fb94dd2fdc82989b3773c508"
+    },
+    {
+      "path": "src-tauri/icons/Square310x310Logo.png",
+      "size": 16348,
+      "sha256": "8401022639f4762872d8ffef64487e66fe6d99dd615cf8654b9ce09257bae8c1"
+    },
+    {
+      "path": "src-tauri/icons/Square44x44Logo.png",
+      "size": 2016,
+      "sha256": "32edd89810fdb68b657eccb8fbb189ccb7002cd4d1b7e4d9fb1b1440b742899c"
+    },
+    {
+      "path": "src-tauri/icons/Square71x71Logo.png",
+      "size": 3394,
+      "sha256": "686f6a8f5700f50cfadbf472fc244a0c8c3a1e18c09909688fdb50edd7c1cb4f"
+    },
+    {
+      "path": "src-tauri/icons/Square89x89Logo.png",
+      "size": 4379,
+      "sha256": "45b5efb9212166366e02f3901c517a4e14c4d816f06e52802fd6a72d4deccf81"
+    },
+    {
+      "path": "src-tauri/icons/StoreLogo.png",
+      "size": 2320,
+      "sha256": "e114fe7f57a717dece15c072047c3a01676cbe75d91c6f17db578d7ff2a6f8b6"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-anydpi-v26/ic_launcher.xml",
+      "size": 261,
+      "sha256": "760d4b8a06bf7163dd010c33ad2cac9e4a75fa0177afaba042f83e311eef0c3e"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-hdpi/ic_launcher.png",
+      "size": 2876,
+      "sha256": "f25c0014505ca3bd371c28991032167759a79327a616facb49d96ccc09439916"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-hdpi/ic_launcher_foreground.png",
+      "size": 8126,
+      "sha256": "2d7b4b10813b614bc36fd206acbcc436b5fd1aaa699df72f525c72d71891c7ef"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-hdpi/ic_launcher_round.png",
+      "size": 2743,
+      "sha256": "3ba5742a850d3695ef51dc7c9eddfe22353b98002282794f940b0a5048454de1"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-mdpi/ic_launcher.png",
+      "size": 2782,
+      "sha256": "32139105aa9ed02efae9b56d80360e7a86a77ad1a93c0169defa7377f097ace1"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-mdpi/ic_launcher_foreground.png",
+      "size": 5293,
+      "sha256": "3f4fcb737bd407bdc855006d21bae97094b04921934cff74364c2e2d8a6c63ab"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-mdpi/ic_launcher_round.png",
+      "size": 2657,
+      "sha256": "47c57730f1430f989b2d659b9399b074336ec5006cccfe1c26e95ed773632537"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-xhdpi/ic_launcher.png",
+      "size": 6402,
+      "sha256": "1af12ac67af5290ebc9fc6e640ad7875a23827a13c7f6c8fbc1b13dac2910244"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-xhdpi/ic_launcher_foreground.png",
+      "size": 11093,
+      "sha256": "34e8ed38f079a414e1d3582eb3aef29cc563319189c489512072a37fb5313820"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-xhdpi/ic_launcher_round.png",
+      "size": 6291,
+      "sha256": "a9d89a1a5f8ab8b5e911a37fd57c2d8f1a8532f33c8a40d2176cc61cd5485bb3"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-xxhdpi/ic_launcher.png",
+      "size": 10782,
+      "sha256": "5de80cf247d412625f8e4fe68597523152a05a5f5451495ef24ccaf8ebc85b0e"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-xxhdpi/ic_launcher_foreground.png",
+      "size": 17726,
+      "sha256": "bd2623093b6e6be98c5a9e3981cfe56acb011794794dd9c2329dca3500302520"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-xxhdpi/ic_launcher_round.png",
+      "size": 10551,
+      "sha256": "62e8e57c6fb6d314cc886b6aba35c9c63fef967c39bdba6e736d1ee6b1902fcc"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-xxxhdpi/ic_launcher.png",
+      "size": 15062,
+      "sha256": "54e56d6b23b8c95608b669b2236a1a1df37f24619a6c5a2c649ac6e860bd28bc"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-xxxhdpi/ic_launcher_foreground.png",
+      "size": 23872,
+      "sha256": "2b27b9c9091707956383d0e75a97a8868bc2428fd0524f822e602ae8c09d9812"
+    },
+    {
+      "path": "src-tauri/icons/android/mipmap-xxxhdpi/ic_launcher_round.png",
+      "size": 14372,
+      "sha256": "47358de7ef74e15a2dd917bd148e4cb7c89a9cfb1f779dc22118a51451eb8265"
+    },
+    {
+      "path": "src-tauri/icons/android/values/ic_launcher_background.xml",
+      "size": 115,
+      "sha256": "0687336f0ccc6f7ee09c7c95110667c63b75931238df779a21af401fb864cd34"
+    },
+    {
+      "path": "src-tauri/icons/app-icon.svg",
+      "size": 453,
+      "sha256": "dd2abea2f2f613ac127adc0fd90e9ebcbb70605306cccceb2971de66650dc868"
+    },
+    {
+      "path": "src-tauri/icons/icon.icns",
+      "size": 165150,
+      "sha256": "0be888f914c1a4f9aa42fba73a18be47eb9794dd1f906060a86b1af8fa9da760"
+    },
+    {
+      "path": "src-tauri/icons/icon.ico",
+      "size": 122757,
+      "sha256": "13a12087fd6764a57a7fa0562c9e37272ad4b43ee180bf628a3c7960cefeb209"
+    },
+    {
+      "path": "src-tauri/icons/icon.png",
+      "size": 12095,
+      "sha256": "968e410288a1c85aa22156959a2d304b854f06058614042fddc71c3a36fd446c"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-20x20@1x.png",
+      "size": 820,
+      "sha256": "d539e78aeebd20316c0321489a16970abdfe13ff9da24eddd080e06372a444ba"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-20x20@2x-1.png",
+      "size": 1808,
+      "sha256": "abda7a8107cb81550c9bf7291cc3b7cd86f5b23dc27e0466f9ceb2eccf1960e6"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-20x20@2x.png",
+      "size": 1808,
+      "sha256": "abda7a8107cb81550c9bf7291cc3b7cd86f5b23dc27e0466f9ceb2eccf1960e6"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-20x20@3x.png",
+      "size": 2860,
+      "sha256": "065f20e8a9bcf0ada7f9181ce6cd2646c184fc4863c4a020da27453f7c644ac1"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-29x29@1x.png",
+      "size": 1240,
+      "sha256": "cdb8df787906e1f8e287e90bfbf3d215ea98717127f93cd92e699d6683735b43"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-29x29@2x-1.png",
+      "size": 2721,
+      "sha256": "7000e83b74c00e02154a7bfe619f453b685595e407343a09551565c6f5102456"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-29x29@2x.png",
+      "size": 2721,
+      "sha256": "7000e83b74c00e02154a7bfe619f453b685595e407343a09551565c6f5102456"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-29x29@3x.png",
+      "size": 4288,
+      "sha256": "0a061c46ea63fd3ffad7161771623eb488861bd6086c76b613533d9438de9f0b"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-40x40@1x.png",
+      "size": 1808,
+      "sha256": "abda7a8107cb81550c9bf7291cc3b7cd86f5b23dc27e0466f9ceb2eccf1960e6"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-40x40@2x-1.png",
+      "size": 3903,
+      "sha256": "11b125e29b92ed8b997cb453819ddd9a53fc0ec9f82300a5cd5f19b2db5cfe79"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-40x40@2x.png",
+      "size": 3903,
+      "sha256": "11b125e29b92ed8b997cb453819ddd9a53fc0ec9f82300a5cd5f19b2db5cfe79"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-40x40@3x.png",
+      "size": 6066,
+      "sha256": "875d69d334fa9aa3dd3d9e29e74e4da58685be8ca6f79781aa8c7c3831e632e5"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-512@2x.png",
+      "size": 65507,
+      "sha256": "fd2d0064e781e5c94777b1b88dd7253ca9eff14350a2550fe2275fd830938ae0"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-60x60@2x.png",
+      "size": 6066,
+      "sha256": "875d69d334fa9aa3dd3d9e29e74e4da58685be8ca6f79781aa8c7c3831e632e5"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-60x60@3x.png",
+      "size": 9381,
+      "sha256": "2f8acc9e7ce694eb4fc17da2de61744d0ae8731803c0d73cad3cd3c62031482d"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-76x76@1x.png",
+      "size": 3745,
+      "sha256": "12286df679571743c971e37b8977a88e4e953a1e41848475292eb3d479beafa4"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-76x76@2x.png",
+      "size": 7596,
+      "sha256": "be5e0158b106d69eaaec31c7371e1af74bb09b0dcce069640b04faf27e60f7a9"
+    },
+    {
+      "path": "src-tauri/icons/ios/AppIcon-83.5x83.5@2x.png",
+      "size": 8342,
+      "sha256": "03a2a32de5201eaedb8891506c3aa7fb0226c71dc01c890f3be6598bd45b7c2d"
+    },
+    {
+      "path": "src-tauri/src/frontend_assets.rs",
+      "size": 12979,
+      "sha256": "732b4a9497290840605d47b44ed43352b381ab229c4c7d5f3a8464d713e1c195"
+    },
+    {
+      "path": "src-tauri/src/main.rs",
+      "size": 2350,
+      "sha256": "bee11d1f3ad39c2d5e6c3990b1015777f4444ac4cf7860a88fdb812804dcf7ae"
+    },
+    {
+      "path": "src-tauri/tauri.conf.json",
+      "size": 530,
+      "sha256": "812d65b6f59b52cf56f800a747050085b67ecb89d70723272e9aeff4ff3d6d77"
+    },
+    {
+      "path": "tests/cli_help.rs",
+      "size": 377,
+      "sha256": "15c119a21c902b79af429a06abbfc66e5483d4775f08c7bd2edd3844eed5b941"
+    },
+    {
+      "path": "tests/cli_subcommands.rs",
+      "size": 556,
+      "sha256": "390f4d5cc7774bceb34a5969dd221e0f627659dd10bc562b4a20e98b68ffe625"
+    },
+    {
+      "path": "tests/exchange_roundtrip.rs",
+      "size": 13257,
+      "sha256": "10c0f5a9dd9f2ea13e274201ea80945ead08e58d03f3b10f37c53e7dc1749047"
+    },
+    {
+      "path": "tests/fixtures/domain-profile-measure.json",
+      "size": 960,
+      "sha256": "21ba5307b46ee32e38fcb40e0df7e6f094ae5124163fedc96ed5c297f684233e"
+    },
+    {
+      "path": "tests/fixtures/malformed/not-a-zip.zip",
+      "size": 40,
+      "sha256": "03991234dabb0353f5351906294410b392bda4e91d5a130fa9722244db5c86f3"
+    },
+    {
+      "path": "tests/fixtures/malformed/truncated.zip",
+      "size": 3,
+      "sha256": "09d1bdfd0c497f9ffdd545221f1ebb4abbc3713ceaafc76da8f3f3226728b0b3"
+    },
+    {
+      "path": "tests/fixtures/manifest.json",
+      "size": 5689,
+      "sha256": "d6bd6f5f1a402e4a228d03dc2783b299f54d32e979f0efdad843f641a54f5945"
+    },
+    {
+      "path": "tests/fixtures/models/BoxTextured.glb",
+      "size": 4696,
+      "sha256": "624621d7885bb418ac64e99c994b45634a32c87caeefae67b06c5c0531c57115"
+    },
+    {
+      "path": "tests/fixtures/models/BoxTextured.gltf",
+      "size": 8084,
+      "sha256": "03e315879df94ae7afdfbfec2ec0b6c8e28a04ee1345331a0f84974a9774a372"
+    },
+    {
+      "path": "tests/fixtures/models/COLLADA.dae",
+      "size": 725385,
+      "sha256": "9697efc60119a491d417e520c0b945b3f424a15861025f352744d661fc2904f7"
+    },
+    {
+      "path": "tests/fixtures/models/HelloWorld.x3d",
+      "size": 3554,
+      "sha256": "12faa2a66b25d0d1c631c29b47b89a2490437494b23f8505d5a34f785f0715a5"
+    },
+    {
+      "path": "tests/fixtures/models/RotatingCube.3DS",
+      "size": 5009,
+      "sha256": "55d0c540a059029fee276fb5e849aa34ebcfad37b619d87d53b5fee3094ea242"
+    },
+    {
+      "path": "tests/fixtures/models/Spider_binary.stl",
+      "size": 68484,
+      "sha256": "267fdc458d855d70b09f88d3b434ddddeaf3785ea57011ab0b49a5d8581c55bd"
+    },
+    {
+      "path": "tests/fixtures/models/Wuson.off",
+      "size": 149571,
+      "sha256": "d373a4777bd0420b1ba5200256dd5b7dc77cba4ab378b4748080ef91c644c387"
+    },
+    {
+      "path": "tests/fixtures/models/Wuson.ply",
+      "size": 915754,
+      "sha256": "c7911cc2f592eed7096cf3b6ff4fb6d7fb543a74b3d7e1f0d21a9ca507b3cee8"
+    },
+    {
+      "path": "tests/fixtures/models/WusonOBJ.obj",
+      "size": 258268,
+      "sha256": "092295203dc1ddb7be09aa0ebd7b2708d7553300698e44a48bc6ac65c6bd86cf"
+    },
+    {
+      "path": "tests/fixtures/models/box.3mf",
+      "size": 1416,
+      "sha256": "de20508dff06f8faf8ca992c00238d4affc916ba4b812e8ff9ec1571fec533a1"
+    },
+    {
+      "path": "tests/fixtures/models/box.fbx",
+      "size": 17200,
+      "sha256": "ad2d79fe89d4d646bc7930dc952eb28e69976a321b387bf7851ecd3f37e667f8"
+    },
+    {
+      "path": "tests/fixtures/models/box.u3d",
+      "size": 1276,
+      "sha256": "e226dd6c345a4ebe9c0f0e336d8a605bcf81efa86b33739b7007c1cc748d7bbe"
+    },
+    {
+      "path": "tests/fixtures/scene/build_fixture.py",
+      "size": 3437,
+      "sha256": "663b541fc4b401e8f496fb9b4e7eeaad064d58a412c2cf306e4a7c500929a530"
+    },
+    {
+      "path": "tests/fixtures/scene/expected.json",
+      "size": 946,
+      "sha256": "a24e0f8420aa07775b485d68d54a3d8c463056118d5710a9026b7fcc0902e25c"
+    },
+    {
+      "path": "tests/fixtures/scene/planned-actual-section.glb",
+      "size": 3932,
+      "sha256": "d5d250c0ca21bad13d9ab21c38a891a8d9534386317685f003d620660938dc3e"
+    },
+    {
+      "path": "tests/fixtures/seismic/PROVENANCE.md",
+      "size": 577,
+      "sha256": "7b3dc878ff4dc490840765252d8ca33e00ff6a1c28c7b57847ecf306a25c19b6"
+    },
+    {
+      "path": "tests/fixtures/seismic/segyio-small.sgy",
+      "size": 14600,
+      "sha256": "e939ed45a8258f1fbaf3c21ca83f54369c4c4def79384b4cb0fc069a4eb1a191"
+    },
+    {
+      "path": "tests/frontend_shell.rs",
+      "size": 15834,
+      "sha256": "e7d0ff9bb70d33968db16090691f73c68162ab2420f0e28453731207336c9325"
+    },
+    {
+      "path": "tests/geometry_integrity.mjs",
+      "size": 2782,
+      "sha256": "57918ea87afb2e81eee67ec4fd18dee0e7b71c7c0d59ed9f938bebe8f3e49465"
+    },
+    {
+      "path": "tests/local_intelligence_contract.rs",
+      "size": 1817,
+      "sha256": "49985151cb28b75e66042a668af71fc84420d94b2b0ad13b8ad880e935a99885"
+    },
+    {
+      "path": "tests/multi_glb_api.rs",
+      "size": 7295,
+      "sha256": "41bec57e3ca82fd09ff6a33df11ef73fdd114d67b769bf8b660194710f1b218b"
+    },
+    {
+      "path": "tests/offline_assets.mjs",
+      "size": 1763,
+      "sha256": "2bc74d78d7162a321cabd3504c696be3616bab6f022e39f422d4ed051c16c4a3"
+    },
+    {
+      "path": "tests/scene_actions.mjs",
+      "size": 26242,
+      "sha256": "193ab6918541fb6ad671ce89bb340eab19167d0274608896204229924f5d36b1"
+    },
+    {
+      "path": "tests/scene_basis.mjs",
+      "size": 7282,
+      "sha256": "ea94c0e3d5b871b966a892b409ea63eaf018df224438e1e6b6b4742fabec37e2"
+    },
+    {
+      "path": "tests/scene_document.rs",
+      "size": 54382,
+      "sha256": "562b301ef2b5c239b6b92106d8023486cf4a09c192a2ed7cf0c6df93f73b8f73"
+    },
+    {
+      "path": "tests/scene_fixture.mjs",
+      "size": 1284,
+      "sha256": "131bfafbb50c8972f8fa6d9949e54589c0dc50876db37ca38e323ab6d2f87c3e"
+    },
+    {
+      "path": "tests/scene_glb.mjs",
+      "size": 5287,
+      "sha256": "a2a4f31985cc271a665365b6a817963716ffde8c296a4fda3984f21513e869c8"
+    },
+    {
+      "path": "tests/scene_workspace.mjs",
+      "size": 2665,
+      "sha256": "74ac93b6988de4a7bbe14262346026ff577292f0fac6f579f13ffeb388fa6b90"
+    },
+    {
+      "path": "tests/scene_workspace_dom.mjs",
+      "size": 9818,
+      "sha256": "49a61c0568715d91be47250ecddb30a06a25db7bb4c2bd899cb9a278a8d771aa"
+    },
+    {
+      "path": "tests/vwm_advanced_ui.rs",
+      "size": 4442,
+      "sha256": "6949e6a8ed391d31f43f9c60f501b1ab1cc873dced278537fdb554e091f2fa7b"
+    },
+    {
+      "path": "tests/vwm_source.rs",
+      "size": 2377,
+      "sha256": "67540d4e50237bbc76484d6f3ed3252cdb9509552e721ebc3e9a806acfa72162"
+    },
+    {
+      "path": "tests/workspace_panels.mjs",
+      "size": 2312,
+      "sha256": "65a7c45c7861cede639d0034ab9d91daed9afc08fe3e8190f03c5c9ba55896dd"
+    },
+    {
+      "path": "tools/3dmk-exec-router/Cargo.toml",
+      "size": 103,
+      "sha256": "88904f949624457ad2e104b20a0991b10dd79ff1cbbdb283571b7bb8bfbac607"
+    },
+    {
+      "path": "tools/3dmk-exec-router/contract.json",
+      "size": 356,
+      "sha256": "e63e4c7d9db0755ac8019510d256da6b36e178bc8b604001a3d9eba84dca9b35"
+    },
+    {
+      "path": "tools/3dmk-exec-router/src/main.rs",
+      "size": 11753,
+      "sha256": "4b2bec69b9738a4667ba9060f48f0db74e7f5a5b19a9e957433a362d647281d8"
+    }
+  ]
+}
