@@ -10,3 +10,6 @@ pub mod perception;
 pub mod point_cloud;
 pub mod projects;
 pub mod scene;
+
+pub mod scene_document;
+pub mod seismic;

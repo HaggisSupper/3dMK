@@ -34,9 +34,22 @@ pub fn load_ply(path: &Path) -> Result<CanonicalScene> {
 
     if let Some(vertex_list) = ply.payload.get("vertex") {
         for v in vertex_list {
-            let x = v.get("x").and_then(as_f32).unwrap_or(0.0);
-            let y = v.get("y").and_then(as_f32).unwrap_or(0.0);
-            let z = v.get("z").and_then(as_f32).unwrap_or(0.0);
+            let x = v
+                .get("x")
+                .and_then(as_f32)
+                .context("PLY vertex missing numeric x")?;
+            let y = v
+                .get("y")
+                .and_then(as_f32)
+                .context("PLY vertex missing numeric y")?;
+            let z = v
+                .get("z")
+                .and_then(as_f32)
+                .context("PLY vertex missing numeric z")?;
+            anyhow::ensure!(
+                [x, y, z].iter().all(|v| v.is_finite()),
+                "PLY vertex is not finite"
+            );
             vertices.push([x, y, z]);
 
             if let (Some(nx), Some(ny), Some(nz)) = (
@@ -52,7 +65,15 @@ pub fn load_ply(path: &Path) -> Result<CanonicalScene> {
                 v.get("green").and_then(as_f32),
                 v.get("blue").and_then(as_f32),
             ) {
-                colors.push([r / 255.0, g / 255.0, b / 255.0]);
+                let scale =
+                    if matches!(v.get("red"), Some(Property::Float(_) | Property::Double(_))) {
+                        1.0
+                    } else if matches!(v.get("red"), Some(Property::UShort(_))) {
+                        65535.0
+                    } else {
+                        255.0
+                    };
+                colors.push([r / scale, g / scale, b / scale]);
             }
         }
     }
@@ -62,27 +83,23 @@ pub fn load_ply(path: &Path) -> Result<CanonicalScene> {
             let Some(property) = f.get("vertex_indices") else {
                 continue;
             };
-            let triangle = match property {
-                Property::ListChar(list) if list.len() == 3 => {
-                    Some([list[0] as u32, list[1] as u32, list[2] as u32])
-                }
-                Property::ListUChar(list) if list.len() == 3 => {
-                    Some([list[0] as u32, list[1] as u32, list[2] as u32])
-                }
-                Property::ListShort(list) if list.len() == 3 => {
-                    Some([list[0] as u32, list[1] as u32, list[2] as u32])
-                }
-                Property::ListUShort(list) if list.len() == 3 => {
-                    Some([list[0] as u32, list[1] as u32, list[2] as u32])
-                }
-                Property::ListInt(list) if list.len() == 3 => {
-                    Some([list[0] as u32, list[1] as u32, list[2] as u32])
-                }
-                Property::ListUInt(list) if list.len() == 3 => Some([list[0], list[1], list[2]]),
-                _ => None,
+            let list: Vec<i64> = match property {
+                Property::ListChar(v) => v.iter().map(|&x| x as i64).collect(),
+                Property::ListUChar(v) => v.iter().map(|&x| x as i64).collect(),
+                Property::ListShort(v) => v.iter().map(|&x| x as i64).collect(),
+                Property::ListUShort(v) => v.iter().map(|&x| x as i64).collect(),
+                Property::ListInt(v) => v.iter().map(|&x| x as i64).collect(),
+                Property::ListUInt(v) => v.iter().map(|&x| x as i64).collect(),
+                _ => anyhow::bail!("PLY face has no integer vertex indices"),
             };
-            if let Some(triangle) = triangle {
-                indices.push(triangle);
+            anyhow::ensure!(list.len() >= 3, "PLY face has fewer than three vertices");
+            anyhow::ensure!(
+                list.iter()
+                    .all(|&i| i >= 0 && (i as usize) < vertices.len()),
+                "PLY face index is out of range"
+            );
+            for pair in list[1..].windows(2) {
+                indices.push([list[0] as u32, pair[0] as u32, pair[1] as u32]);
             }
         }
     }

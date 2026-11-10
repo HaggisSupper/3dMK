@@ -1,6 +1,8 @@
 use vwm_core::{CanonicalScene, PlanePrimitive, PlaneRelationKind};
+use vwm_geometry::adjacency::build_mesh_adjacency;
 use vwm_geometry::{
     analyze_scene,
+    normals::compute_face_normals,
     relations::{build_plane_relations, RelationConfig},
     GeometryConfig,
 };
@@ -52,4 +54,6 @@ fn invalid_triangle_indices_return_an_error_instead_of_panicking() {
     };
 
     assert!(analyze_scene(&scene, GeometryConfig::default()).is_err());
+    assert!(build_mesh_adjacency(&scene).is_err());
+    assert!(compute_face_normals(&scene).is_err());
 }

@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 use vwm_core::{CanonicalScene, Patch};
 
 use crate::adjacency::MeshAdjacency;
-use crate::math::{angle_between_degrees, arr3, centroid, p3};
+use crate::math::{angle_between_degrees, arr3, centroid, p3, validate_triangle_indices};
 
 #[derive(Debug, Clone, Copy)]
 pub struct PatchConfig {
@@ -18,6 +18,7 @@ pub fn segment_patches(
     face_normals: &[UnitVector3<f64>],
     cfg: PatchConfig,
 ) -> Result<Vec<Patch>> {
+    validate_triangle_indices(scene)?;
     let tris = scene
         .indices
         .as_ref()

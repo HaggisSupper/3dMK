@@ -3,9 +3,10 @@ use nalgebra::{Point3, Unit, UnitVector3, Vector3};
 use rayon::prelude::*;
 use vwm_core::CanonicalScene;
 
-use crate::math::p3;
+use crate::math::{p3, validate_triangle_indices};
 
 pub fn compute_face_normals(scene: &CanonicalScene) -> Result<Vec<UnitVector3<f64>>> {
+    validate_triangle_indices(scene)?;
     let tris = scene
         .indices
         .as_ref()

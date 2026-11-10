@@ -57,6 +57,30 @@ impl JobRegistry {
         self.store.load_project(project_id)?;
         let cancel_mode = validated_text(cancel_mode, "cancel mode", 100)?;
         let mut active = self.active.lock().map_err(|_| JobError::Lock)?;
+        // A client can disappear after admission but before dispatch. Reclaim only
+        // undispatched leases, never claim that a running worker was terminated.
+        let expired = active
+            .iter()
+            .filter_map(|(id, job)| {
+                (job.record.state == JobState::Queued && job.started.elapsed().as_secs() >= 120)
+                    .then_some(*id)
+            })
+            .collect::<Vec<_>>();
+        for id in expired {
+            let mut record = active
+                .get(&id)
+                .expect("ID collected under same lock")
+                .record
+                .clone();
+            record.state = JobState::Failed;
+            record.stage = "dispatch_timeout".into();
+            record.updated_at = current_timestamp()?;
+            record
+                .diagnostics
+                .push("Queued request was not dispatched within 120 seconds".into());
+            self.store.save_job(&record)?;
+            active.remove(&id);
+        }
         if active.len() >= self.max_active {
             return Err(JobError::QueueFull);
         }
@@ -176,7 +200,7 @@ fn valid_transition(current: JobState, next: JobState) -> bool {
                 | JobState::Complete
         ) | (
             JobState::CancellationRequested,
-            JobState::Cancelled | JobState::Failed | JobState::Complete
+            JobState::Cancelled | JobState::Failed
         ) | (
             JobState::ReviewRequired,
             JobState::Cancelled | JobState::Failed | JobState::Complete
@@ -230,6 +254,39 @@ mod tests {
         fn drop(&mut self) {
             let _ = fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[test]
+    fn abandoned_queued_admission_expires_but_running_job_does_not() {
+        let directory = TestDir::new();
+        let store = ProjectStore::open(&directory.0).unwrap();
+        let project = store.create_project("Dispatch lease").unwrap();
+        let jobs = JobRegistry::open(store, 1).unwrap();
+        let stale = jobs
+            .create(project.project_id, JobKind::Prepare, "result_discard")
+            .unwrap();
+        jobs.active
+            .lock()
+            .unwrap()
+            .get_mut(&stale.job_id)
+            .unwrap()
+            .started = Instant::now() - std::time::Duration::from_secs(121);
+        let running = jobs
+            .create(project.project_id, JobKind::Prepare, "result_discard")
+            .unwrap();
+        assert_eq!(jobs.get(stale.job_id).unwrap().state, JobState::Failed);
+        jobs.transition(running.job_id, JobState::Running, "working", None, None)
+            .unwrap();
+        jobs.active
+            .lock()
+            .unwrap()
+            .get_mut(&running.job_id)
+            .unwrap()
+            .started = Instant::now() - std::time::Duration::from_secs(121);
+        assert!(matches!(
+            jobs.create(project.project_id, JobKind::Prepare, "result_discard"),
+            Err(JobError::QueueFull)
+        ));
     }
 
     #[test]

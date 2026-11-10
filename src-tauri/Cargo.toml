@@ -10,6 +10,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 agentic-cad-backend = { path = ".." }
 anyhow = "1"
+sha2 = "0.10"
 axum = "0.7"
 tauri = { version = "2", features = [] }
 tokio = { version = "1", features = ["net"] }

@@ -74,7 +74,7 @@ fn frontend_has_a_usable_entry_point() {
     assert!(html.contains("async function projectCalibratedPhotos"));
     assert!(html.contains("/api/calibrated-photo-project"));
     assert!(html.contains("class=\"nested-accordion\""));
-    assert!(html.contains("Import geometry or package"));
+    assert!(html.contains("Open source / project · replaces current workspace"));
     assert!(html.contains("id=\"packageImportReview\""));
     assert!(html.contains("id=\"packageModelSelect\""));
     assert!(html.contains("async function inspectZipPackage"));
@@ -92,7 +92,7 @@ fn frontend_has_a_usable_entry_point() {
     assert!(html.contains("const rememberTextureAsset ="));
     assert!(html.contains("pointGeometry.userData.texture = sourceTexture || null"));
     assert!(html.contains("meshGeometry.userData.texture = sourceTexture || null"));
-    assert!(html.contains("Saved ${packaged.filename} from current PLY geometry"));
+    assert!(html.contains("Save project cannot replace the committed revision with a browser PLY"));
     assert!(html.contains("Exported ${asset.filename} as a raw 3D model."));
     assert!(html.contains("scene_analysis_context"));
     assert!(html.contains("mesh_smoothing"));
@@ -101,8 +101,8 @@ fn frontend_has_a_usable_entry_point() {
     assert!(html.contains("id=\"helpDrawer\""));
     assert!(html.contains("id=\"helpToggleBtn\""));
     assert!(html.contains("id=\"helpPinBtn\""));
-    assert!(html.contains("How to use 3DMk"));
-    assert!(html.contains("A simple first run"));
+    assert!(html.contains("Context help"));
+    assert!(html.contains("Quick start"));
     assert!(html.contains("VWM and VLM in plain language"));
     assert!(html
         .contains("Its suggestions are for review; it does not change the saved model by itself."));
@@ -124,7 +124,9 @@ fn frontend_has_a_usable_entry_point() {
     assert!(html.contains("id=\"measureUnitsSelect\""));
     assert!(html.contains("Measurement display units"));
     assert!(html.contains("saved as its own measurement object"));
-    assert!(html.contains("localStorage.getItem(HELP_DRAWER_PIN_KEY)"));
+    assert!(html.contains("/workspace-panels.js"));
+    assert!(html.contains("workspacePinBtn"));
+    assert!(!html.contains("HELP_DRAWER_PIN_KEY"));
     assert!(html.contains("raw_outer_boundary"));
     assert!(html.contains("outer_walls"));
     assert!(html.contains("outer_corners"));
@@ -192,7 +194,9 @@ fn calibrated_projection_posts_complete_inputs_and_commits_once() {
     assert!(html.contains("form.append('projection_options'"));
     assert!(html.contains("form.append('reference_photo'"));
     assert!(html.contains("fetchJson('/api/calibrated-photo-project'"));
-    assert!(html.contains("loadPlyGeometryFromUrl(data.projected_model)"));
+    let compact_html: String = html.chars().filter(|c| !c.is_whitespace()).collect();
+    assert!(compact_html
+        .contains("loadPlyGeometryFromUrl(data.projected_model,task);task.assertCurrent()"));
     assert!(html.contains("commitGeometryEdit([projectedGeometry]"));
     assert!(html.contains("source_geometry_fingerprint: activeGeometryFingerprint"));
     assert!(html.contains("photoEvidence.length"));
@@ -204,7 +208,8 @@ fn ply_and_photo_pairing_contract_preserves_source_data() {
     let html = include_str!("../public/index.html");
 
     assert!(html.contains("const normalizePackageSourcePath ="));
-    assert!(html.contains("sourcePath: packageAssetSourcePath(asset)"));
+    let compact_html: String = html.chars().filter(|c| !c.is_whitespace()).collect();
+    assert!(compact_html.contains("sourcePath:packageAssetSourcePath(asset)"));
     assert!(html.contains("camera_id: camera.id"));
     assert!(html.contains("normalizePackageSourcePath(photo.sourcePath || photo.name)"));
     assert!(html.contains("source_path: referencePhotos[index].sourcePath || file"));
@@ -246,16 +251,22 @@ fn detached_review_uses_revision_bound_exact_membership() {
 }
 
 #[test]
-fn divergent_rust_projects_force_current_browser_package() {
+fn divergent_rust_projects_refuse_browser_owned_project_save() {
     let html = include_str!("../public/index.html");
 
     assert!(html.contains("currentModelPackage.rustProjectId && !rustProjectHasLocalDivergence"));
-    assert!(html.contains("const forcedBrowserPackage"));
-    assert!(html.contains("geometryPlyBlob(2000000, true, loadedGeometryStore)"));
-    assert!(html.contains(
-        "Local geometry or detached-review edits are not committed to the Rust revision"
-    ));
-    assert!(html.contains("The Rust-backed revision remains unchanged."));
+    assert!(!html.contains("const forcedBrowserPackage"));
+    let save = html
+        .split("async function saveWorkingPackage()")
+        .nth(1)
+        .unwrap()
+        .split("async function exportSelectedBundle()")
+        .next()
+        .unwrap();
+    assert!(!save.contains("geometryPlyBlob"));
+    assert!(!save.contains("JSZip"));
+    assert!(html.contains("Save project cannot replace the committed revision with a browser PLY"));
+    assert!(html.contains("Import this model into the Rust project store"));
 }
 
 #[test]

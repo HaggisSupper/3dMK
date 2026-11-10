@@ -1,0 +1,118 @@
+{
+  "schema_version": "1.0.0",
+  "domain": {
+    "id": "product",
+    "version": "1.0.0",
+    "label": "Product assembly"
+  },
+  "composition_id": null,
+  "classes": [
+    {
+      "id": "scene",
+      "label": "Scene",
+      "parent_class_id": null,
+      "allowed_child_class_ids": [
+        "group",
+        "mesh",
+        "point_cloud",
+        "assembly",
+        "component"
+      ],
+      "properties": []
+    },
+    {
+      "id": "group",
+      "label": "Group",
+      "parent_class_id": null,
+      "allowed_child_class_ids": [
+        "group",
+        "mesh",
+        "point_cloud",
+        "assembly",
+        "component"
+      ],
+      "properties": []
+    },
+    {
+      "id": "mesh",
+      "label": "Mesh",
+      "parent_class_id": null,
+      "allowed_child_class_ids": [],
+      "properties": [
+        {
+          "id": "geometry",
+          "label": "Geometry",
+          "kind": "geometry_source",
+          "required": true,
+          "allowed_sources": [
+            "embedded_asset",
+            "dimensional_definition"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "point_cloud",
+      "label": "Point cloud",
+      "parent_class_id": null,
+      "allowed_child_class_ids": [],
+      "properties": [
+        {
+          "id": "geometry",
+          "label": "Geometry",
+          "kind": "geometry_source",
+          "required": true,
+          "allowed_sources": [
+            "embedded_asset"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "assembly",
+      "label": "Assembly",
+      "parent_class_id": null,
+      "allowed_child_class_ids": [
+        "assembly",
+        "component",
+        "mesh"
+      ],
+      "properties": []
+    },
+    {
+      "id": "component",
+      "label": "Component",
+      "parent_class_id": null,
+      "allowed_child_class_ids": [],
+      "properties": [
+        {
+          "id": "geometry",
+          "label": "Geometry",
+          "kind": "geometry_source",
+          "required": true,
+          "allowed_sources": [
+            "embedded_asset",
+            "dimensional_definition"
+          ]
+        }
+      ]
+    }
+  ],
+  "features": {
+    "workstation_panels": [
+      "import",
+      "scene_tree",
+      "analysis",
+      "measure",
+      "export"
+    ],
+    "capability_ids": [],
+    "default_visible_panels": [
+      "import",
+      "scene_tree",
+      "analysis",
+      "measure",
+      "export"
+    ]
+  }
+}

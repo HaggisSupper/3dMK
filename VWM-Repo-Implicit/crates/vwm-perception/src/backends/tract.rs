@@ -109,7 +109,7 @@ impl TractImageSegmenter {
         let model = tract_onnx::onnx()
             .model_for_path(&model_path)
             .map_err(model_error)?
-            .with_input_fact(0, f32::fact(&shape).into())
+            .with_input_fact(0, f32::fact(shape).into())
             .map_err(model_error)?
             .into_optimized()
             .map_err(model_error)?
@@ -456,7 +456,7 @@ impl TractImageClassifier {
         let model = tract_onnx::onnx()
             .model_for_path(&model_path)
             .map_err(model_error)?
-            .with_input_fact(0, f32::fact(&shape).into())
+            .with_input_fact(0, f32::fact(shape).into())
             .map_err(model_error)?
             .into_optimized()
             .map_err(model_error)?

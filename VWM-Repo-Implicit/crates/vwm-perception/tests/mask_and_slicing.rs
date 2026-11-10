@@ -6,7 +6,7 @@ use vwm_perception::{
 
 #[test]
 fn binary_mask_reports_tight_bounds_and_crop_preserves_alpha() {
-    let mask = BinaryMask::from_predicate(4, 3, |x, y| x >= 1 && x <= 2 && y >= 1).unwrap();
+    let mask = BinaryMask::from_predicate(4, 3, |x, y| (1..=2).contains(&x) && y >= 1).unwrap();
     let bounds = mask.bounding_box().unwrap();
     assert_eq!(
         (bounds.x, bounds.y, bounds.width, bounds.height),

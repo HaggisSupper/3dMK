@@ -3,19 +3,10 @@ use fast_surface_nets::{surface_nets, SurfaceNetsBuffer};
 use serde::{Deserialize, Serialize};
 use vwm_implicit_core::{DenseScalarGrid, FieldMesh, ImplicitError, ImplicitField, ImplicitResult};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
 pub struct SurfaceNetsConfig {
     pub min: [u32; 3],
     pub max: Option<[u32; 3]>,
-}
-
-impl Default for SurfaceNetsConfig {
-    fn default() -> Self {
-        Self {
-            min: [0, 0, 0],
-            max: None,
-        }
-    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
