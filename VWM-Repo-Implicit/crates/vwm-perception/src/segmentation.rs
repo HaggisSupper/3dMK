@@ -59,9 +59,9 @@ impl InstanceSegmenter for ColorRegionSegmenter {
         let width = frame.width as usize;
         let height = frame.height as usize;
         let mut foreground = vec![false; width * height];
-        for index in 0..foreground.len() {
+        for (index, foreground_pixel) in foreground.iter_mut().enumerate() {
             let p = index * 4;
-            foreground[index] = self.is_foreground([
+            *foreground_pixel = self.is_foreground([
                 frame.rgba8[p],
                 frame.rgba8[p + 1],
                 frame.rgba8[p + 2],

@@ -5255,11 +5255,12 @@ dependencies = [
 
 [[package]]
 name = "three-dmk-desktop"
-version = "0.1.0"
+version = "2.0.0-alpha.1"
 dependencies = [
  "agentic-cad-backend",
  "anyhow",
  "axum",
+ "sha2",
  "tauri",
  "tauri-build",
  "tokio",
@@ -6164,6 +6165,7 @@ version = "0.1.0"
 dependencies = [
  "nalgebra",
  "serde",
+ "serde_json",
  "thiserror 1.0.69",
 ]
 
@@ -6186,9 +6188,11 @@ dependencies = [
 name = "vwm-implicit"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "vwm-implicit-core",
  "vwm-implicit-poisson",
  "vwm-implicit-surface-nets",
+ "vwm-io",
 ]
 
 [[package]]
@@ -6228,6 +6232,7 @@ dependencies = [
  "las",
  "log",
  "ply-rs",
+ "serde_json",
  "stl_io",
  "thiserror 1.0.69",
  "tobj",

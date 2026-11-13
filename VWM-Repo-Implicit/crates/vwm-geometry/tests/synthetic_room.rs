@@ -2,8 +2,8 @@ use approx::assert_relative_eq;
 use vwm_core::{CanonicalScene, GeometryOrigin, LengthUnit, Transform3D};
 use vwm_geometry::{analyze_scene, GeometryConfig};
 
-fn rect_xy(z: f32, x0: f32, x1: f32, y0: f32, y1: f32) -> (Vec<[f32; 3]>, Vec<[u32; 3]>) {
-    let base = vec![[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]];
+fn rect_xz(y: f32, x0: f32, x1: f32, z0: f32, z1: f32) -> (Vec<[f32; 3]>, Vec<[u32; 3]>) {
+    let base = vec![[x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1]];
     let idx = vec![[0, 1, 2], [0, 2, 3]];
     (base, idx)
 }
@@ -20,8 +20,8 @@ fn synthetic_room_detects_major_planes() {
     let mut indices = Vec::<[u32; 3]>::new();
 
     let parts = vec![
-        rect_xy(0.0, 0.0, 4.0, 0.0, 3.0), // floor
-        rect_xy(2.5, 0.0, 4.0, 0.0, 3.0), // ceiling
+        rect_xz(0.0, 0.0, 4.0, 0.0, 3.0), // floor
+        rect_xz(2.5, 0.0, 4.0, 0.0, 3.0), // ceiling
         rect_yz(0.0, 0.0, 3.0, 0.0, 2.5), // wall x=0
         rect_yz(4.0, 0.0, 3.0, 0.0, 2.5), // wall x=4
     ];

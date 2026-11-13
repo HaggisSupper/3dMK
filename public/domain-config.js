@@ -72,6 +72,11 @@
     function renderProfile(profile) {
         const classes = byId('domainClassList');
         const features = byId('domainFeatureList');
+        let explanation=byId('domainPresetExplanation');
+        if(!explanation){explanation=document.createElement('section');explanation.id='domainPresetExplanation';explanation.setAttribute('aria-label','Preset explanation');byId('domainSelect').parentElement.append(explanation);}
+        explanation.replaceChildren();
+        const preset=state?.profiles.find(item=>item.id===profile.domain.id&&item.version===profile.domain.version);
+        for(const text of [preset?.description||'Custom class and tool presentation.',preset?.example?`Try: ${preset.example}`:'Review this profile before applying it.','Presets change classes and visible tools. They do not transform coordinates, assign units, or alter source geometry.']){const line=document.createElement('p');line.textContent=text;explanation.append(line);}
         classes.replaceChildren();
         features.replaceChildren();
         for (const definition of profile.classes) {
@@ -136,10 +141,15 @@
         setFeatureVisible(accordion('reference'), panels.has('import'));
         setFeatureVisible(accordion('alignment'), panels.has('import') || panels.has('scene_tree'));
         setFeatureVisible(byId('sceneTreePanel'), panels.has('scene_tree'));
+        setFeatureVisible(accordion('scene-layout'), panels.has('scene_tree'));
         setFeatureVisible(accordion('clean'), panels.has('analysis'));
         setFeatureVisible(accordion('derive'), panels.has('analysis') || panels.has('measure'));
         setFeatureVisible(accordion('convert'), panels.has('analysis'));
-        setFeatureVisible(accordion('room-plan'), panels.has('analysis'));
+        setFeatureVisible(accordion('room-plan'), panels.has('analysis') && profile.domain.id === 'indoor');
+        document.body.dataset.domain = profile.domain.id;
+        setFeatureVisible(byId('subsurfacePanel'), profile.domain.id === 'subsurface' || profile.domain.id === 'geospatial');
+        const badge=byId('activeDomainLabel'); if(badge)badge.textContent=profile.domain.label;
+        window.dispatchEvent(new CustomEvent('3dmk-domain-changed',{detail:profile.domain}));
         setFeatureVisible(accordion('measure'), panels.has('measure'));
         setFeatureVisible(accordion('export'), panels.has('export'));
     }

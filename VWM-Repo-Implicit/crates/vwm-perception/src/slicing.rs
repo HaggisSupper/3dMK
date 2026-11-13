@@ -174,6 +174,8 @@ fn extract_faces(scene: &CanonicalScene, face_ids: &BTreeSet<u32>) -> Result<Obj
 
     Ok(ObjectSlice {
         scene: CanonicalScene {
+            source_document: scene.source_document.clone(),
+            primitives: Vec::new(),
             vertices,
             normals: retain_only_complete(normals),
             indices: Some(indices),
@@ -239,6 +241,8 @@ fn extract_points(scene: &CanonicalScene, point_ids: &BTreeSet<u32>) -> Result<O
 
     Ok(ObjectSlice {
         scene: CanonicalScene {
+            source_document: scene.source_document.clone(),
+            primitives: Vec::new(),
             vertices,
             normals: retain_only_complete(normals),
             indices: None,

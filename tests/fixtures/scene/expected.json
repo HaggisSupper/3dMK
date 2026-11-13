@@ -1,0 +1,69 @@
+{
+  "name": "Planned and actual XYZ stations / top / section",
+  "fieldData": false,
+  "units": "m",
+  "horizontalCrs": "LOCAL_TEST_METRES",
+  "verticalDatum": "collar elevation 0 m",
+  "axes": "glTF: X east, Y up, Z south",
+  "interpolation": "piecewise linear XYZ; no inferred survey or velocity model",
+  "plan": [
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      -100,
+      0
+    ],
+    [
+      20,
+      -200,
+      0
+    ]
+  ],
+  "actual": [
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      10,
+      -100,
+      0
+    ],
+    [
+      40,
+      -200,
+      10
+    ]
+  ],
+  "topElevationMetres": -150,
+  "expectedTopIntersections": [
+    [
+      10,
+      -150,
+      0
+    ],
+    [
+      25,
+      -150,
+      5
+    ]
+  ],
+  "sectionEastMetres": 15,
+  "expectedSectionIntersections": {
+    "plan": [
+      15,
+      -175,
+      0
+    ],
+    "actual": [
+      15,
+      -116.66666666666667,
+      1.6666666666666667
+    ]
+  }
+}

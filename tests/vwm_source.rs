@@ -14,8 +14,17 @@ fn runtime_vwm_crates_resolve_from_one_canonical_tree() {
         .canonicalize()
         .expect("canonical VWM source should exist");
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
-    let output = Command::new(cargo)
-        .args(["metadata", "--format-version=1"])
+    let mut command = Command::new(cargo);
+    command.args(["metadata", "--format-version=1", "--offline"]);
+    // Preserve an explicit offline/pinned dependency override for this child
+    // command. Cargo's command-line --config is not inherited by test processes.
+    if let Some(config) = std::env::var_os("CARGO_METADATA_CONFIG") {
+        command.arg("--config").arg(config);
+    }
+    if let Some(platform) = std::env::var_os("CARGO_METADATA_FILTER_PLATFORM") {
+        command.arg("--filter-platform").arg(platform);
+    }
+    let output = command
         .current_dir(&root)
         .output()
         .expect("cargo metadata should run");

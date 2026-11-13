@@ -2,6 +2,8 @@ use ahash::{AHashMap, AHashSet};
 use anyhow::{anyhow, Result};
 use vwm_core::CanonicalScene;
 
+use crate::math::validate_triangle_indices;
+
 #[derive(Debug, Clone)]
 pub struct MeshAdjacency {
     pub face_neighbours: Vec<Vec<usize>>,
@@ -9,6 +11,7 @@ pub struct MeshAdjacency {
 }
 
 pub fn build_mesh_adjacency(scene: &CanonicalScene) -> Result<MeshAdjacency> {
+    validate_triangle_indices(scene)?;
     let tris = scene
         .indices
         .as_ref()
@@ -20,9 +23,7 @@ pub fn build_mesh_adjacency(scene: &CanonicalScene) -> Result<MeshAdjacency> {
     for (fi, tri) in tris.iter().enumerate() {
         for &vid in tri {
             let idx = vid as usize;
-            if idx < vertex_to_faces.len() {
-                vertex_to_faces[idx].push(fi);
-            }
+            vertex_to_faces[idx].push(fi);
         }
 
         let edges = [

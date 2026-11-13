@@ -1,0 +1,356 @@
+{
+  "schema_version": 1,
+  "hash_algorithm": "sha256",
+  "path_base": "public/",
+  "excluded_manifest_paths": [
+    "vendor/SHA256SUMS",
+    "vendor/runtime-assets.json"
+  ],
+  "file_count": 49,
+  "total_bytes": 3493365,
+  "files": [
+    {
+      "path": "vendor/THIRD_PARTY_NOTICES.md",
+      "sha256": "bd9d6254c9eda7d4054878547f8416d04f350a1322e264a3a71f829e76785e31",
+      "bytes": 2392,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "notice"
+    },
+    {
+      "path": "vendor/draco/1.5.6/draco_decoder.js",
+      "sha256": "30e4d486fa020737af10e3c56197693e5b904bdc05b8bfa5d7b06751dec6da04",
+      "bytes": 719410,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/draco/1.5.6/draco_decoder.wasm",
+      "sha256": "c55a594e8ffd18426d36b27fea9618af3df5e173640a3e56d46f09d76f0574f2",
+      "bytes": 285747,
+      "content_type": "application/wasm",
+      "kind": "wasm"
+    },
+    {
+      "path": "vendor/draco/1.5.6/draco_wasm_wrapper.js",
+      "sha256": "e8049906ef3f8f75d3456c22a3f31bfdfe5b5b5bd09ccdec613b9e9a49d554d8",
+      "bytes": 58763,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/jspdf/2.5.1/jspdf.umd.min.js",
+      "sha256": "98ccf17aa10c20bb1301762618fcc9b6ab3a4e7f26b6071d64d0b41154df3875",
+      "bytes": 364463,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/jszip/3.10.1/jszip.min.js",
+      "sha256": "acc7e41455a80765b5fd9c7ee1b8078a6d160bbbca455aeae854de65c947d59e",
+      "bytes": 97630,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/licenses/bundled/@babel-helpers-7.10.4-LICENSE",
+      "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76",
+      "bytes": 1106,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "license"
+    },
+    {
+      "path": "vendor/licenses/bundled/fflate-0.4.8-LICENSE",
+      "sha256": "62249119bb7df6e54300f37a37145c26a6d4420410aac8881a119c5b427cf751",
+      "bytes": 1069,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "license"
+    },
+    {
+      "path": "vendor/licenses/bundled/immediate-3.0.6-LICENSE.txt",
+      "sha256": "809e66de579fb7d92503848bbe6d1f348f4f6521a71e5d294fe7cc0c87a3b4ff",
+      "bytes": 1115,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "license"
+    },
+    {
+      "path": "vendor/licenses/bundled/lie-3.3.0-license.md",
+      "sha256": "5c81b0caa98593408b03125efa25efe622341ed87ae55561968828cd887d64a4",
+      "bytes": 1084,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "license"
+    },
+    {
+      "path": "vendor/licenses/bundled/pako-1.0.5-LICENSE",
+      "sha256": "a04665b3b2de56c66730c1f720f528175739e4104f79073614aa611da1e85539",
+      "bytes": 1104,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "license"
+    },
+    {
+      "path": "vendor/licenses/bundled/setimmediate-1.0.5-LICENSE.txt",
+      "sha256": "c4b4ad3a5746f1f5249a6dd90396ec519264e1bb02e01e48a6522c48a3a97cb4",
+      "bytes": 1103,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "license"
+    },
+    {
+      "path": "vendor/licenses/draco-1.5.6-AUTHORS",
+      "sha256": "7399754545fa82fbf402e3e91d50de0b63772870fd807c48dd9af25c042efb10",
+      "bytes": 317,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "license"
+    },
+    {
+      "path": "vendor/licenses/draco-1.5.6-LICENSE",
+      "sha256": "d3709b0fb4b8a94bbb1d02b8a2e484f258b0d9c5c5a01f940391f3fe662cd1a4",
+      "bytes": 13898,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "license"
+    },
+    {
+      "path": "vendor/licenses/draco-browser-README.md",
+      "sha256": "8b0bff6aa9c9115318d4c91206d379d4421c0d112526df6e6da9ab4c480e4645",
+      "bytes": 1501,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "license"
+    },
+    {
+      "path": "vendor/licenses/jspdf-2.5.1-LICENSE",
+      "sha256": "2d26bfab8a36d2250602c7a7597237e180c5cd3517acc108126e3cb399f483c8",
+      "bytes": 1142,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "license"
+    },
+    {
+      "path": "vendor/licenses/jspdf-bundled-NOTICES.txt",
+      "sha256": "1d5d2fc23d202f353d2f1cef2fa498a938f266b4b0e2dc0a4119ecfbcbc94b72",
+      "bytes": 44527,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "license"
+    },
+    {
+      "path": "vendor/licenses/jszip-3.10.1-LICENSE.markdown",
+      "sha256": "566c953c6090b1218ca6217dd7359d45dde46581968586dc607d59a78af6a9c4",
+      "bytes": 33753,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "license"
+    },
+    {
+      "path": "vendor/licenses/jszip-bundled-NOTICES.txt",
+      "sha256": "f9a4809a1af7ba3dc3dcf6fc2dd0bf0adf76a7daf4426e95e27ada4f38debf5b",
+      "bytes": 1769,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "license"
+    },
+    {
+      "path": "vendor/licenses/three-0.160.0-LICENSE",
+      "sha256": "852e0e8699169bf9f6fdc6bda3e682d078dcbc738b5d33e74df594721bff271d",
+      "bytes": 1081,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "license"
+    },
+    {
+      "path": "vendor/licenses/three-mesh-bvh-0.7.0-LICENSE",
+      "sha256": "b106ef6198a9862ed2b5b873e944ecf3583c631a84a7462d400ecc1910ce7fee",
+      "bytes": 1072,
+      "content_type": "text/plain; charset=utf-8",
+      "kind": "license"
+    },
+    {
+      "path": "vendor/three/0.160.0/build/three.module.js",
+      "sha256": "76dea8151bc9352aef3528b4262e249b2604f62543828328db978d060d61a495",
+      "bytes": 1272972,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/controls/OrbitControls.js",
+      "sha256": "5a44a9e86a2a0fb11933eed69bc2cd33c76a496854c1aed6ed776efa87d7b064",
+      "bytes": 29868,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/environments/RoomEnvironment.js",
+      "sha256": "e21f41b7ef2016f2984a5d27850b42dffa797a6a194a138e288b06576d765a7b",
+      "bytes": 3735,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/exporters/GLTFExporter.js",
+      "sha256": "f8a6eb87719e68c925fdf445014b5ead49cf779ae14e69c6cc1cb1dd4eae514d",
+      "bytes": 77714,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/exporters/OBJExporter.js",
+      "sha256": "1f86eb4275fea0eef64e8e85a9acbfe2b7ab76556f8f093d28dbd0a39bb21d66",
+      "bytes": 5370,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/exporters/PLYExporter.js",
+      "sha256": "89b648a745aa82a321edeb6f842f524a799aad3e9cd4d6aad41a8cb79f235656",
+      "bytes": 12001,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/exporters/STLExporter.js",
+      "sha256": "d64440877b68a973c9c2fe6a0474c9c9ab996a12f1fa835fbc4ffa29158f176b",
+      "bytes": 3890,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/loaders/DRACOLoader.js",
+      "sha256": "65c114ecb7b349cdc59c75b2c92d19cca672a138060dba0f60f64262fa40408c",
+      "bytes": 13628,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/loaders/GLTFLoader.js",
+      "sha256": "d073b438e6a07e1359741dd5d6c76c953420cc0d4fd84eb1bdde94315540e6a3",
+      "bytes": 108522,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/loaders/MTLLoader.js",
+      "sha256": "990757029142686fdcbbaded27207234151a9942469a1aa5417842b302565174",
+      "bytes": 10580,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/loaders/OBJLoader.js",
+      "sha256": "022e0334f837c60506276e136faf3e54b21b20aea672eed4a0c50651d4fc0a5d",
+      "bytes": 21175,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/loaders/PLYLoader.js",
+      "sha256": "5b1f81016923481f66e3cd70cbbdfbe6742e60ae51839bccd8e4a8f7d616db9d",
+      "bytes": 16622,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/loaders/STLLoader.js",
+      "sha256": "896d006a48b8f125385a485ccae154dadee801a953f0b45ceffe7ddd8a29ca93",
+      "bytes": 10029,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/math/MeshSurfaceSampler.js",
+      "sha256": "a31e980aee9b16b96568bd61514e78435cf6a50d4b8515fb9a90ae5e88c35ada",
+      "bytes": 5690,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/math/SimplexNoise.js",
+      "sha256": "9b8d541b77b0ddc79afaa6a1de8941452c191b8b9006f04e7b8fc422e2b263f7",
+      "bytes": 14351,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/postprocessing/EffectComposer.js",
+      "sha256": "d234e578618fa816955ebdc059c049c577e203e650e33cf22bde3f232c29e669",
+      "bytes": 4651,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/postprocessing/MaskPass.js",
+      "sha256": "328cf7db0da5d9be83ffe39d54b01d5ac1fddf108cc98182ddbb056f5c8b537f",
+      "bytes": 2231,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/postprocessing/OutputPass.js",
+      "sha256": "13817fc7a87f662d29d2c5e00f44d3a4588c9afac4a372de0cacb0e44e368ffd",
+      "bytes": 2398,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/postprocessing/Pass.js",
+      "sha256": "b3c6128340eaa37e40a6a2f1b738e894c855239417d50959759b34a2b5e89f92",
+      "bytes": 1706,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/postprocessing/RenderPass.js",
+      "sha256": "1c90c085312871c4bcdccfcf519499c6276dd503363fcf7cb7f703add45cf4a2",
+      "bytes": 1915,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/postprocessing/SSAOPass.js",
+      "sha256": "22ef811aeda777d2ba71d8f70cd332aa843782b9ffc559e6ba0dbfffa003061d",
+      "bytes": 11421,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/postprocessing/ShaderPass.js",
+      "sha256": "3b28a1ee27e0eb96c0eab137a1f442ccf127a926904eced2d51e125ec44af781",
+      "bytes": 1576,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/shaders/CopyShader.js",
+      "sha256": "4e3346db194db56a596cd074e9bdb39fb5eb52040c333e0d29dc4eb1324d3b1d",
+      "bytes": 571,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/shaders/OutputShader.js",
+      "sha256": "53a52e430c27bc36ceaab8ae90a2b4af7b02672d7ee4b29d6ba3c28e09c92c2a",
+      "bytes": 1393,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/shaders/SSAOShader.js",
+      "sha256": "bd5cda34d6b52941c1121b77947664848af10dc68febd453dfdc56c59e58ba06",
+      "bytes": 6478,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/utils/BufferGeometryUtils.js",
+      "sha256": "9be041e96308775d00e2695cc607645b9a9b64fd7c0e759dd8f7c00a8d92becb",
+      "bytes": 31906,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three/0.160.0/examples/jsm/utils/TextureUtils.js",
+      "sha256": "1b84a7fde8745dd614f62b6ca8108b592144278c07891a0cbe8cdf8e15796efa",
+      "bytes": 2367,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    },
+    {
+      "path": "vendor/three-mesh-bvh/0.7.0/build/index.module.js",
+      "sha256": "3520b73c1c5a56648625e670d0656c4e4ea2093f22bb2dc368876cc2fda33da7",
+      "bytes": 184559,
+      "content_type": "text/javascript",
+      "kind": "javascript"
+    }
+  ]
+}

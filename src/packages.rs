@@ -1009,7 +1009,12 @@ fn inspect_reader<R: Read + Seek>(
             ("inode/directory".to_owned(), None)
         } else {
             file_count += 1;
-            let keep_control_file = is_control_file(&path) && expanded_bytes <= 4 * 1024 * 1024;
+            let control_limit = if path == "3dmk-package.json" {
+                64 * 1024 * 1024
+            } else {
+                4 * 1024 * 1024
+            };
+            let keep_control_file = is_control_file(&path) && expanded_bytes <= control_limit;
             let mut control_bytes = keep_control_file.then(Vec::new);
             let mut first_bytes = Vec::with_capacity(4096);
             let mut hash = Sha256::new();

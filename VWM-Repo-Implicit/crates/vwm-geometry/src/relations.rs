@@ -22,9 +22,14 @@ pub fn build_plane_relations(
         for j in (i + 1)..planes.len() {
             let a_n = UnitVector3::new_normalize(v3(planes[i].normal));
             let b_n = UnitVector3::new_normalize(v3(planes[j].normal));
+            let normal_alignment = a_n.dot(&b_n);
             let angle = angle_between_degrees(a_n, b_n);
             let centroid_distance = dist3(planes[i].centroid, planes[j].centroid);
-            let offset_difference = (planes[i].offset - planes[j].offset).abs();
+            let offset_difference = if normal_alignment < 0.0 {
+                (planes[i].offset + planes[j].offset).abs()
+            } else {
+                (planes[i].offset - planes[j].offset).abs()
+            };
 
             let kind = if angle <= cfg.parallel_angle_threshold_degrees
                 || (180.0 - angle) <= cfg.parallel_angle_threshold_degrees

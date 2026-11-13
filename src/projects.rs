@@ -18,6 +18,8 @@ pub const DEFAULT_MAX_ASSET_BYTES: u64 = 1024 * 1024 * 1024;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProjectError {
+    #[error(transparent)]
+    Scene(#[from] crate::scene_document::SceneError),
     #[error("invalid project data: {0}")]
     Invalid(String),
     #[error("project item was not found")]
@@ -761,6 +763,64 @@ impl ProjectStore {
         Ok(assets)
     }
 
+    pub fn get_scene_document(
+        &self,
+        project_id: Uuid,
+    ) -> Result<crate::scene_document::SceneCommandResult> {
+        let _guard = self.guard()?;
+        self.load_project_locked(project_id)?;
+        let assets = self
+            .list_assets_locked(project_id)?
+            .into_iter()
+            .map(|a| a.asset_id)
+            .collect();
+        Ok(crate::scene_document::load_scene_state(
+            &self.project_dir(project_id),
+            project_id,
+            &assets,
+        )?
+        .response(false))
+    }
+
+    pub fn apply_scene_command(
+        &self,
+        project_id: Uuid,
+        request: &crate::scene_document::SceneCommandRequest,
+    ) -> Result<crate::scene_document::SceneCommandResult> {
+        let _guard = self.guard()?;
+        self.load_project_locked(project_id)?;
+        let assets = self
+            .list_assets_locked(project_id)?
+            .into_iter()
+            .map(|a| a.asset_id)
+            .collect();
+        let directory = self.project_dir(project_id);
+        let mut scene = crate::scene_document::load_scene_state(&directory, project_id, &assets)?;
+        let additions: &[crate::scene_document::SceneObject] = match &request.command {
+            crate::scene_document::SceneCommand::AddObject { object } => {
+                std::slice::from_ref(object)
+            }
+            crate::scene_document::SceneCommand::AddObjects { objects } => objects,
+            _ => &[],
+        };
+        let mut selectors: HashMap<Uuid, Vec<u32>> = HashMap::new();
+        for object in additions {
+            if let (Some(asset_id), Some(node)) = (object.asset_id, object.asset_node_index) {
+                selectors.entry(asset_id).or_default().push(node);
+            }
+        }
+        for (asset_id, nodes) in selectors {
+            let asset = self.find_asset_locked(project_id, asset_id)?;
+            let path = directory.join("assets").join(&asset.sha256).join("payload");
+            validate_glb_node_selectors(&path, &nodes)?;
+        }
+        let result = scene.apply(request, &assets)?;
+        if !result.duplicate {
+            crate::scene_document::save_scene_state(&directory, &scene, &assets)?;
+        }
+        Ok(result)
+    }
+
     pub fn export_package(&self, project_id: Uuid, output_path: &Path) -> Result<()> {
         let _guard = self.guard()?;
         let project = self.load_project_locked(project_id)?;
@@ -773,52 +833,121 @@ impl ProjectStore {
         if let Some(parent) = output_path.parent() {
             fs::create_dir_all(parent)?;
         }
+        let staged_path = output_path.with_extension(format!("{}.pending", Uuid::new_v4()));
+        let _cleanup = ExportStage(staged_path.clone());
         let file = OpenOptions::new()
             .create_new(true)
             .write(true)
-            .open(output_path)?;
+            .open(&staged_path)?;
         let mut archive = ZipWriter::new(file);
         archive.start_file(
             "3dmk-package.json",
-            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated),
+            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored),
         )?;
+        let mut records = serde_json::Map::new();
+        for category in [
+            "analyses",
+            "measurements",
+            "room-plans",
+            "operations",
+            "jobs",
+        ] {
+            for entry in fs::read_dir(self.project_dir(project_id).join(category))? {
+                let entry = entry?;
+                if entry.file_type()?.is_file()
+                    && entry.path().extension().is_some_and(|x| x == "json")
+                {
+                    let name = entry.file_name().to_string_lossy().into_owned();
+                    records.insert(
+                        format!("{category}/{name}"),
+                        read_json::<Value>(&entry.path())?,
+                    );
+                }
+            }
+        }
+        let primary = revisions
+            .iter()
+            .find(|r| Some(r.revision_id) == project.active_revision_id)
+            .and_then(|r| {
+                assets
+                    .iter()
+                    .find(|a| a.asset_id == r.render_asset_id.unwrap_or(r.scene_asset_id))
+            })
+            .map(|a| export_asset_paths(a)[0].clone());
+        let scene_state = if self
+            .project_dir(project_id)
+            .join(crate::scene_document::SCENE_FILE_NAME)
+            .exists()
+        {
+            let allowed = assets.iter().map(|a| a.asset_id).collect();
+            Some(crate::scene_document::load_scene_state(
+                &self.project_dir(project_id),
+                project_id,
+                &allowed,
+            )?)
+        } else {
+            None
+        };
+        if scene_state.is_some() && primary.is_none() {
+            return Err(ProjectError::Invalid(
+                "Scene project export requires an imported primary model".into(),
+            ));
+        }
         let manifest = serde_json::json!({
+            "scene_state": scene_state,
+            "primary_model_path": primary,
+            "records": records,
+            "asset_paths": assets.iter().map(|a|(a.asset_id.to_string(),export_asset_paths(a))).collect::<std::collections::BTreeMap<_,_>>(),
             "package_format_version": "3dmk-package-v1",
             "project": project.clone(),
             "revisions": revisions.clone(),
             "assets": assets.clone(),
         });
-        let mut manifest_bytes = serde_json::to_vec_pretty(&manifest)?;
+        let mut manifest_bytes = serde_json::to_vec(&manifest)?;
+        if manifest_bytes.len() >= 64 * 1024 * 1024 {
+            return Err(ProjectError::Invalid(
+                "Project manifest exceeds 64 MiB".into(),
+            ));
+        }
         manifest_bytes.push(b'\n');
         archive.write_all(&manifest_bytes)?;
 
-        let mut written_paths = HashMap::<String, ()>::new();
+        let mut written_paths = HashMap::<String, String>::new();
         for asset in &assets {
             let payload_path = self
                 .project_dir(project_id)
                 .join("assets")
                 .join(&asset.sha256)
                 .join("payload");
-            let package_paths = asset
-                .metadata
-                .get("package_paths")
-                .and_then(Value::as_array)
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_str)
-                .filter(|path| valid_package_path(path))
-                .map(str::to_owned)
-                .collect::<Vec<_>>();
-            let package_paths = if package_paths.is_empty() {
-                vec![format!("__3dmk/assets/{}.bin", asset.sha256)]
-            } else {
-                package_paths
-            };
+            let package_paths = export_asset_paths(asset);
+            let mut source = File::open(&payload_path)?;
+            let mut hash = Sha256::new();
+            let mut copied = 0u64;
+            let mut buffer = [0u8; 65536];
+            loop {
+                let count = source.read(&mut buffer)?;
+                if count == 0 {
+                    break;
+                }
+                copied += count as u64;
+                hash.update(&buffer[..count]);
+            }
+            if copied != asset.byte_length || hex_digest(hash.finalize().as_slice()) != asset.sha256
+            {
+                let _ = fs::remove_file(&staged_path);
+                return Err(ProjectError::Invalid(
+                    "asset bytes do not match their recorded digest".into(),
+                ));
+            }
             for package_path in package_paths {
-                if written_paths
-                    .insert(package_path.to_ascii_lowercase(), ())
-                    .is_some()
+                if let Some(previous) =
+                    written_paths.insert(package_path.to_ascii_lowercase(), asset.sha256.clone())
                 {
+                    if previous != asset.sha256 {
+                        return Err(ProjectError::Invalid(
+                            "different assets claim the same package path".into(),
+                        ));
+                    }
                     continue;
                 }
                 archive.start_file(
@@ -831,7 +960,359 @@ impl ProjectStore {
         }
         let file = archive.finish()?;
         file.sync_all()?;
+        // Do not replace an existing package. Staging is invisible until complete.
+        if output_path.exists() {
+            let _ = fs::remove_file(&staged_path);
+            return Err(ProjectError::Conflict(
+                "export destination already exists".into(),
+            ));
+        }
+        fs::rename(&staged_path, output_path)?;
         Ok(())
+    }
+
+    pub fn restore_package_scene(
+        &self,
+        manifest: &Value,
+        extracted: &[PackageAssetImport],
+    ) -> Result<PackageSceneImportResult> {
+        let _guard = self.guard()?;
+        if manifest
+            .get("package_format_version")
+            .and_then(Value::as_str)
+            != Some("3dmk-package-v1")
+        {
+            return Err(ProjectError::Invalid(
+                "unsupported project package version".into(),
+            ));
+        }
+        let project: Project = serde_json::from_value(manifest["project"].clone())?;
+        let revisions: Vec<Revision> = serde_json::from_value(manifest["revisions"].clone())?;
+        let assets: Vec<Asset> = serde_json::from_value(manifest["assets"].clone())?;
+        validate_project(project.project_id, &project)?;
+        let ids = assets
+            .iter()
+            .map(|a| a.asset_id)
+            .collect::<std::collections::HashSet<_>>();
+        let revision_ids = revisions
+            .iter()
+            .map(|r| r.revision_id)
+            .collect::<std::collections::HashSet<_>>();
+        if ids.len() != assets.len()
+            || revision_ids.len() != revisions.len()
+            || project
+                .revision_ids
+                .iter()
+                .copied()
+                .collect::<std::collections::HashSet<_>>()
+                != revision_ids
+            || project.source_asset_ids.iter().any(|id| !ids.contains(id))
+        {
+            return Err(ProjectError::Invalid(
+                "project package contains duplicate or missing graph identities".into(),
+            ));
+        }
+        for revision in &revisions {
+            if !ids.contains(&revision.scene_asset_id)
+                || revision
+                    .render_asset_id
+                    .is_some_and(|id| !ids.contains(&id))
+                || revision
+                    .source_mapping_asset_id
+                    .is_some_and(|id| !ids.contains(&id))
+                || revision
+                    .quality_report_id
+                    .is_some_and(|id| !ids.contains(&id))
+                || revision
+                    .parent_revision_ids
+                    .iter()
+                    .any(|id| !revision_ids.contains(id) || *id == revision.revision_id)
+            {
+                return Err(ProjectError::Invalid(
+                    "project package revision references absent assets or parents".into(),
+                ));
+            }
+            let mut pending = revision.parent_revision_ids.clone();
+            let mut visited = std::collections::HashSet::new();
+            while let Some(id) = pending.pop() {
+                if id == revision.revision_id {
+                    return Err(ProjectError::Invalid(
+                        "revision graph contains a cycle".into(),
+                    ));
+                }
+                if visited.insert(id) {
+                    let parent =
+                        revisions
+                            .iter()
+                            .find(|r| r.revision_id == id)
+                            .ok_or_else(|| {
+                                ProjectError::Invalid(
+                                    "revision ancestry references a missing revision".into(),
+                                )
+                            })?;
+                    pending.extend(parent.parent_revision_ids.iter().copied());
+                }
+            }
+        }
+        let records = manifest.get("records").and_then(Value::as_object);
+        for revision in &revisions {
+            if let Some(id) = revision.operation_id {
+                let value = records
+                    .and_then(|r| r.get(&format!("operations/{id}.json")))
+                    .ok_or_else(|| {
+                        ProjectError::Invalid("missing revision operation record".into())
+                    })?;
+                let operation: OperationRecord = serde_json::from_value(value.clone())?;
+                if operation.operation_id != id
+                    || operation.project_id != project.project_id
+                    || operation
+                        .input_revision_ids
+                        .iter()
+                        .any(|id| !revision_ids.contains(id))
+                    || operation
+                        .output_revision_ids
+                        .iter()
+                        .any(|id| !revision_ids.contains(id))
+                {
+                    return Err(ProjectError::Invalid(
+                        "invalid operation graph reference".into(),
+                    ));
+                }
+            }
+            if revision.camera_set_id.is_some() {
+                return Err(ProjectError::Invalid(
+                    "Camera-set restoration is not implemented; package was not restored".into(),
+                ));
+            }
+        }
+        for id in &project.analysis_ids {
+            let value = records
+                .and_then(|r| r.get(&format!("analyses/{id}.json")))
+                .ok_or_else(|| ProjectError::Invalid("missing analysis record".into()))?;
+            let analysis: AnalysisRecord = serde_json::from_value(value.clone())?;
+            if analysis.analysis_id != *id
+                || !revision_ids.contains(&analysis.input_revision_id)
+                || analysis
+                    .overlay_asset_ids
+                    .iter()
+                    .any(|id| !ids.contains(id))
+                || analysis
+                    .source_mapping_asset_id
+                    .is_some_and(|id| !ids.contains(&id))
+            {
+                return Err(ProjectError::Invalid(
+                    "invalid analysis graph reference".into(),
+                ));
+            }
+        }
+        let scene_state = manifest
+            .get("scene_state")
+            .filter(|value| !value.is_null())
+            .map(|value| serde_json::from_value::<crate::scene_document::SceneState>(value.clone()))
+            .transpose()?;
+        if let Some(scene) = &scene_state {
+            if scene.document.project_id != project.project_id {
+                return Err(crate::scene_document::SceneError::ProjectMismatch.into());
+            }
+            scene.validate(&ids)?;
+        }
+        let active = revisions
+            .iter()
+            .find(|r| Some(r.revision_id) == project.active_revision_id)
+            .cloned()
+            .ok_or_else(|| ProjectError::Invalid("package has no active revision".into()))?;
+        let final_dir = self.project_dir(project.project_id);
+        let temp_dir = self.projects_dir().join(format!(
+            ".{}.{}.restore",
+            project.project_id,
+            Uuid::new_v4()
+        ));
+        let result = (|| {
+            create_project_layout(&temp_dir)?;
+            for asset in &assets {
+                if asset.sha256.len() != 64
+                    || !asset.sha256.bytes().all(|c| c.is_ascii_hexdigit())
+                    || asset.byte_length > self.max_asset_bytes
+                {
+                    return Err(ProjectError::Invalid("invalid asset digest or size".into()));
+                }
+                let paths = manifest["asset_paths"][asset.asset_id.to_string()]
+                    .as_array()
+                    .map(|a| {
+                        a.iter()
+                            .filter_map(Value::as_str)
+                            .map(str::to_owned)
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_else(|| export_asset_paths(asset));
+                let input = extracted
+                    .iter()
+                    .find(|e| e.package_paths.iter().any(|p| paths.contains(p)))
+                    .ok_or_else(|| {
+                        ProjectError::Invalid(format!(
+                            "missing package payload for {}",
+                            asset.original_name
+                        ))
+                    })?;
+                let dir = temp_dir.join("assets").join(&asset.sha256);
+                fs::create_dir_all(&dir)?;
+                let mut source = File::open(&input.source_path)?;
+                let mut output = File::create(dir.join("payload"))?;
+                let mut hash = Sha256::new();
+                let mut size = 0u64;
+                let mut buffer = [0u8; 65536];
+                loop {
+                    let count = source.read(&mut buffer)?;
+                    if count == 0 {
+                        break;
+                    }
+                    size += count as u64;
+                    if size > asset.byte_length {
+                        return Err(ProjectError::Invalid("asset exceeds recorded size".into()));
+                    }
+                    hash.update(&buffer[..count]);
+                    output.write_all(&buffer[..count])?;
+                }
+                if size != asset.byte_length
+                    || hex_digest(hash.finalize().as_slice()) != asset.sha256
+                {
+                    return Err(ProjectError::Invalid(
+                        "package asset digest mismatch".into(),
+                    ));
+                }
+                output.sync_all()?;
+                write_new_json(&dir.join("asset.json"), asset)?;
+            }
+            for revision in &revisions {
+                let dir = temp_dir
+                    .join("revisions")
+                    .join(revision.revision_id.to_string());
+                fs::create_dir(&dir)?;
+                write_new_json(&dir.join("revision.json"), revision)?;
+            }
+            if let Some(records) = manifest["records"].as_object() {
+                for (path, value) in records {
+                    let parts = path.split('/').collect::<Vec<_>>();
+                    if parts.len() != 2
+                        || ![
+                            "analyses",
+                            "measurements",
+                            "room-plans",
+                            "operations",
+                            "jobs",
+                        ]
+                        .contains(&parts[0])
+                        || !parts[1].ends_with(".json")
+                        || Uuid::parse_str(parts[1].trim_end_matches(".json")).is_err()
+                    {
+                        return Err(ProjectError::Invalid("unsafe project record path".into()));
+                    }
+                    write_new_json(&temp_dir.join(path), value)?;
+                }
+            }
+            for (category, list) in [
+                ("analyses", &project.analysis_ids),
+                ("measurements", &project.measurement_set_ids),
+            ] {
+                for id in list {
+                    if !temp_dir.join(category).join(format!("{id}.json")).is_file() {
+                        return Err(ProjectError::Invalid(
+                            "package omits referenced project records".into(),
+                        ));
+                    }
+                }
+            }
+            if let Some(scene) = &scene_state {
+                for (asset_id, nodes) in scene.source_node_selectors() {
+                    let asset = assets
+                        .iter()
+                        .find(|asset| asset.asset_id == asset_id)
+                        .ok_or(ProjectError::NotFound)?;
+                    validate_glb_node_selectors(
+                        &temp_dir.join("assets").join(&asset.sha256).join("payload"),
+                        &nodes,
+                    )?;
+                }
+                crate::scene_document::save_scene_state(&temp_dir, scene, &ids)?;
+            }
+            write_new_json(&temp_dir.join("project.json"), &project)?;
+            if final_dir.exists() {
+                let existing_path = final_dir.join(crate::scene_document::SCENE_FILE_NAME);
+                let existing_scene = if existing_path.exists() {
+                    Some(read_json::<Value>(&existing_path)?)
+                } else {
+                    None
+                };
+                let incoming_scene = scene_state.as_ref().map(serde_json::to_value).transpose()?;
+                if existing_scene != incoming_scene {
+                    return Err(ProjectError::Conflict(
+                        "Existing scene placements or views differ; newer state was preserved"
+                            .into(),
+                    ));
+                }
+                if self.load_project_locked(project.project_id)? != project
+                    || revisions.iter().any(|r| {
+                        self.load_revision_locked(project.project_id, r.revision_id)
+                            .ok()
+                            .as_ref()
+                            != Some(r)
+                    })
+                    || self
+                        .list_assets_locked(project.project_id)?
+                        .iter()
+                        .map(|a| (a.asset_id, a))
+                        .collect::<std::collections::BTreeMap<_, _>>()
+                        != assets
+                            .iter()
+                            .map(|a| (a.asset_id, a))
+                            .collect::<std::collections::BTreeMap<_, _>>()
+                {
+                    return Err(ProjectError::Conflict("A different version of this project already exists. Importing cannot overwrite newer state.".into()));
+                }
+                if let Some(records) = manifest["records"].as_object() {
+                    for (path, value) in records {
+                        if read_json::<Value>(&final_dir.join(path))? != *value {
+                            return Err(ProjectError::Conflict("Existing project records differ from package; newer state was preserved".into()));
+                        }
+                    }
+                }
+                for asset in &assets {
+                    let mut file =
+                        File::open(final_dir.join("assets").join(&asset.sha256).join("payload"))?;
+                    let mut hasher = Sha256::new();
+                    let mut buffer = [0u8; 65536];
+                    let mut bytes = 0u64;
+                    loop {
+                        let n = file.read(&mut buffer)?;
+                        if n == 0 {
+                            break;
+                        }
+                        bytes += n as u64;
+                        hasher.update(&buffer[..n]);
+                    }
+                    if bytes != asset.byte_length
+                        || hex_digest(hasher.finalize().as_slice()) != asset.sha256
+                    {
+                        return Err(ProjectError::Invalid(
+                            "Existing project asset is corrupt; restore cannot silently return it"
+                                .into(),
+                        ));
+                    }
+                }
+                fs::remove_dir_all(&temp_dir)?;
+            } else {
+                fs::rename(&temp_dir, &final_dir)?;
+            }
+            Ok(PackageSceneImportResult {
+                project,
+                assets,
+                root_revision: active,
+            })
+        })();
+        if result.is_err() {
+            let _ = fs::remove_dir_all(&temp_dir);
+        }
+        result
     }
 
     pub fn store_source_asset(
@@ -1480,6 +1961,96 @@ pub(crate) fn recover_json_file(path: &Path) -> Result<()> {
             let _ = fs::remove_file(backup);
         }
         _ => {}
+    }
+    Ok(())
+}
+
+fn export_asset_paths(asset: &Asset) -> Vec<String> {
+    let paths = asset
+        .metadata
+        .get("package_paths")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .filter(|p| valid_package_path(p) && !p.eq_ignore_ascii_case("3dmk-package.json"))
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    if !paths.is_empty() {
+        return paths;
+    }
+    let extension = Path::new(&asset.original_name)
+        .extension()
+        .and_then(|x| x.to_str())
+        .filter(|x| x.len() <= 12 && x.bytes().all(|c| c.is_ascii_alphanumeric()))
+        .unwrap_or("bin");
+    vec![format!("__3dmk/assets/{}.{}", asset.sha256, extension)]
+}
+
+struct ExportStage(PathBuf);
+impl Drop for ExportStage {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.0);
+    }
+}
+
+/// Validate immutable source-node selectors without decoding the vertex payload.
+fn validate_glb_node_selectors(
+    path: &Path,
+    selectors: &[u32],
+) -> std::result::Result<(), crate::scene_document::SceneError> {
+    use crate::scene_document::SceneError as NodeError;
+    let mut file = File::open(path)?;
+    let mut header = [0_u8; 20];
+    file.read_exact(&mut header)?;
+    let word = |offset| u32::from_le_bytes(header[offset..offset + 4].try_into().unwrap());
+    let json_length = word(12) as usize;
+    if word(0) != 0x46546c67
+        || word(4) != 2
+        || word(16) != 0x4e4f534a
+        || json_length > 64 * 1024 * 1024
+        || 20 + json_length as u64 > file.metadata()?.len()
+    {
+        return Err(NodeError::Invalid(
+            "Scene node selection requires a valid bounded GLB source".into(),
+        ));
+    }
+    let mut bytes = vec![0; json_length];
+    file.read_exact(&mut bytes)?;
+    let document: Value = serde_json::from_slice(&bytes)?;
+    let nodes = document["nodes"]
+        .as_array()
+        .ok_or_else(|| NodeError::Invalid("GLB has no nodes".into()))?;
+    let mesh_count = document["meshes"].as_array().map_or(0, Vec::len);
+    let scene_index = document["scene"].as_u64().unwrap_or(0) as usize;
+    let roots = document["scenes"][scene_index]["nodes"]
+        .as_array()
+        .ok_or_else(|| NodeError::Invalid("GLB has no default scene roots".into()))?;
+    let mut stack = roots.clone();
+    let mut reachable = std::collections::HashSet::new();
+    while let Some(index) = stack.pop() {
+        let index = index
+            .as_u64()
+            .ok_or_else(|| NodeError::Invalid("Invalid GLB node index".into()))?
+            as usize;
+        if index >= nodes.len() || !reachable.insert(index) {
+            return Err(NodeError::Invalid("Invalid GLB node hierarchy".into()));
+        }
+        if let Some(children) = nodes[index]["children"].as_array() {
+            stack.extend(children.iter().cloned());
+        }
+    }
+    for selector in selectors {
+        let index = *selector as usize;
+        if !reachable.contains(&index)
+            || nodes[index]["mesh"]
+                .as_u64()
+                .is_none_or(|mesh| mesh as usize >= mesh_count)
+        {
+            return Err(NodeError::Invalid(format!(
+                "Source node {selector} is not a mesh node in the default GLB scene"
+            )));
+        }
     }
     Ok(())
 }

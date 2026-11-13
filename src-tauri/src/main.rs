@@ -4,19 +4,15 @@ use anyhow::Context;
 use std::path::PathBuf;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
-const FRONTEND_HTML: &str = include_str!("../../public/index.html");
-const DOMAIN_CONFIG_JS: &str = include_str!("../../public/domain-config.js");
+mod frontend_assets;
+
+include!(concat!(env!("OUT_DIR"), "/frontend_assets.rs"));
 
 fn prepare_app_directories(app: &tauri::AppHandle) -> anyhow::Result<(PathBuf, PathBuf, PathBuf)> {
     let data_dir = app.path().app_data_dir()?;
-    let public_dir = data_dir.join("public");
+    let public_dir = frontend_assets::publish_assets(&data_dir, EMBEDDED_FRONTEND_ASSETS)?;
     let output_dir = data_dir.join("output");
-
-    std::fs::create_dir_all(&public_dir)?;
     std::fs::create_dir_all(&output_dir)?;
-    std::fs::write(public_dir.join("index.html"), FRONTEND_HTML)?;
-    std::fs::write(public_dir.join("domain-config.js"), DOMAIN_CONFIG_JS)?;
-
     Ok((data_dir, public_dir, output_dir))
 }
 

@@ -11,6 +11,13 @@ use sha2::{Digest, Sha256};
 use crate::projects::{recover_json_file, write_json_recoverable};
 
 pub const DEFAULT_PROFILE: &str = include_str!("../config/default-domain.json");
+const BUNDLED_PROFILES: &[&str] = &[
+    DEFAULT_PROFILE,
+    include_str!("../config/indoor-domain.json"),
+    include_str!("../config/geospatial-domain.json"),
+    include_str!("../config/subsurface-domain.json"),
+    include_str!("../config/product-domain.json"),
+];
 const PANEL_IDS: &[&str] = &["import", "scene_tree", "analysis", "measure", "export"];
 const MAX_INSTALLED_PROFILES: usize = 64;
 const MAX_CONFIG_BYTES: u64 = 64 * 1024 * 1024;
@@ -48,6 +55,8 @@ pub struct DomainSummary {
     pub version: String,
     pub label: String,
     pub sha256: String,
+    pub description: String,
+    pub example: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -97,7 +106,9 @@ impl DomainPreferenceStore {
     pub fn open(root: impl Into<PathBuf>) -> Result<Self> {
         let root = root.into();
         fs::create_dir_all(&root)?;
-        validate_for_3dmk(&DomainProfile::from_json_str(DEFAULT_PROFILE)?)?;
+        for source in BUNDLED_PROFILES {
+            validate_for_3dmk(&DomainProfile::from_json_str(source)?)?;
+        }
         Ok(Self {
             root,
             lock: Arc::new(Mutex::new(())),
@@ -112,7 +123,10 @@ impl DomainPreferenceStore {
     pub fn preview_profile(&self, source: &str) -> Result<DomainProfile> {
         let profile = DomainProfile::from_json_str(source)?;
         validate_for_3dmk(&profile)?;
-        if profile.domain.id == default_profile()?.domain.id {
+        if bundled_profiles()?
+            .iter()
+            .any(|p| p.domain.id == profile.domain.id)
+        {
             return Err(DomainPreferenceError::Unsupported(
                 "the bundled default domain cannot be replaced".into(),
             ));
@@ -191,7 +205,10 @@ impl DomainPreferenceStore {
             domain_id: default.domain.id.clone(),
             domain_version: default.domain.version.clone(),
         };
-        let mut profiles = vec![summary(&default)?];
+        let mut profiles = bundled_profiles()?
+            .iter()
+            .map(summary)
+            .collect::<Result<Vec<_>>>()?;
         let (saved, diagnostic) = match self.load_unlocked() {
             Ok(saved) => (saved, None),
             Err(error) => (SavedConfiguration::default(), Some(format!("Saved domain configuration is invalid: {error}. Confirm a replacement domain to recover."))),
@@ -232,7 +249,9 @@ impl DomainPreferenceStore {
         let mut identities = std::collections::HashSet::new();
         for item in &saved.installed {
             validate_for_3dmk(&item.profile)?;
-            if item.profile.domain.id == default_profile()?.domain.id
+            if bundled_profiles()?
+                .iter()
+                .any(|p| p.domain.id == item.profile.domain.id)
                 || !identities.insert((
                     item.profile.domain.id.as_str(),
                     item.profile.domain.version.as_str(),
@@ -270,6 +289,13 @@ impl DomainPreferenceStore {
     }
 }
 
+fn bundled_profiles() -> Result<Vec<DomainProfile>> {
+    BUNDLED_PROFILES
+        .iter()
+        .map(|source| DomainProfile::from_json_str(source).map_err(Into::into))
+        .collect()
+}
+
 fn default_profile() -> Result<DomainProfile> {
     Ok(DomainProfile::from_json_str(DEFAULT_PROFILE)?)
 }
@@ -279,9 +305,11 @@ fn find_profile(
     domain_id: &str,
     domain_version: &str,
 ) -> Result<Option<DomainProfile>> {
-    let default = default_profile()?;
-    if default.domain.id == domain_id && default.domain.version == domain_version {
-        return Ok(Some(default));
+    if let Some(profile) = bundled_profiles()?
+        .into_iter()
+        .find(|p| p.domain.id == domain_id && p.domain.version == domain_version)
+    {
+        return Ok(Some(profile));
     }
     Ok(saved
         .installed
@@ -297,8 +325,22 @@ fn profile_digest(profile: &DomainProfile) -> Result<String> {
     Ok(format!("{:x}", Sha256::digest(bytes)))
 }
 
+fn preset_help(id: &str) -> (&'static str, &'static str) {
+    match id {
+        "general_geometry" => ("General geometry inspection and scene composition. No room or engineering interpretation is assumed.", "Import two GLB parts, rename their file roots, and toggle individual nodes."),
+        "indoor" => ("Room, wall, floor and opening classes; optional room-plan tools for building scans.", "Open a room mesh, inspect a clipping view, then enable room recognition only if relevant."),
+        "geospatial" => ("Terrain, surface and fault classes with indexed seismic controls. Check coordinate registration before combining sources.", "Combine terrain and horizon GLBs in one declared metre frame; compare saved viewpoints."),
+        "subsurface" => ("Well, plan, survey, section, BHA, top and horizon classes, plus bounded SEG-Y slices.", "Load the synthetic well A and well B GLBs, toggle planned/actual branches, then review top and section objects."),
+        "product" => ("Assembly and component classes for product layouts and reference images; no mechanical solver is implied.", "Select several GLB components, place them using metre transforms, group and hide a subassembly."),
+        _ => ("Custom class and tool presentation supplied by this profile.", "Review its classes and enabled panels before applying it."),
+    }
+}
+
 fn summary(profile: &DomainProfile) -> Result<DomainSummary> {
+    let (description, example) = preset_help(&profile.domain.id);
     Ok(DomainSummary {
+        description: description.into(),
+        example: example.into(),
         id: profile.domain.id.clone(),
         version: profile.domain.version.clone(),
         label: profile.domain.label.clone(),
@@ -381,7 +423,7 @@ mod tests {
         profile["domain"]["id"] = serde_json::json!("survey_review");
         let source = profile.to_string();
         store.preview_profile(&source).unwrap();
-        assert_eq!(store.state().unwrap().profiles.len(), 1);
+        assert_eq!(store.state().unwrap().profiles.len(), 5);
         store
             .apply_profile("survey_review", "1.0.0", Some(&source))
             .unwrap();
@@ -390,7 +432,7 @@ mod tests {
             reopened.state().unwrap().effective.domain_id,
             "survey_review"
         );
-        assert_eq!(reopened.state().unwrap().profiles.len(), 2);
+        assert_eq!(reopened.state().unwrap().profiles.len(), 6);
         fs::remove_dir_all(root).unwrap();
     }
 
@@ -448,6 +490,32 @@ mod tests {
         profile["domain"]["id"] = serde_json::json!("built_environment");
         profile["features"]["workstation_panels"] = serde_json::json!(["unknown_panel"]);
         assert!(store.preview_profile(&profile.to_string()).is_err());
+        fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn bundled_examples_are_explained_and_product_selection_survives_reopen() {
+        let root = temporary_root();
+        let store = DomainPreferenceStore::open(&root).unwrap();
+        let state = store.state().unwrap();
+        assert_eq!(state.profiles.len(), 5);
+        for profile in &state.profiles {
+            assert!(!profile.description.is_empty());
+            assert!(!profile.example.is_empty());
+        }
+        assert!(state
+            .profiles
+            .iter()
+            .any(|p| p.id == "general_geometry" && p.description.contains("No room")));
+        store.apply_profile("product", "1.0.0", None).unwrap();
+        assert_eq!(
+            DomainPreferenceStore::open(&root)
+                .unwrap()
+                .state()
+                .unwrap()
+                .effective
+                .domain_id,
+            "product"
+        );
         fs::remove_dir_all(root).unwrap();
     }
 }

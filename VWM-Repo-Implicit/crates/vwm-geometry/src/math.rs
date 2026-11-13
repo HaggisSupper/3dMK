@@ -1,4 +1,26 @@
+use anyhow::{anyhow, Result};
 use nalgebra::{Matrix3, Point3, SymmetricEigen, Unit, UnitVector3, Vector3};
+use vwm_core::CanonicalScene;
+
+pub(crate) fn validate_triangle_indices(scene: &CanonicalScene) -> Result<()> {
+    let triangles = scene
+        .indices
+        .as_deref()
+        .ok_or_else(|| anyhow!("scene has no triangle indices"))?;
+
+    for (triangle_index, triangle) in triangles.iter().enumerate() {
+        for &vertex_index in triangle {
+            if vertex_index as usize >= scene.vertices.len() {
+                return Err(anyhow!(
+                    "triangle {triangle_index} references vertex {vertex_index}, but the scene contains only {} vertices",
+                    scene.vertices.len()
+                ));
+            }
+        }
+    }
+
+    Ok(())
+}
 
 pub fn p3(a: [f32; 3]) -> Point3<f64> {
     Point3::new(a[0] as f64, a[1] as f64, a[2] as f64)

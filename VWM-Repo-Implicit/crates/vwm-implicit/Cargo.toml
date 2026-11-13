@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+anyhow.workspace = true
 vwm-implicit-core = { path = "../vwm-implicit-core" }
 vwm-implicit-poisson = { path = "../vwm-implicit-poisson" }
 vwm-implicit-surface-nets = { path = "../vwm-implicit-surface-nets" }
+vwm-io = { path = "../vwm-io" }

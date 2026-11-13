@@ -6,16 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3DMk</title>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="./vendor/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="./vendor/jszip/3.10.1/jszip.min.js"></script>
     <script src="domain-config.js" defer></script>
+    <script type="module" src="workspace-panels.js"></script>
 
     <script type="importmap">
         {
             "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-                "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.7.0/build/index.module.js"
+                "three": "./vendor/three/0.160.0/build/three.module.js",
+                "three/addons/": "./vendor/three/0.160.0/examples/jsm/",
+                "three-mesh-bvh": "./vendor/three-mesh-bvh/0.7.0/build/index.module.js"
             }
         }
     </script>
@@ -23,7 +24,7 @@
     <style>
         :root {
             --bg-dark: #121212; --bg-panel: #1e1e1e; --bg-input: #2a2a2a; --bg-hover: #333333;
-            --text-main: #f1f5f4; --text-muted: #9ba7a5; --border-color: #34413f;
+            --text-main: #e5e5e5; --text-muted: #aaa; --border-color: #414141;
             --teal-accent: #14b8a6; --teal-glow: rgba(20, 184, 166, 0.4); --error-red: #ef4444;
             --success: #34d399; --warning: #fbbf24;
             --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px;
@@ -111,8 +112,8 @@
         .accordion-item.active > .accordion-body { display: block; }
         .nested-accordion { display: grid; gap: 8px; }
         .nested-accordion .accordion-item { margin-bottom: 0; border-radius: var(--panel-radius); background: var(--bg-input); }
-        .nested-accordion .accordion-header { min-height: 36px; padding: 8px 10px; background: rgba(20, 184, 166, 0.08); color: var(--text-main); font-size: 11px; text-transform: none; letter-spacing: 0.02em; }
-        .nested-accordion .accordion-header:hover { background: rgba(20, 184, 166, 0.14); }
+        .nested-accordion .accordion-header { min-height: 36px; padding: 8px 10px; background: #252525; color: var(--text-main); font-size: 11px; text-transform: none; letter-spacing: 0.02em; }
+        .nested-accordion .accordion-header:hover { background: #303030; }
         .nested-accordion .accordion-header::after { font-size: 12px; }
         .nested-accordion .accordion-body { padding: 10px; background: transparent; }
         .nested-accordion .accordion-body > .workflow-card:last-child { margin-bottom: 0; }
@@ -133,7 +134,7 @@
         button.action-btn:active { background-color: var(--teal-accent); color: #000; }
         button.action-btn.primary { border-color: var(--teal-accent); color: var(--teal-accent); margin-top: 4px; }
         button.action-btn.primary:not(#importPackageBtn):not(#exportBundleBtn):not(#savePackageBtn) { border-color: var(--border-color); color: var(--text-main); }
-        #importPackageBtn, #exportBundleBtn, #savePackageBtn, #emptyImportBtn { background: var(--teal-accent); color: #06110f; border-color: var(--teal-accent); }
+        #importPackageBtn, #exportBundleBtn, #savePackageBtn, #emptyAddFilesBtn { background: var(--teal-accent); color: #06110f; border-color: var(--teal-accent); }
         #startCropBtn { border-color: var(--border-color); color: var(--text-main); }
         button.action-btn.active-toggle { background-color: var(--teal-accent); color: #000; border-color: var(--teal-accent); }
         button.action-btn.danger { border-color: var(--error-red); color: var(--error-red); }
@@ -359,6 +360,88 @@
         #domainDialog button:hover { border-color: #22b8a7; }
         #domainApplyBtn { background: #126d65 !important; border-color: #188d82 !important; }
         #domainApplyBtn:disabled { opacity: .45; cursor: not-allowed; }
+
+        /* Shared compact panel primitive; pinned same-side panels stack. */
+        #sidebar,#helpDrawer,#viewDrawer { transition:none; }
+        .panel-heading { display:flex; align-items:center; justify-content:space-between; gap:6px; }
+        .sidebar-header { padding:10px 8px 8px 56px; min-height:60px; }
+        .brand-title { font-size:15px; }
+        #activeDomainLabel { margin:2px 0 0; font-size:10px; }
+        .help-header { padding:8px; min-height:44px; align-items:center; gap:6px; }
+        .help-title { margin:0; font-size:13px; font-weight:600; }
+        .help-actions { gap:4px; }
+        .help-icon-btn { min-width:28px; width:28px; height:28px; min-height:28px; padding:5px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; font-size:20px; }
+        .help-icon-btn svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.5; }
+        .help-icon-btn[aria-pressed="true"] { background:#303030; }
+        .history-btn,#hamburgerBtn { width:36px; height:36px; border-radius:4px; }
+        .help-card,.drawer-section { padding:8px; border-radius:4px; }
+        .help-control-list li,.help-next-steps li { padding:4px; border-radius:2px; }
+        .help-control-list,.help-next-steps { gap:4px; }
+        .help-control-list strong { display:inline-block; min-width:104px; margin:0 6px 0 0; color:var(--text-main); }
+        body.right-panels-paired #viewDrawer { top:0; height:calc(var(--app-viewport-height,100dvh) / 2); bottom:auto; }
+        body.right-panels-paired #helpDrawer { top:calc(var(--app-viewport-height,100dvh) / 2); height:calc(var(--app-viewport-height,100dvh) / 2); border-top:1px solid var(--border-color); }
+        @media (max-width:899px) {
+            body.help-open #historyControls,body.view-open #historyControls { right:10px; }
+            #helpDrawer,#viewDrawer,#sidebar { width:min(360px,calc(100vw - 48px)); max-width:calc(100vw - 48px); }
+            #helpDrawer,#viewDrawer { top:56px; height:calc(var(--app-viewport-height,100dvh) - 56px); }
+        }
+
+        #sceneWorkspace input:not([type=checkbox]),#sceneWorkspace select { width:100%; min-height:28px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:3px; padding:3px 5px; }
+        #sceneWorkspace button { min-height:28px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:3px; padding:3px 6px; cursor:pointer; }
+        #sceneWorkspace button:disabled { opacity:.4; cursor:default; }
+        #sceneWorkspace label { font-size:10px; }
+        #sceneWorkspace details { border-top:1px solid var(--border-color); padding-top:5px; margin-top:6px; }
+        #sceneWorkspace summary { cursor:pointer; font-size:11px; }
+        .scene-button-row { display:flex; align-items:center; gap:4px; margin:5px 0; }
+        .scene-button-row>* { min-width:0; flex:1; }
+        .scene-vector-row { display:grid; grid-template-columns:76px repeat(3,minmax(0,1fr)); gap:3px; align-items:center; margin-top:4px; }
+        .scene-object-row { display:flex; align-items:center; gap:5px; min-height:28px; }
+        .scene-object-row>button { flex:1; text-align:left; border-color:transparent!important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .scene-object-row>span { font-size:9px; color:var(--text-muted); }
+        .scene-object-row[data-selected=true] { outline:1px solid var(--teal-accent); background:#303030; }
+        #sceneInspector { border-top:1px solid var(--border-color); margin-top:6px; padding-top:6px; }
+        body.scene-layout-active [data-accordion-key=clean],body.scene-layout-active [data-accordion-key=derive] { opacity:.45; }
+
+        :is(.drawer-section,.domain-section,#sceneWorkspace,#subsurfacePanel) :is(input[type=number],input[type=text],select,textarea) { box-sizing:border-box; min-height:28px; max-width:100%; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-input); color:var(--text-main); padding:4px 6px; font:inherit; font-size:11px; color-scheme:dark; }
+        :is(.drawer-section,.domain-section,#sceneWorkspace,#subsurfacePanel) :is(input,select,textarea,button):focus-visible { outline:2px solid var(--teal-accent); outline-offset:2px; }
+        #vwmAdvancedPanel { background:transparent; border-color:var(--border-color); }
+        #vwmAdvancedPanel > details { border:1px solid var(--border-color); border-radius:3px; margin:6px 0; padding:7px; background:var(--bg-panel); }
+        #vwmAdvancedPanel summary { font-size:11px; font-weight:600; cursor:pointer; }
+        #vwmAdvancedPanel .control-group { display:grid; grid-template-columns:minmax(0,1fr) 94px; align-items:center; gap:8px; margin:7px 0; }
+        #vwmAdvancedPanel .control-group input { width:100%; }
+        #vwmAdvancedPanel .control-group label { font-size:10px; line-height:1.3; margin:0; }
+        #vwmAdvancedPanel .action-btn { min-height:29px; padding:5px 7px; margin-top:5px; font-size:11px; }
+        #sceneObjectTree { max-height:310px; overflow:auto; border:1px solid var(--border-color); padding:3px; border-radius:3px; }
+        #sceneWorkspace .scene-object-row { display:grid; grid-template-columns:20px 16px minmax(0,1fr) auto; gap:4px; align-items:center; min-height:28px; }
+        #sceneWorkspace .scene-object-row[data-visible=false] { color:var(--text-muted); }
+        #sceneWorkspace .scene-object-row[data-selected=true] { background:var(--bg-hover); outline:1px solid var(--teal-accent); outline-offset:-1px; }
+        #sceneWorkspace .scene-object-row button { border:0; background:transparent; min-height:26px; padding:2px; text-align:left; }
+        #sceneWorkspace .scene-tree-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        #sceneWorkspace .scene-tree-kind { font-size:9px; color:var(--text-muted); }
+        #sceneWorkspace .scene-tree-fold { text-align:center!important; }
+        #sceneWorkspace input[type=file] { width:100%; margin-top:6px; font-size:10px; }
+        #domainPresetExplanation { border-left:2px solid var(--teal-accent); padding:6px 10px; margin:10px 0; font-size:12px; line-height:1.5; background:var(--bg-input); }
+        #domainPresetExplanation p { margin:3px 0; }
+
+        /* Persistent scene-level actions remain outside collapsible panels. */
+        #sceneActions { position:fixed; left:12px; bottom:12px; z-index:102; max-width:620px; right:12px; width:max-content; padding:8px; border:1px solid var(--border-color); border-radius:4px; background:rgba(30,30,30,.97); }
+        .scene-global-buttons { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+        #sceneActions button { min-height:34px; padding:6px 10px; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-input); color:var(--text-main); cursor:pointer; }
+        #sceneActions #addSceneFilesBtn,#confirmAddSceneFilesBtn { background:var(--teal-accent); border-color:var(--teal-accent); color:#06110f; font-weight:600; }
+        #sceneActions button:disabled { opacity:.45; cursor:not-allowed; }
+        #sceneActionStatus { max-width:580px; margin:5px 0 0; overflow-wrap:anywhere; }
+        .scene-action-dialog { margin:auto; width:min(520px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow:auto; padding:18px; background:var(--bg-panel); color:var(--text-main); border:1px solid var(--border-color); border-radius:5px; color-scheme:dark; }
+        .scene-action-dialog::backdrop { background:rgba(0,0,0,.62); }
+        .scene-action-dialog h2 { font-size:17px; margin-bottom:12px; }
+        .scene-action-dialog p,.scene-action-dialog small { display:block; color:var(--text-muted); line-height:1.5; margin:8px 0; }
+        .scene-action-dialog label { display:block; margin:10px 0 5px; }
+        .scene-action-dialog input { max-width:100%; }
+        .scene-action-dialog input[type=number] { width:160px; min-height:32px; padding:5px 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:3px; color:var(--text-main); }
+        .scene-dialog-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+        .scene-dialog-actions button { width:auto; min-width:88px; margin:0; }
+        .scene-action-dialog .format-help { border-top:1px solid var(--border-color); padding-top:8px; }
+        @media(min-width:900px) { body.sidebar-open #sceneActions { left:316px; max-width:calc(100vw - 328px); } body.help-open #sceneActions,body.view-open #sceneActions { right:372px; max-width:calc(100vw - 384px); } body.sidebar-open.help-open #sceneActions,body.sidebar-open.view-open #sceneActions { max-width:calc(100vw - 688px); } }
+        @media(max-width:899px) { #sceneActions { width:calc(100vw - 24px); max-width:none; } }
     </style>
 </head>
 <body>
@@ -385,6 +468,34 @@
         <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
     </button>
     <div id="drawerScrim" aria-hidden="true"></div>
+
+    <section id="sceneActions" aria-label="Scene actions">
+        <div class="scene-global-buttons">
+            <button id="addSceneFilesBtn" type="button" aria-haspopup="dialog" aria-controls="addSceneFilesDialog">Add files to scene…</button>
+            <button id="openSceneModelBtn" type="button">Open model/package…</button>
+            <button id="clearSceneBtn" type="button" aria-haspopup="dialog" aria-controls="clearSceneDialog">Clear scene…</button>
+        </div>
+        <p id="sceneActionStatus" class="status-line" role="status" aria-live="polite">Add GLBs together. PNG/JPEG references need a model and width in metres.</p>
+    </section>
+    <dialog id="addSceneFilesDialog" class="scene-action-dialog" aria-labelledby="addSceneFilesTitle" aria-describedby="sceneAddHelp">
+        <h2 id="addSceneFilesTitle">Add files to scene</h2>
+        <p id="sceneAddHelp">Keep the current scene and add GLB models or PNG/JPEG reference images. Each GLB keeps its own group and hierarchy. An empty scene needs a GLB first; you can include it with your images.</p>
+        <label for="sceneAssetInput">Files to add</label>
+        <input id="sceneAssetInput" type="file" multiple accept=".glb,.png,.jpg,.jpeg" aria-describedby="sceneAddLimits">
+        <small id="sceneAddLimits">Up to 64 files / 512 MiB per selection. Preview: 64 unique assets / 512 MiB total; 4,096 scene objects. Keep source units and coordinate registration consistent.</small>
+        <label for="sceneImageWidth">Reference image width · metres</label>
+        <input id="sceneImageWidth" type="number" min=".001" step="any" placeholder="Required for images" aria-describedby="sceneImageWidthHelp">
+        <small id="sceneImageWidthHelp">Applies to each selected image; aspect ratio is preserved. Not needed for GLB files.</small>
+        <p id="sceneAddStatus" class="status-line" role="status" aria-live="polite">Choose one or more files.</p>
+        <p class="format-help">Open model/package replaces the workspace. GLB, GLTF, OBJ, PLY and STL have browser previews; ZIP packages are inspected before opening. FBX, DAE, 3DS, 3MF, OFF, U3D and X3D can enter the backend importer, but do not have a direct viewport preview. Only GLB and PNG/JPEG are additive here.</p>
+        <div class="scene-dialog-actions"><button id="cancelAddSceneFilesBtn" type="button" class="action-btn">Cancel</button><button id="confirmAddSceneFilesBtn" type="button" class="action-btn" disabled>Add to scene</button></div>
+    </dialog>
+    <dialog id="clearSceneDialog" class="scene-action-dialog" aria-labelledby="clearSceneTitle" aria-describedby="clearSceneDescription">
+        <h2 id="clearSceneTitle">Clear the current scene?</h2>
+        <p id="clearSceneDescription">Unsaved workspace edits will be lost, including measurements, clipping, selection and local undo history. Pending imports will be discarded from this workspace.</p>
+        <p>This closes the active project in the viewer. Original files and saved projects stay on disk; clearing does not write an empty scene to the saved project.</p>
+        <div class="scene-dialog-actions"><button id="cancelClearSceneBtn" class="action-btn" type="button" autofocus>Cancel</button><button id="confirmClearSceneBtn" class="action-btn danger" type="button">Clear scene</button></div>
+    </dialog>
 
     <dialog id="domainDialog" aria-labelledby="domainDialogTitle">
         <div class="domain-dialog-head"><h2 id="domainDialogTitle">Domain configuration</h2><button id="domainCloseBtn" type="button" aria-label="Close domain configuration">Close</button></div>
@@ -422,11 +533,31 @@
 
     <aside id="sidebar" class="open" aria-label="Workspace controls" aria-hidden="false">
         <header class="sidebar-header">
-            <div class="brand-title">3DMk</div>
+            <div class="panel-heading"><div class="brand-title">3DMk</div><div class="help-actions"><button id="workspacePinBtn" class="help-icon-btn" type="button" aria-label="Pin workspace panel" aria-pressed="false" title="Pin panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8l-1 6 3 3v2h-5v7h-2v-7H6v-2l3-3z"/></svg></button><button id="workspaceCloseBtn" class="help-icon-btn" type="button" aria-label="Close workspace panel" title="Close panel">×</button></div></div><div id="activeDomainLabel" class="drawer-note">General geometry</div>
             <div id="backendStatus" class="backend-status" role="status">Connecting…</div>
         </header>
         
         <div class="sidebar-content">
+            <div class="accordion-item" data-accordion-key="scene-layout">
+                <button type="button" class="accordion-header" aria-expanded="false">Scene</button>
+                <div class="accordion-body" id="sceneWorkspace">
+                    <div class="control-group"><label for="sceneMode">Workspace</label><select id="sceneMode" disabled><option value="source">Source geometry</option><option value="layout">Scene layout</option></select></div>
+                    <div class="scene-button-row"><button id="sceneUndoBtn" type="button" disabled title="Undo scene command">Undo</button><button id="sceneRedoBtn" type="button" disabled title="Redo scene command">Redo</button><button id="sceneAddGroupBtn" type="button" disabled>Group</button></div>
+                    <div class="drawer-note">+X up · source coordinates preserved</div><div id="sceneObjectTree" role="tree" aria-label="Scene objects"></div>
+                    <div id="sceneInspector" hidden>
+                        <div id="sceneSourceAxisRow" class="control-group" hidden><label for="sceneSourceUpAxis">Source up-axis · this subtree</label><select id="sceneSourceUpAxis"><option value="" disabled>As stored</option><option value="y">Y · standard GLB</option><option value="z">Z · legacy CAD / BHA</option><option value="x">X</option></select></div><label for="sceneObjectName">Name</label><input id="sceneObjectName" type="text" maxlength="160">
+                        <div class="scene-button-row"><label><input id="sceneObjectLocked" type="checkbox"> Locked</label><button id="sceneDuplicateBtn" type="button">Instance</button><button id="sceneDeleteBtn" type="button">Remove</button></div>
+                        <div id="sceneRegistrationStatus" class="status-line" role="status"></div><label for="sceneParent">Group</label><select id="sceneParent"></select>
+                        <label for="sceneObjectRole">Role</label><select id="sceneObjectRole"><option value="model">Model</option><option value="reference">Reference</option><option value="plan">Plan</option><option value="actual">Actual</option><option value="top">Top</option><option value="section">Section</option><option value="slice">Slice</option></select>
+                        <div class="scene-vector-row"><label>Position · m</label><input id="scenePosition0" type="number" step=".01" aria-label="Position · m X" value="0"><input id="scenePosition1" type="number" step=".01" aria-label="Position · m Y" value="0"><input id="scenePosition2" type="number" step=".01" aria-label="Position · m Z" value="0"></div><div class="scene-vector-row"><label>Rotation · °</label><input id="sceneRotation0" type="number" step=".1" aria-label="Rotation · ° X" value="0"><input id="sceneRotation1" type="number" step=".1" aria-label="Rotation · ° Y" value="0"><input id="sceneRotation2" type="number" step=".1" aria-label="Rotation · ° Z" value="0"></div><div class="scene-vector-row"><label>Scale</label><input id="sceneScale0" type="number" step=".01" aria-label="Scale X" value="1"><input id="sceneScale1" type="number" step=".01" aria-label="Scale Y" value="1"><input id="sceneScale2" type="number" step=".01" aria-label="Scale Z" value="1"></div>
+                        <div class="scene-button-row"><label for="sceneObjectOpacity">Opacity</label><input id="sceneObjectOpacity" type="number" min="0" max="1" step=".05" value="1"><button id="sceneApplyTransformBtn" type="button">Apply</button></div>
+                    </div>
+                    <p class="drawer-note">Use Add files to scene below the viewport to append GLBs or PNG/JPEG references.</p>
+                    <details><summary>Views</summary><div class="scene-button-row"><input id="sceneViewName" type="text" placeholder="View name" aria-label="View name"><button id="sceneSaveViewBtn" type="button" disabled>Save view</button></div><select id="sceneViewSelect" aria-label="Saved views" disabled><option value="">Choose view</option></select><div class="scene-button-row"><button id="sceneRestoreViewBtn" type="button" disabled>Restore</button><button id="sceneDeleteViewBtn" type="button" disabled>Remove view</button></div></details>
+                    <div id="sceneDocumentStatus" class="status-line" role="status">Import a project</div>
+                </div>
+            </div>
+
             <div class="accordion-item active" data-accordion-key="load">
                 <button type="button" class="accordion-header" aria-expanded="true">Import</button>
                 <div class="accordion-body">
@@ -435,10 +566,35 @@
                             <button type="button" class="accordion-header" aria-expanded="true">Geometry</button>
                             <div class="accordion-body">
                                 <section class="workflow-card" aria-labelledby="loadGeometryHeading">
-                                    <h3 id="loadGeometryHeading">Import geometry or package</h3>
+                                    <h3 id="loadGeometryHeading">Model / project</h3>
                                     <div class="control-group">
-                                        <label for="modelInput">Model, scan, or ZIP</label>
-                                        <input type="file" id="modelInput" accept=".3ds,.3mf,.dae,.fbx,.glb,.gltf,.off,.obj,.ply,.stl,.u3d,.x3d,.zip">
+                                        <label for="modelInput">Open source / project · replaces current workspace</label>
+                                        <input type="file" id="modelInput" multiple accept=".3ds,.3mf,.dae,.fbx,.glb,.gltf,.off,.obj,.ply,.stl,.u3d,.x3d,.zip"><small class="drawer-note">One model/project, or up to 64 GLBs, within 512 MiB. Direct previews: GLB, GLTF, OBJ, PLY, STL. Other listed model types use backend import without a direct preview. Add files to scene preserves the current scene.</small>
+                                    <details class="drawer-section" id="exchangePanel"><summary>Objects / source frame</summary><div id="exchangeInspector">Load a GLBAdapter or standard GLB source.</div></details>
+                                    <details class="drawer-section domain-feature-hidden" id="subsurfacePanel"><summary>Subsurface · indexed seismic slices</summary>
+                                        <p class="drawer-note">Read-only SEG-Y rev 0/1, big-endian. Up to 512 MB / 250,000 traces. Amplitudes stay on disk. No full-volume GPU load.</p>
+                                        <input id="seismicInput" type="file" accept=".sgy,.segy" aria-label="Open SEG-Y" style="max-width:100%">
+                                        <div class="control-group"><label for="seismicAxis">Slice axis</label><select id="seismicAxis"><option value="inline">Inline</option><option value="crossline">Crossline</option><option value="sample">Time / depth sample</option></select></div>
+                                        <div class="control-group"><label for="seismicPosition">Position <span id="seismicPositionLabel">—</span></label><input id="seismicPosition" type="range" min="0" max="0" value="0"></div>
+                                        <div class="control-group"><label for="seismicLod">Sampling stride (LOD)</label><select id="seismicLod"><option value="1">1 · finest bounded preview</option><option value="2">2</option><option value="4">4</option><option value="8">8</option></select></div>
+                                        <canvas id="seismicCanvas" width="1" height="1" style="width:100%;height:180px;background:#10191e;image-rendering:auto" aria-label="Seismic amplitude slice"></canvas>
+                                        <p id="seismicAxisLabels" class="drawer-note"></p><p id="seismicStatus" class="status-line" aria-live="polite">Open a SEG-Y dataset to index traces.</p>
+                                        <button id="seismicCancel" class="action-btn">Cancel slice request</button>
+                                        <details><summary>Depth registration and well/horizon overlay</summary>
+                                            <p class="drawer-note">Time-domain data needs a velocity/time-depth model. This viewer does not invent one. Enable overlay only for an already depth-sampled source with verified metre coordinates, CRS and datum.</p>
+                                            <label for="seismicDomain">Vertical domain</label><select id="seismicDomain"><option value="time">Time / unresolved</option><option value="depth">Already depth-sampled metres</option></select>
+                                            <label>First crossline easting (m)<input id="seismicEast" type="number" value="0"></label>
+                                            <label>First inline northing (m)<input id="seismicNorth" type="number" value="0"></label>
+                                            <label>Sample zero elevation (m)<input id="seismicElevation" type="number" value="0"></label>
+                                            <label>Metres per crossline number<input id="seismicCrossSpacing" type="number" value="25"></label>
+                                            <label>Metres per inline number<input id="seismicInlineSpacing" type="number" value="25"></label>
+                                            <label>Depth metres per sample<input id="seismicDepthStep" type="number" value="1" min="0.001" step="0.001"></label>
+                                            <div class="checkbox-group"><input id="seismicRegistered" type="checkbox"><label for="seismicRegistered">I confirm matching CRS, metre units, datum, axes and depth sampling</label></div>
+                                            <div class="checkbox-group"><input id="seismicOverlay" type="checkbox"><label for="seismicOverlay">Overlay slice with loaded wells / horizons</label></div>
+                                        </details>
+                                        <p id="seismicWarnings" class="drawer-note">SEG-D, VOXL, prestack gathers and variable traces are unsupported.</p>
+                                    </details>
+<div id="packageCommitStatus" class="status-line" aria-live="polite">Review the selected model before committing.</div>
                                         <div id="packageImportReview" class="package-review" hidden aria-live="polite">
                                             <div class="summary-kicker">Package review</div>
                                             <div id="packageReviewSummary" class="status-line">Inspecting package contents…</div>
@@ -451,7 +607,7 @@
                                                 <span class="summary-badge" id="packageImageCount">0 images</span>
                                             </div>
                                             <button id="importPackageBtn" class="action-btn primary" type="button" disabled>Commit package</button>
-                                            <div id="packageCommitStatus" class="status-line" aria-live="polite">Review the selected model before committing.</div>
+
                                         </div>
                                     </div>
                                 </section>
@@ -495,9 +651,9 @@
                                 <section class="workflow-card" aria-labelledby="loadAlignmentHeading">
                                     <h3 id="loadAlignmentHeading">Orientation</h3>
                                     <div class="control-group">
-                                        <label for="upAxisSelect">Source up-axis</label>
+                                        <label for="upAxisSelect">Source up-axis → +X display</label>
                                         <select id="upAxisSelect">
-                                            <option value="Y">Y (WebGL default)</option>
+                                            <option value="Y">Y (standard GLB)</option>
                                             <option value="Z">Z (standard CAD)</option>
                                             <option value="X">X</option>
                                             <option value="-Y">-Y</option>
@@ -789,19 +945,10 @@
     </aside>
 
     <aside id="helpDrawer" aria-label="Context help" aria-hidden="true" inert>
-        <header class="help-header">
-            <div>
-                <div class="help-kicker">Start here</div>
-                <div class="help-title">How to use 3DMk</div>
-            </div>
-            <div class="help-actions">
-                <button id="helpPinBtn" class="help-icon-btn" type="button" aria-pressed="false">Pin</button>
-                <button id="helpCloseBtn" class="help-icon-btn" type="button">Close</button>
-            </div>
-        </header>
+        <header class="help-header"><div class="help-title">Help</div><div class="help-actions"><button id="helpPinBtn" class="help-icon-btn" type="button" aria-label="Pin help panel" aria-pressed="false" title="Pin panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8l-1 6 3 3v2h-5v7h-2v-7H6v-2l3-3z"/></svg></button><button id="helpCloseBtn" class="help-icon-btn" type="button" aria-label="Close help panel" title="Close panel">×</button></div></header>
         <div class="help-body">
-            <details class="help-card" open>
-                <summary id="helpStartHeading">A simple first run</summary>
+            <details class="help-card">
+                <summary id="helpStartHeading">Quick start</summary>
                 <ol class="help-next-steps" aria-label="First steps">
                     <li><strong>1. Import</strong>Open a model, scan, or working package from the Import section.</li>
                     <li><strong>2. Inspect</strong>Drag to turn the model, use the wheel to zoom, and use the View button for display settings.</li>
@@ -821,8 +968,8 @@
                 </ul>
                 <p class="help-note">On a touch screen, use one finger to turn, two fingers to move, and pinch to zoom. Use Fit scene / reset camera if the model is hard to find.</p>
             </details>
-            <details class="help-card" open>
-                <summary id="helpContextHeading">Your next step</summary>
+            <details class="help-card">
+                <summary id="helpContextHeading">Selection help</summary>
                 <div id="helpContextBadge" class="help-context-label">Getting started</div>
                 <p id="helpContextSummary" aria-live="polite">Import a model, scan, or working package to start.</p>
                 <ul id="helpNextSteps" class="help-next-steps" aria-live="polite"></ul>
@@ -845,13 +992,7 @@
     </aside>
 
     <aside id="viewDrawer" aria-label="View settings" aria-hidden="true" inert>
-        <header class="help-header">
-            <div>
-                <div class="help-kicker">Inspect</div>
-                <div class="help-title">View settings</div>
-            </div>
-            <div class="help-actions"><button id="viewCloseBtn" class="help-icon-btn" type="button">Close</button></div>
-        </header>
+        <header class="help-header"><div class="help-title">View</div><div class="help-actions"><button id="viewPinBtn" class="help-icon-btn" type="button" aria-label="Pin view panel" aria-pressed="false" title="Pin panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8l-1 6 3 3v2h-5v7h-2v-7H6v-2l3-3z"/></svg></button><button id="viewCloseBtn" class="help-icon-btn" type="button" aria-label="Close view panel" title="Close panel">×</button></div></header>
         <div class="help-body">
             <section class="drawer-section" aria-labelledby="viewDisplayHeading">
                 <h3 id="viewDisplayHeading">Display</h3>
@@ -908,11 +1049,11 @@
                     <div class="control-group"><label for="sliceRotZ">Roll (Z Axis)</label><input type="range" id="sliceRotZ" min="-180" max="180" value="0" step="1"></div>
                     <button id="resetSliceRotBtn" class="action-btn" style="margin-top: 4px;">Reset clipping rotation</button>
                 </div>
-                <p class="drawer-note">These settings are for inspection only. They do not change the saved model.</p>
+                <p class="drawer-note">Save a scene view to retain clipping. Axis sliders replace restored planes; source geometry stays unchanged.</p>
             </section>
             <section class="drawer-section" id="vwmAdvancedPanel" aria-labelledby="vwmAdvancedHeading">
                 <h3 id="vwmAdvancedHeading">VWM advanced controls</h3>
-                <p class="drawer-note">Every operational VWM subsystem is exposed here. Model-dependent paths report their prerequisite instead of silently falling back.</p>
+                <p class="drawer-note">Model-dependent tools show their prerequisites.</p>
                 <details open>
                     <summary>Geometry intelligence</summary>
                     <div class="control-group"><label for="vwmPatchAngle">Patch normal angle (degrees)</label><input id="vwmPatchAngle" type="number" min="0.1" max="90" step="0.1" value="12"></div>
@@ -965,9 +1106,9 @@
 
     <main id="canvas-container">
         <section id="canvasEmptyState" class="canvas-empty-state" aria-labelledby="canvasEmptyTitle">
-            <h1 id="canvasEmptyTitle">Start a 3D workspace</h1>
-            <p>Import a model, scan, or working package to inspect geometry, measure it, and create reviewable outputs.</p>
-            <div class="empty-actions"><button id="emptyImportBtn" class="action-btn primary" type="button">Import model or package</button><button id="emptyHelpBtn" class="action-btn" type="button">Show quick help</button></div>
+            <h1 id="canvasEmptyTitle">Start a scene</h1>
+            <p>Add one or more GLBs, or open a model, scan or project ZIP.</p>
+            <div class="empty-actions"><button id="emptyAddFilesBtn" class="action-btn primary" type="button">Add files to scene…</button><button id="emptyImportBtn" class="action-btn" type="button">Open model/package…</button><button id="emptyHelpBtn" class="action-btn" type="button">Help</button></div>
             <small class="empty-formats">GLB · GLTF · OBJ · PLY · STL · ZIP</small>
         </section>
         <div id="labels-container"></div>
@@ -994,6 +1135,8 @@
     </main>
 
     <script type="module">
+        import './workspace-panels.js';
+        import { mountSceneWorkspace, validateSceneAddFiles, createSceneImportGate, bindSceneClearDialog } from './scene-workspace.js';
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'; 
@@ -1007,6 +1150,9 @@
         import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
         import { OBJExporter } from 'three/addons/exporters/OBJExporter.js';
         import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
+        import { mountSeismicViewer } from './seismic-viewer.js';
+        import { glbDocument, glbSceneTemplate, axisBasis, convertViewBasis } from './scene-glb.js';
+        import { cropGeometry, gltfRenderCache } from './geometry-integrity.js';
         import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 
         import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -1021,6 +1167,9 @@
         THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
         let scene, activeCamera, cameraPersp, cameraOrtho, renderer, controls;
+        let sceneWorkspace = null;
+        const sceneImports = createSceneImportGate();
+        let sceneImportBusy = false;
         let dirLight, ambientLight, pmremGenerator, proceduralEnvironment;
         let composer, renderPass, ssaoPass, outputPass;
         const objectAppearanceMaterials = new Set();
@@ -1060,7 +1209,7 @@
         
         let isMeasuring = false, activeMeasurePoints = [], measurementSets = [], activeMeasurementEdit = null, measurementIdSequence = 0, measurementCounters = { distance: 0, angle: 0, area: 0 }, raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2(), pointerDownPos = new THREE.Vector2(), labelObjects = [], cancelProcessFlag = false;
-        let activeRequestController = null, processingCancelled = false;
+        let activeRequestController = null, activeServerJobId = null, processingCancelled = false;
         let cropBoxMesh = null;
         let floatingObjectEntries = new Map();
         let selectedFloatingClusterIds = new Set();
@@ -1077,13 +1226,8 @@
         const MAX_HISTORY = 5;
         let undoStack = [];
         let redoStack = [];
-        const HELP_DRAWER_OPEN_KEY = '3dmk-help-open';
-        const HELP_DRAWER_PIN_KEY = '3dmk-help-pinned';
         const UI_SCALE_KEY = '3dmk-ui-scale';
         const UI_SCALE_AUTO_KEY = '3dmk-ui-scale-auto';
-        let helpDrawerPinned = localStorage.getItem(HELP_DRAWER_PIN_KEY) === 'true';
-        let helpDrawerOpen = helpDrawerPinned || localStorage.getItem(HELP_DRAWER_OPEN_KEY) === 'true';
-        let viewDrawerOpen = false;
         let uiScale = 1;
         let uiScaleAuto = true;
         const UI_SCALE_MIN = 0.5;
@@ -1239,6 +1383,7 @@
             renderFloatingMeshReviewList(null);
         }
         const resetModelPackage = (name = 'model') => {
+            window.dispatchEvent(new Event('3dmk-frame-changed'));
             currentModelPackage = {
                 baseName: filenameStem(name),
                 sourceModel: sanitizeFilename(name),
@@ -2064,58 +2209,10 @@
             if (hiddenFloatingClusterIds.size || pendingFloatingDeletionIds.size) rebuildMeshes();
             if (!currentModelPackage.sourceModel && modelName) currentModelPackage.sourceModel = modelName;
         }
-        const syncDrawerModalState = () => {
-            const sidebarOpen = $('sidebar')?.classList.contains('open');
-            const helpOpen = document.body.classList.contains('help-open');
-            const viewOpen = document.body.classList.contains('view-open');
-            $('sidebar')?.toggleAttribute('inert', !sidebarOpen);
-            $('sidebar')?.setAttribute('aria-hidden', String(!sidebarOpen));
-            $('helpDrawer')?.toggleAttribute('inert', !helpOpen);
-            $('viewDrawer')?.toggleAttribute('inert', !viewOpen);
-            const scrim = $('drawerScrim');
-            if (scrim) scrim.setAttribute('aria-hidden', String(!(sidebarOpen || helpOpen || viewOpen)));
-        };
-        const setSidebarOpen = open => {
-            const sidebar = $('sidebar');
-            sidebar?.classList.toggle('open', open);
-            document.body.classList.toggle('sidebar-open', open);
-            $('hamburgerBtn')?.setAttribute('aria-expanded', String(open));
-            if (!open && sidebar?.contains(document.activeElement)) $('hamburgerBtn')?.focus();
-            syncDrawerModalState();
-        };
-        const setHelpOpen = open => {
-            helpDrawerOpen = !!open;
-            if (helpDrawerOpen) setViewOpen(false);
-            document.body.classList.toggle('help-open', helpDrawerOpen);
-            $('helpDrawer')?.setAttribute('aria-hidden', String(!helpDrawerOpen));
-            $('helpToggleBtn')?.setAttribute('aria-expanded', String(helpDrawerOpen));
-            localStorage.setItem(HELP_DRAWER_OPEN_KEY, helpDrawerOpen ? 'true' : 'false');
-            if (!helpDrawerOpen && $('helpDrawer')?.contains(document.activeElement)) $('helpToggleBtn')?.focus();
-            syncDrawerModalState();
-        };
-        const setHelpPinned = pinned => {
-            helpDrawerPinned = !!pinned;
-            localStorage.setItem(HELP_DRAWER_PIN_KEY, helpDrawerPinned ? 'true' : 'false');
-            const button = $('helpPinBtn');
-            if (button) {
-                button.setAttribute('aria-pressed', String(helpDrawerPinned));
-                button.innerText = helpDrawerPinned ? 'Unpin' : 'Pin';
-            }
-            if (helpDrawerPinned) setHelpOpen(true);
-        };
-        const closeHelpDrawer = () => {
-            if (helpDrawerPinned) setHelpPinned(false);
-            setHelpOpen(false);
-        };
-        const setViewOpen = open => {
-            viewDrawerOpen = !!open;
-            if (viewDrawerOpen && helpDrawerOpen) closeHelpDrawer();
-            document.body.classList.toggle('view-open', viewDrawerOpen);
-            $('viewDrawer')?.setAttribute('aria-hidden', String(!viewDrawerOpen));
-            $('viewToggleBtn')?.setAttribute('aria-expanded', String(viewDrawerOpen));
-            if (!viewDrawerOpen && $('viewDrawer')?.contains(document.activeElement)) $('viewToggleBtn')?.focus();
-            syncDrawerModalState();
-        };
+        const setSidebarOpen = open => window.threeDmkPanels.dispatch({type:open?'open':'close',id:'workspace'});
+        const setHelpOpen = open => window.threeDmkPanels.dispatch({type:open?'open':'close',id:'help'});
+        const setViewOpen = open => window.threeDmkPanels.dispatch({type:open?'open':'close',id:'view'});
+        const closeHelpDrawer = () => setHelpOpen(false);
         const closeViewDrawer = () => setViewOpen(false);
         function syncSlideOutViewport() {
             const viewportWidth = window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth;
@@ -2339,7 +2436,8 @@
                 id: set.id,
                 mode: set.mode,
                 name: set.name,
-                points: set.points.map(point => [point.x, point.y, point.z])
+                coordinate_basis: 'preview-Y',
+                points: set.points.map(point => point.clone().applyQuaternion(axisBasis(THREE,'X','Y')).toArray())
             }));
         }
         function restoreMeasurementSets(records = []) {
@@ -2349,7 +2447,8 @@
                 if (!MEASURE_MODE_TITLES[record?.mode]) return;
                 const points = (record.points || [])
                     .map(point => Array.isArray(point) ? new THREE.Vector3(point[0], point[1], point[2]) : new THREE.Vector3(point.x, point.y, point.z))
-                    .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y) && Number.isFinite(point.z));
+                    .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y) && Number.isFinite(point.z))
+                    .map(point => point.applyQuaternion(axisBasis(THREE,'Y','X')));
                 if (points.length < requiredPointsForMode(record.mode)) return;
                 const set = {
                     id: record.id || `measurement-${index + 1}`,
@@ -2536,22 +2635,35 @@
             setAccordionItemOpen(item, !item.classList.contains('active'), true);
         });
 
-        init();
-        animate();
+        try {
+            init();
+            animate();
+        } catch (error) {
+            console.error('3DMK startup failed', error);
+            $('backendStatus').textContent = 'WebGL unavailable';
+            $('statGpu').textContent = 'Unavailable';
+            $('canvasEmptyTitle').textContent = '3D graphics could not start';
+            $('canvasEmptyState').querySelector('p').textContent = `This browser could not initialize the 3D viewer (${error.message}). Use a WebGL-capable browser or the supported desktop build. No model has been imported or changed.`;
+            $('canvasEmptyState').hidden = false;
+            $('modelInput').disabled = true;
+            $('emptyImportBtn').disabled = true;
+            ['emptyAddFilesBtn','addSceneFilesBtn','openSceneModelBtn','clearSceneBtn'].forEach(id => $(id).disabled = true);
+        }
 
         function init() {
-            setSidebarOpen(window.innerWidth >= 900);
             initUiScale();
             scene = new THREE.Scene(); scene.background = new THREE.Color(0x121212);
-            scene.add(currentGroup); scene.add(measurementGroup); scene.add(measurementDraftGroup); scene.add(cropGroup);
+            currentGroup.quaternion.copy(axisBasis(THREE,'Y','X'));scene.add(currentGroup);
+            mountSeismicViewer({THREE,scene,displayBasis:()=>axisBasis(THREE,'Y','X'),frame:()=>({origin:currentModelPackage.exchange?.mapping?.origin||[0,0,0],renderOrigin:currentModelPackage.sourceLocalOrigin||[0,0,0]})});
+            scene.add(measurementGroup); scene.add(measurementDraftGroup); scene.add(cropGroup);
 
             gridHelper = new THREE.GridHelper(100, 100, 0x3a3a3a, 0x222222);
-            gridHelper.position.y = -0.01; gridHelper.receiveShadow = true; scene.add(gridHelper);
+            gridHelper.quaternion.copy(axisBasis(THREE,'Y','X'));gridHelper.position.x = -0.01; gridHelper.receiveShadow = true; scene.add(gridHelper);
 
             const viewport = $('canvas-container');
             const aspect = viewport.clientWidth / viewport.clientHeight;
-            cameraPersp = new THREE.PerspectiveCamera(45, aspect, 0.1, 100000); cameraPersp.position.set(0, 10, 20);
-            cameraOrtho = new THREE.OrthographicCamera(-10 * aspect, 10 * aspect, 10, -10, 0.1, 100000); cameraOrtho.position.set(0, 10, 20);
+            cameraPersp = new THREE.PerspectiveCamera(45, aspect, 0.1, 100000); cameraPersp.up.set(1,0,0);cameraPersp.position.set(10, 0, 20);
+            cameraOrtho = new THREE.OrthographicCamera(-10 * aspect, 10 * aspect, 10, -10, 0.1, 100000); cameraOrtho.up.set(1,0,0);cameraOrtho.position.set(10, 0, 20);
             activeCamera = cameraPersp;
 
             renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true, powerPreference: "high-performance" });
@@ -2562,7 +2674,7 @@
             const axisHost = $('axisGizmo');
             orientationAxisScene = new THREE.Scene();
             orientationAxisCamera = new THREE.OrthographicCamera(-1.25, 1.25, 1.25, -1.25, 0.1, 10);
-            orientationAxisCamera.position.set(3, 2.5, 4); orientationAxisCamera.lookAt(0, 0, 0);
+            orientationAxisCamera.position.set(0, 0, 4); orientationAxisCamera.lookAt(0, 0, 0);
             orientationAxes = new THREE.AxesHelper(0.9);
             orientationAxisScene.add(orientationAxes);
             orientationAxisRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -2604,6 +2716,7 @@
             
             // Keybinds for Undo/Redo
             window.addEventListener('keydown', (e) => {
+                if(document.querySelector('dialog[open]'))return;
                 onUiScaleKey(e);
                 if (e.ctrlKey || e.metaKey) {
                     if (e.key === 'z') { if (e.shiftKey) redo(); else undo(); e.preventDefault(); } 
@@ -2611,17 +2724,20 @@
                 }
             });
 
+            mountSceneLayout();
             safeBind('undoBtn', 'click', undo);
             safeBind('redoBtn', 'click', redo);
-            safeBind('viewToggleBtn', 'click', () => { if (viewDrawerOpen) closeViewDrawer(); else setViewOpen(true); });
-            safeBind('viewCloseBtn', 'click', closeViewDrawer);
-            safeBind('helpToggleBtn', 'click', () => { if (helpDrawerOpen) closeHelpDrawer(); else setHelpOpen(true); });
-            safeBind('helpPinBtn', 'click', () => setHelpPinned(!helpDrawerPinned));
-            safeBind('helpCloseBtn', 'click', closeHelpDrawer);
-            safeBind('emptyImportBtn', 'click', () => { setSidebarOpen(true); $('modelInput')?.click(); });
+            safeBind('emptyImportBtn', 'click', openSceneModelPicker);
+            safeBind('openSceneModelBtn', 'click', openSceneModelPicker);
+            safeBind('addSceneFilesBtn', 'click', openAddSceneFilesDialog);
+            safeBind('emptyAddFilesBtn', 'click', openAddSceneFilesDialog);
+            safeBind('cancelAddSceneFilesBtn', 'click', () => $('addSceneFilesDialog').close());
+            safeBind('sceneAssetInput', 'change', updateSceneAddSelection);
+            safeBind('sceneImageWidth', 'input', updateSceneAddSelection);
+            safeBind('confirmAddSceneFilesBtn', 'click', addSelectedSceneFiles);
+            bindSceneClearDialog({dialog:$('clearSceneDialog'),openButton:$('clearSceneBtn'),cancelButton:$('cancelClearSceneBtn'),confirmButton:$('confirmClearSceneBtn'),clear:clearSceneWorkspace});
             safeBind('emptyHelpBtn', 'click', () => setHelpOpen(true));
             safeBind('errorModalCloseBtn', 'click', () => { $('errorModal').style.display = 'none'; $('helpToggleBtn')?.focus(); });
-            safeBind('drawerScrim', 'click', () => { if (viewDrawerOpen) closeViewDrawer(); else if (helpDrawerOpen) closeHelpDrawer(); else if ($('sidebar')?.classList.contains('open')) setSidebarOpen(false); });
             safeBind('modelInput', 'change', handleModelUpload);
             safeBind('importPackageBtn', 'click', commitPendingPackage);
             safeBind('textureInput', 'change', handleTextureUpload); 
@@ -2757,8 +2873,7 @@
                 cont.addEventListener('pointerdown', (e) => pointerDownPos.set(e.clientX, e.clientY));
                 cont.addEventListener('pointerup', (e) => {
                     if (Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y) < 10) {
-                        if (isMeasuring) handleMeasureClick(e);
-                        if (window.innerWidth < 900 && $('sidebar').classList.contains('open') && e.clientX > $('sidebar').offsetWidth) setSidebarOpen(false);
+                        if (isMeasuring && !sceneWorkspace?.active) handleMeasureClick(e);
                     }
                 });
             }
@@ -2767,18 +2882,12 @@
                 const menu = $('floatingMeshContextMenu');
                 if (menu && !menu.hidden && !menu.contains(event.target)) hideFloatingMeshContextMenu();
             });
-            safeBind('hamburgerBtn', 'click', () => setSidebarOpen(!$('sidebar').classList.contains('open')));
             window.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     hideFloatingMeshContextMenu();
-                    if (helpDrawerOpen && !helpDrawerPinned) setHelpOpen(false);
-                    if (viewDrawerOpen) closeViewDrawer();
-                    if (window.innerWidth < 900) setSidebarOpen(false);
                 }
             });
             
-            setHelpPinned(helpDrawerPinned);
-            setHelpOpen(helpDrawerOpen);
             updateUndoRedoUI();
             updateWorkflowAvailability();
             checkBackend();
@@ -2789,23 +2898,37 @@
             }
         }
 
-        async function fetchJson(url, options = {}, timeoutMs = 30000) {
-            const controller = new AbortController();
-            activeRequestController = controller;
+        async function fetchJson(url, options = {}, timeoutMs = 30000, {workspaceScoped=true} = {}) {
+            const controller = new AbortController(),workspaceTask=workspaceScoped?sceneImports.current():null;
+            const externalSignal=options.signal;
+            const abort=()=>controller.abort();externalSignal?.addEventListener('abort',abort,{once:true});
+            if(externalSignal?.aborted)controller.abort();
+            if(workspaceScoped)activeRequestController = controller;
+            let serverJobId = null, delivered = false;
             const timeout = setTimeout(() => controller.abort(), timeoutMs);
             try {
+                const legacyProcessing=workspaceScoped&&options.method==='POST' && /^\/api\/(?!v1\/)/.test(url) && currentModelPackage.rustProjectId;
+                if(legacyProcessing){
+                    const response=await fetch(`/api/v1/projects/${currentModelPackage.rustProjectId}/jobs`,{method:'POST',signal:controller.signal});
+                    const body=await response.json();if(!response.ok)throw new Error(body.error?.message||'Processing queue unavailable');
+                    serverJobId=body.job_id;activeServerJobId=serverJobId;
+                    options={...options,headers:{...options.headers,'x-3dmk-job-id':serverJobId}};
+                    if(controller.signal.aborted)throw new Error('Cancelled before processing');
+                }
                 const response = await fetch(url, { ...options, signal: controller.signal });
                 const text = await response.text();
                 let data;
                 try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text || `HTTP ${response.status}` }; }
-                if (!response.ok) {
-                    const detail = typeof data.error === 'string' ? data.error : data.error?.message;
-                    throw new Error(detail || `HTTP ${response.status}`);
-                }
+                if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : data.error?.message || `HTTP ${response.status}`);
+                if (controller.signal.aborted) throw new Error('Cancelled: late server result discarded');
+                workspaceTask?.assertCurrent();
+                delivered = true;
                 return data;
             } finally {
-                clearTimeout(timeout);
+                clearTimeout(timeout);externalSignal?.removeEventListener('abort',abort);
+                if(serverJobId && !delivered) { try { await fetch(`/api/v1/jobs/${serverJobId}`,{method:'DELETE',keepalive:true}); } catch {} }
                 if (activeRequestController === controller) activeRequestController = null;
+                if (activeServerJobId === serverJobId) activeServerJobId = null;
             }
         }
 
@@ -2844,7 +2967,7 @@
         async function checkBackend() {
             const status = $('backendStatus');
             try {
-                const health = await fetchJson('/api/health', { cache: 'no-store' }, 5000);
+                const health = await fetchJson('/api/health', { cache: 'no-store' }, 5000, {workspaceScoped:false});
                 backendCapabilities = {
                     connected: true,
                     vlm: false,
@@ -2919,10 +3042,10 @@
             $('alignAxisBtn').disabled = !(hasPointCloud || hasMesh);
             $('clearRoomPlanBtn').disabled = !hasRoomPlanOverlay;
             if ($('savePackageBtn')) $('savePackageBtn').disabled = !hasGeometry;
-            if ($('exportBtn')) $('exportBtn').disabled = !hasGeometry;
-            if ($('exportFloorPlanBtn')) $('exportFloorPlanBtn').disabled = !hasGeometry;
-            if ($('exportDxfBtn')) $('exportDxfBtn').disabled = !hasGeometry;
-            if ($('exportElevationsBtn')) $('exportElevationsBtn').disabled = !hasGeometry;
+            if ($('exportBtn')) $('exportBtn').disabled = !hasGeometry || !!sceneWorkspace?.active;
+            if ($('exportFloorPlanBtn')) $('exportFloorPlanBtn').disabled = !hasGeometry || !!sceneWorkspace?.active;
+            if ($('exportDxfBtn')) $('exportDxfBtn').disabled = !hasGeometry || !!sceneWorkspace?.active;
+            if ($('exportElevationsBtn')) $('exportElevationsBtn').disabled = !hasGeometry || !!sceneWorkspace?.active;
             if ($('exportPdfBtn')) $('exportPdfBtn').disabled = !hasGeometry;
             if ($('exportBundleBtn')) $('exportBundleBtn').disabled = !hasGeometry;
             Object.values(ROOM_PLAN_LAYER_INPUTS).forEach(id => { const input = $(id); if (input) input.disabled = !hasRoomPlanOverlay; });
@@ -3059,6 +3182,7 @@
         }
 
         function undo() {
+            if (sceneWorkspace?.active) { void sceneWorkspace.command({type:'undo'}); return; }
             if (undoStack.length === 0) return;
             redoStack.push(captureHistoryState());
             const prevState = undoStack.pop();
@@ -3066,6 +3190,7 @@
         }
 
         function redo() {
+            if (sceneWorkspace?.active) { void sceneWorkspace.command({type:'redo'}); return; }
             if (redoStack.length === 0) return;
             undoStack.push(captureHistoryState());
             const nextState = redoStack.pop();
@@ -3075,13 +3200,16 @@
         function updateSunPath() {
             const az = parseFloat($('sunAzimuth').value) * (Math.PI / 180), el = parseFloat($('sunElevation').value) * (Math.PI / 180);
             const r = currentModelMaxDim > 0 ? currentModelMaxDim * 2 : 50;
-            dirLight.position.set(r * Math.cos(el) * Math.sin(az), r * Math.sin(el), r * Math.cos(el) * Math.cos(az)); dirLight.lookAt(0,0,0);
+            dirLight.position.set(r * Math.cos(el) * Math.sin(az), r * Math.sin(el), r * Math.cos(el) * Math.cos(az)).applyQuaternion(axisBasis(THREE,'Y','X')); dirLight.lookAt(0,0,0);
         }
 
         function applyCoordinateRebase() {
-            const base = new THREE.Quaternion();
-            switch($('upAxisSelect').value) { case 'Z': base.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2); break; case '-Z': base.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2); break; case 'X': base.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2); break; case '-X': base.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2); break; case '-Y': base.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI); break; }
+            window.dispatchEvent(new Event('3dmk-frame-changed'));
+            const old=currentGroup.quaternion.clone(),base=axisBasis(THREE,$('upAxisSelect').value,'X');
             currentGroup.quaternion.copy(base).multiply(new THREE.Quaternion().setFromEuler(sceneManualRotation));
+            const delta=currentGroup.quaternion.clone().multiply(old.invert());
+            for(const set of measurementSets){for(const point of set.points)point.applyQuaternion(delta);rebuildMeasurementSet(set);}
+            for(const point of activeMeasurePoints)point.applyQuaternion(delta);renderMeasurementDraft();
             currentGroup.updateMatrixWorld(true); centerCamera(); updateSlicingBounds();
         }
 
@@ -3134,11 +3262,13 @@
             const activePlanes = isEnabled ? [clipPlaneX, clipPlaneY, clipPlaneZ] : [];
             currentGroup.traverse(child => { if (child.material && child !== blueprintPlane) { if (Array.isArray(child.material)) child.material.forEach(m => m.clippingPlanes = activePlanes); else child.material.clippingPlanes = activePlanes; } });
             if (isEnabled) updateClippingPlanes();
+            sceneWorkspace?.refreshClipping(activePlanes);
             updateContextHelp();
         }
 
         function updateSlicingBounds() {
-            if (currentGroup.children.length === 0) return; const box = new THREE.Box3().setFromObject(currentGroup); if (box.isEmpty()) return;
+            const slicingGroup=sceneWorkspace?.active?sceneWorkspace.root:currentGroup;
+            if (slicingGroup.children.length === 0) return; const box = new THREE.Box3().setFromObject(slicingGroup); if (box.isEmpty()) return;
             box.getCenter(slicePivot);
             box.getSize(sliceSize);
             const radius = sliceSize.length() / 2;
@@ -3180,9 +3310,42 @@
                 let pZ = slicePivot.clone().sub(clipPlaneZ.normal.clone().multiplyScalar(parseFloat(sz.value)));
                 clipPlaneZ.constant = -clipPlaneZ.normal.dot(pZ);
             }
+            if(sceneWorkspace?.active) sceneWorkspace.refreshClipping($('enableSlicing').checked?[clipPlaneX,clipPlaneY,clipPlaneZ]:[]);
+        }
+
+        function resetProcessingButtonLabels() {
+            const labels={runPdfTo3dBtn:'Generate STEP',runPoissonBtn:'Reconstruct from file',recognizeObjectsBtn:'Detect structure',vwmRunGeometryBtn:'Analyze patches, planes and relations',vwmReconstructAdvancedBtn:'Reconstruct loaded point cloud',vwmPerceptionBtn:'Detect objects + bounds',correctFlatSurfaceBtn:'Align to ground',recognizeModelFloorplanBtn:'Build room plan',smoothMeshBtn:'Smooth mesh',refinePackageImagesBtn:'Refine texture from package',calibratedPhotoProjectionBtn:'Project calibrated photos'};
+            for(const [id,label] of Object.entries(labels))if($(id))$(id).innerText=label;
+            if($('runPoissonBtn'))$('runPoissonBtn').disabled=!backendCapabilities.meshReconstruction;
+            if($('runPdfTo3dBtn'))$('runPdfTo3dBtn').disabled=false;
+        }
+        function clearSceneWorkspace() {
+            sceneImports.invalidate();
+            processingCancelled=true;cancelProcessFlag=true;activeRequestController?.abort();
+            pendingPackageFile=null;pendingPackageInventory=null;
+            $('packageImportReview').hidden=true;$('packageModelSelect').replaceChildren();
+            $('importPackageBtn').innerText='Commit package';
+            ['sceneAssetInput','sceneImageWidth','textureInput'].forEach(id=>{if($(id))$(id).value='';});
+            if($('addSceneFilesDialog').open)$('addSceneFilesDialog').close();
+            $('errorModal').style.display='none';
+            $('enableSlicing').checked=false;$('slicingControls').style.display='none';
+            clipPlaneX.set(new THREE.Vector3(-1,0,0),10000);clipPlaneY.set(new THREE.Vector3(0,-1,0),10000);clipPlaneZ.set(new THREE.Vector3(0,0,-1),10000);
+            slicePivot.set(0,0,0);sliceSize.set(10,10,10);currentModelMaxDim=10;
+            isMeasuring=false;$('toggleMeasureBtn').innerText='Enable Measuring Tool';$('toggleMeasureBtn').classList.remove('active-toggle');$('canvas-container').style.cursor='default';
+            if($('autoRotate'))$('autoRotate').checked=false;controls.autoRotate=false;
+            unloadCurrentModel();setSceneImportBusy(false);
+            resetProcessingButtonLabels();
+            objectAppearanceMaterials.clear();
+            renderExchangeInspector(null,null);
+            setStatus('packageCommitStatus','Choose a model or ZIP package to open.');
+            setStatus('packageReviewSummary','Choose a ZIP package to inspect.');
+            setStatus('sceneDocumentStatus','Add a GLB or open a model/project');
+            setStatus('sceneActionStatus','Scene cleared. Original files and saved projects are unchanged.','success');
+            window.dispatchEvent(new Event('3dmk-scene-cleared'));
         }
 
         function unloadCurrentModel(errorMessage) {
+            sceneWorkspace?.detach();
             showLoader(false); if (errorMessage) { $('errorModalMsg').innerText = errorMessage; $('errorModal').style.display = 'flex'; $('errorModalCloseBtn')?.focus(); }
             cancelCropMode();
             
@@ -3196,6 +3359,7 @@
             clearSceneAnalysisOverlay();
             clearSceneAnalysisContext();
             
+            currentGroup.traverse(child=>{if(child.material)for(const material of Array.isArray(child.material)?child.material:[child.material])material.dispose();});
             while(currentGroup.children.length > 0) currentGroup.remove(currentGroup.children[0]);
             
             if (currentTexture) { currentTexture.dispose(); currentTexture = null; }
@@ -3208,9 +3372,10 @@
             ['sliceX', 'sliceY', 'sliceZ'].forEach(id => { const el = $(id); if(el) { el.dataset.initialized = 'false'; el.value = 0; }});
             ['sliceRotX', 'sliceRotY', 'sliceRotZ'].forEach(id => { const el = $(id); if(el) el.value = 0; });
             sceneManualRotation.set(0, 0, 0);
+            $('upAxisSelect').value='Y';currentGroup.quaternion.copy(axisBasis(THREE,'Y','X'));
             ['sceneRotateX', 'sceneRotateY', 'sceneRotateZ'].forEach(id => { const el = $(id); if (el) el.value = '0'; });
 
-            $('statVertices').innerText = "0"; $('statFaces').innerText = "0"; controls.target.set(0, 0, 0); activeCamera.position.set(0, 10, 20); controls.update(); buildSceneGraph(); updateCanvasEmptyState();
+            $('statVertices').innerText = "0"; $('statFaces').innerText = "0"; controls.target.set(0, 0, 0); activeCamera.position.set(10, 0, 20); controls.update(); buildSceneGraph(); updateCanvasEmptyState();
             setStatus('textureStatus', 'Generates planar UVs when needed.');
             updatePackageImagesStatus('Open a ZIP package with a texture and reference photos.');
             setStatus('imageRefinementStatus', 'Photos are kept with the model; this pass improves the draped texture.');
@@ -3326,38 +3491,31 @@
         }
 
         async function applyDestructiveCrop() {
+            const task=sceneImports.current();
             if (!cropBoxMesh || !cropBoxMesh.userData.currentBounds) return; cancelProcessFlag = false; showLoader(true, "VRAM Crop: Analyzing points..."); await new Promise(resolve => setTimeout(resolve, 50));
-            const bounds = cropBoxMesh.userData.currentBounds; let newGeometries = [];
+            if(!task.isCurrent())return;
+            currentGroup.updateMatrixWorld(true);
+            const bounds = cropBoxMesh.userData.currentBounds, sourceToBounds=currentGroup.matrixWorld.clone(); let newGeometries = [];
             try {
-                loadedGeometryStore.forEach(geom => {
-                    if (cancelProcessFlag) throw new Error("Cancelled"); const pos = geom.attributes.position; if (!pos) return;
-                    const col = geom.attributes.color, norm = geom.attributes.normal; let keptIndices = []; const p = new THREE.Vector3();
-                    for(let i=0; i<pos.count; i++) { p.set(pos.getX(i), pos.getY(i), pos.getZ(i)); if (bounds.containsPoint(p)) keptIndices.push(i); }
-                    if (keptIndices.length === 0) return; if (keptIndices.length === pos.count) { newGeometries.push(geom); return; }
-                    const newGeo = new THREE.BufferGeometry(), newPos = new Float32Array(keptIndices.length * 3);
-                    let newCol = col ? new Float32Array(keptIndices.length * 3) : null, newNorm = norm ? new Float32Array(keptIndices.length * 3) : null;
-                    for(let i=0; i<keptIndices.length; i++) {
-                        const idx = keptIndices[i]; newPos[i*3] = pos.getX(idx); newPos[i*3+1] = pos.getY(idx); newPos[i*3+2] = pos.getZ(idx);
-                        if(newCol) { newCol[i*3] = col.getX(idx); newCol[i*3+1] = col.getY(idx); newCol[i*3+2] = col.getZ(idx); }
-                        if(newNorm) { newNorm[i*3] = norm.getX(idx); newNorm[i*3+1] = norm.getY(idx); newNorm[i*3+2] = norm.getZ(idx); }
-                    }
-                    newGeo.setAttribute('position', new THREE.BufferAttribute(newPos, 3));
-                    if(newCol) newGeo.setAttribute('color', new THREE.BufferAttribute(newCol, 3)); if(newNorm) newGeo.setAttribute('normal', new THREE.BufferAttribute(newNorm, 3));
-                    if (geom.userData.originalColors && newCol) newGeo.userData.originalColors = new THREE.BufferAttribute(newCol, 3);
-                    newGeo.userData.isMesh = geom.userData.isMesh; newGeo.userData.isPointCloud = geom.userData.isPointCloud;
-                    newGeometries.push(newGeo);
-                });
-                if (cancelProcessFlag) throw new Error("Cancelled");
+                for (const geom of loadedGeometryStore) {
+                    task.assertCurrent();if (cancelProcessFlag) throw new Error("Cancelled");
+                    const cropped = cropGeometry(THREE, geom, bounds, sourceToBounds);
+                    if (cropped) newGeometries.push(cropped);
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+                task.assertCurrent();if (cancelProcessFlag) throw new Error("Cancelled");
                 
                 // Track History
                 saveState();
                 
-                cancelCropMode(); processGeometries(newGeometries); showLoader(false);
-            } catch(e) { showLoader(false); if (e.message !== "Cancelled") alert("Crop failed out of memory."); }
+                cancelCropMode(); processGeometries(newGeometries, { localEdit: true }); showLoader(false);
+                setStatus('cleanupStatus', 'Crop preview preserves whole triangles, UVs, material groups and source IDs. Export a derived model; the committed source stays intact.');
+            } catch(e) { for(const geometry of newGeometries)geometry.dispose?.();if(!task.isCurrent())return;showLoader(false); if (e.message !== "Cancelled") alert("Crop failed out of memory."); }
         }
         
         // --- Backend API: Floorplan to 3D ---
         async function runPdfTo3dBackend() {
+            const task=sceneImports.current();
             const fileInput = $('floorplanFile');
             if (!fileInput || !fileInput.files.length) { setStatus('pdfTo3dStatus', 'Select a floorplan image first.', 'error'); return; }
             const btn = $('runPdfTo3dBtn');
@@ -3368,7 +3526,7 @@
             fd.append('height', $('extrudeHeight').value);
 
             try {
-                const data = await fetchJson('/api/pdf-to-3d', { method: 'POST', body: fd }, 10 * 60 * 1000);
+                const data = await fetchJson('/api/pdf-to-3d', { method: 'POST', body: fd }, 10 * 60 * 1000);task.assertCurrent();
                 renderFloorplanLayout(data.layout);
                 const rooms = data.layout?.rooms?.length || 0;
                 const walls = countLayoutWalls(data.layout);
@@ -3377,8 +3535,10 @@
                 setStatus('pdfTo3dStatus', `Rendered ${source} with ${walls} wall segment${walls === 1 ? '' : 's'} and ${corners} corner${corners === 1 ? '' : 's'}; generated ${data.vertices} exterior vertices at ${data.height}m. Downloading STEP…`, 'success');
                 downloadUrl(data.step_file, 'floorplan.step');
             } catch(e) {
+                if(!task.isCurrent())return;
                 setStatus('pdfTo3dStatus', e.name === 'AbortError' ? 'Floorplan conversion timed out.' : e.message, 'error');
             } finally {
+                if(!task.isCurrent())return;
                 btn.disabled = false; btn.innerText = "Generate STEP";
             }
         }
@@ -3498,33 +3658,20 @@
 
         // --- Backend API: Poisson Reconstruct ---
         async function runPoissonBackend() {
-            const fileInput = $('pointCloudFile');
-            if (!backendCapabilities.meshReconstruction) { setStatus('poissonStatus', 'Rust point-cloud reconstruction is unavailable.', 'error'); return; }
-            if (!fileInput || !fileInput.files.length) { setStatus('poissonStatus', 'Select a point-cloud file first.', 'error'); return; }
-            const btn = $('runPoissonBtn');
-            btn.disabled = true; btn.innerText = "Reconstructing…"; setStatus('poissonStatus', 'Uploading and reconstructing the source file…');
-
-            const fd = new FormData();
-            fd.append('cloud', fileInput.files[0]);
-
+            const task=sceneImports.current(),fileInput=$('pointCloudFile');
+            if(!backendCapabilities.meshReconstruction){setStatus('poissonStatus','Rust point-cloud reconstruction is unavailable.','error');return;}
+            if(!fileInput?.files.length){setStatus('poissonStatus','Select a point-cloud file first.','error');return;}
+            const btn=$('runPoissonBtn');btn.disabled=true;btn.innerText='Reconstructing…';setStatus('poissonStatus','Uploading and reconstructing the source file…');
+            const fd=new FormData();fd.append('cloud',fileInput.files[0]);let geometry=null;
             try {
-                const data = await fetchJson('/api/point-cloud-to-mesh', { method: 'POST', body: fd }, 30 * 60 * 1000);
-                const meshFile = data.mesh_file || data.ply_file;
-                setStatus('poissonStatus', 'Reconstruction complete. Loading mesh into the viewport…', 'success');
-                unloadCurrentModel(); showLoader(true, "Loading reconstructed mesh…");
-                new PLYLoader().load(meshFile, (geo) => {
-                    geo.userData.isPointCloud = geo.index === null;
-                    geo.userData.isMesh = geo.index !== null;
-                    hasVertexColors = false;
-                    if (geo.attributes.color) { hasVertexColors = true; geo.userData.originalColors = geo.attributes.color.clone(); }
-                    if (geo.index) geo.computeBoundsTree();
-                    processGeometries([geo]); showLoader(false); setStatus('poissonStatus', 'Mesh loaded successfully.', 'success');
-                }, null, (e) => { showLoader(false); setStatus('poissonStatus', `Failed to load mesh: ${e.message}`, 'error'); });
-            } catch(e) {
-                setStatus('poissonStatus', e.name === 'AbortError' ? 'Source-file reconstruction timed out.' : e.message, 'error');
-            } finally {
-                btn.disabled = !backendCapabilities.meshReconstruction; btn.innerText = "Reconstruct from file";
-            }
+                const data=await fetchJson('/api/point-cloud-to-mesh',{method:'POST',body:fd,signal:task.signal},30*60*1000);task.assertCurrent();
+                setStatus('poissonStatus','Reconstruction complete. Loading mesh into the viewport…','success');showLoader(true,'Loading reconstructed mesh…');
+                geometry=await loadPlyGeometryFromUrl(data.mesh_file||data.ply_file,task);task.assertCurrent();
+                geometry.userData.isPointCloud=geometry.index===null;geometry.userData.isMesh=geometry.index!==null;
+                if(geometry.attributes.color)geometry.userData.originalColors=geometry.attributes.color.clone();if(geometry.index)geometry.computeBoundsTree();
+                unloadCurrentModel();processGeometries([geometry]);geometry=null;setStatus('poissonStatus','Mesh loaded successfully.','success');
+            } catch(error){if(task.isCurrent())setStatus('poissonStatus',error.name==='AbortError'?'Source-file reconstruction timed out.':error.message,'error');}
+            finally {geometry?.dispose?.();if(task.isCurrent()){showLoader(false);btn.disabled=!backendCapabilities.meshReconstruction;btn.innerText='Reconstruct from file';}}
         }
 
         function getActiveTexture() {
@@ -3553,6 +3700,7 @@
         }
 
         async function captureTextureAsset() {
+            const task=sceneImports.current();
             if (currentModelPackage.textureBlob) return currentModelPackage.textureBlob;
             const texture = getActiveTexture();
             const image = texture?.image;
@@ -3563,7 +3711,7 @@
             canvas.width = width; canvas.height = height;
             const context = canvas.getContext('2d');
             context.drawImage(image, 0, 0, width, height);
-            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));task.assertCurrent();
             if (blob) rememberTextureAsset(blob, currentModelPackage.textureName || `${currentModelPackage.baseName || 'model'}-texture.png`, blob.type || 'image/png');
             return blob;
         }
@@ -3606,7 +3754,8 @@
         }
 
         async function buildModelPackage(modelBlob, modelName, exportOptions = {}) {
-            await captureTextureAsset();
+            const task=sceneImports.current();
+            await captureTextureAsset();task.assertCurrent();
             const analysis = currentModelPackage.analysisContext;
             const transformHistory = currentModelPackage.transformHistory || analysis?.transform_history || [];
             const roomPlanReview = floorplanLayoutGroup?.userData?.layout ? {
@@ -3694,21 +3843,25 @@
             pdf.addImage(imgData, 'JPEG', (pdf.internal.pageSize.getWidth() - imgW) / 2, (pdf.internal.pageSize.getHeight() - imgH) / 2, imgW, imgH);
             pdf.setTextColor(150);
             pdf.setFontSize(10);
-            pdf.text(`3DMk viewport snapshot`, 10, 10);
+            pdf.text(`3DMK · ${currentModelPackage.rustProjectId||'preview'} · scene r${sceneWorkspace?.document?.revision||0}`, 10, 10);
+            pdf.setFontSize(7);pdf.text(`Current camera · base view ${sceneWorkspace?.document?.active_view_id||'unsaved'}`,10,14);
             return { blob: pdf.output('blob'), filename: `${filenameStem(currentModelPackage.baseName || 'model')}_snapshot.pdf` };
         }
 
+        async function committedPackageAsset() {
+            if(!currentModelPackage.rustProjectId||rustProjectHasLocalDivergence)throw new Error('Save project requires unchanged committed geometry; export a derived model from Source geometry for previews.');
+            const response=await fetch(`/api/v1/projects/${currentModelPackage.rustProjectId}/export`);if(!response.ok)throw new Error('Project package export failed');
+            return {blob:await response.blob(),filename:`${filenameStem(currentModelPackage.baseName||'3dmk-project')}.zip`};
+        }
         async function buildExportAsset(format) {
-            if (format === 'package') {
-                const sharedFormat = $('exportFormat')?.value || 'glb';
-                const asset = await serializeCurrentGeometry(sharedFormat);
-                return buildModelPackage(asset.blob, asset.filename, collectExportOptions());
-            }
+            if (format === 'package') return committedPackageAsset();
             if (format === 'snapshot') return createViewportSnapshotAsset();
+            if(sceneWorkspace?.active)throw new Error('Model export is source-only. Use Save project for scene instances or a viewport snapshot.');
             return serializeCurrentGeometry(format);
         }
 
         async function convertPointCloudToMesh() {
+            const task=sceneImports.current();
             const mode = getLoadedGeometryMode();
             if (mode === 'mesh') { setStatus('conversionStatus', 'Reconstruct mesh requires a point cloud.', 'error'); return; }
             if (mode === 'mixed') { setStatus('conversionStatus', 'Loaded data mixes mesh and point-cloud layers. Isolate one mode before converting.', 'error'); return; }
@@ -3718,13 +3871,14 @@
 
             showLoader(true, 'Reconstructing mesh from loaded point cloud…');
             await new Promise(resolve => setTimeout(resolve, 0));
+            if(!task.isCurrent())return;
             try {
                 const sourceTexture = clouds.find(geometry => geometry.userData.texture)?.userData.texture || getActiveTexture();
                 const form = new FormData();
                 form.append('cloud', geometryPlyBlob(2000000, false, clouds), `${filenameStem(currentModelPackage.sourceModel || currentModelPackage.baseName || 'loaded-cloud')}.ply`);
-                const data = await fetchJson('/api/point-cloud-to-mesh', { method: 'POST', body: form }, 30 * 60 * 1000);
+                const data = await fetchJson('/api/point-cloud-to-mesh', { method: 'POST', body: form }, 30 * 60 * 1000);task.assertCurrent();
                 const meshFile = data.mesh_file || data.ply_file;
-                const meshGeometry = await loadPlyGeometryFromUrl(meshFile);
+                const meshGeometry = await loadPlyGeometryFromUrl(meshFile,task);if(!task.isCurrent()){meshGeometry.dispose();task.assertCurrent();}
                 meshGeometry.name = `${currentModelPackage.baseName || 'model'} mesh`;
                 meshGeometry.userData.isMesh = true;
                 meshGeometry.userData.isPointCloud = false;
@@ -3738,11 +3892,14 @@
                 processGeometries([meshGeometry]);
                 setStatus('conversionStatus', `Created a mesh from the loaded scan (${data.backend || 'Rust reconstruction'}).`, 'success');
             } catch (error) {
+                if(!task.isCurrent())return;
                 setStatus('conversionStatus', `Mesh conversion failed: ${error.message}`, 'error');
-            } finally { showLoader(false); }
+            } finally {
+                if(!task.isCurrent())return; showLoader(false); }
         }
 
         async function convertMeshToPointCloud() {
+            const task=sceneImports.current();
             const mode = getLoadedGeometryMode();
             if (mode === 'point-cloud') { setStatus('conversionStatus', 'Sample to points requires a mesh.', 'error'); return; }
             if (mode === 'mixed') { setStatus('conversionStatus', 'Loaded data mixes mesh and point-cloud layers. Isolate one mode before converting.', 'error'); return; }
@@ -3752,6 +3909,7 @@
             const targetCount = Number($('meshPointCount').value);
             showLoader(true, `Sampling ${targetCount.toLocaleString()} surface points…`);
             await new Promise(resolve => setTimeout(resolve, 0));
+            if(!task.isCurrent())return;
             try {
                 const sourceTexture = meshes.find(geometry => geometry.userData.texture)?.userData.texture || getActiveTexture();
                 const texturePixels = ensureTexturePixels();
@@ -3792,8 +3950,10 @@
                 processGeometries([pointGeometry]);
                 setStatus('conversionStatus', `Point cloud created with ${targetCount.toLocaleString()} surface samples.`, 'success');
             } catch (error) {
+                if(!task.isCurrent())return;
                 setStatus('conversionStatus', `Point-cloud conversion failed: ${error.message}`, 'error');
-            } finally { showLoader(false); }
+            } finally {
+                if(!task.isCurrent())return; showLoader(false); }
         }
 
         function classifyGeometry(geometry) {
@@ -3870,9 +4030,18 @@
             return new Blob([`${header.join('\n')}\n${vertices.join('\n')}\n${faces.map(face => `3 ${face}`).join('\n')}\n`], { type: 'application/octet-stream' });
         }
 
-        function loadPlyGeometryFromUrl(url) {
-            return new Promise((resolve, reject) => {
-                new PLYLoader().load(url, resolve, null, error => reject(new Error(error?.message || 'Could not load PLY geometry from backend output.')));
+        function loadPlyGeometryFromUrl(url,task=sceneImports.current()) {
+            return new Promise((resolve,reject)=>{
+                let settled=false;
+                const finish=(error,geometry)=>{if(settled){geometry?.dispose?.();return;}settled=true;task.signal.removeEventListener('abort',abort);error?reject(error):resolve(geometry);};
+                const abort=()=>finish(new Error('Scene processing superseded; late result discarded.'));
+                try {
+                    task.assertCurrent();task.signal.addEventListener('abort',abort,{once:true});
+                    new PLYLoader().load(url,geometry=>{
+                        if(settled||!task.isCurrent()){geometry.disposeBoundsTree?.();geometry.dispose?.();abort();return;}
+                        finish(null,geometry);
+                    },null,error=>finish(new Error(error?.message||'Could not load PLY geometry from backend output.')));
+                } catch(error){finish(error);}
             });
         }
 
@@ -3921,6 +4090,7 @@
         }
 
         async function recognizeLoadedObjects() {
+            const task=sceneImports.current();
             if (!loadedGeometryStore.length) return;
             if (!backendCapabilities.analysis) { setStatus('recognitionStatus', 'Scene analysis is unavailable.', 'error'); return; }
             const button = $('recognizeObjectsBtn'); button.disabled = true; button.innerText = 'Detecting…';
@@ -3930,7 +4100,7 @@
                 form.append('cloud', geometryPlyBlob(150000, false), 'canvas-analysis.ply');
                 form.append('scene_metadata', JSON.stringify(sceneMetadataPayload()));
                 form.append('floating_mesh_settings', JSON.stringify(floatingMeshSettingsFromUi()));
-                const data = await fetchJson('/api/point-cloud-analyze', { method: 'POST', body: form }, 120000);
+                const data = await fetchJson('/api/point-cloud-analyze', { method: 'POST', body: form }, 120000);task.assertCurrent();
                 const analysis = data.analysis;
                 rememberSceneAnalysis(analysis);
                 const overlayCount = renderSceneAnalysisOverlay(analysis);
@@ -3948,8 +4118,10 @@
                     setStatus('flatSurfaceStatus', `Top support plane: ${supportPlane.orientation} · score ${(supportPlane.support_score?.total ?? 0).toFixed(2)} · ${supportPlane.inliers.toLocaleString()} inliers.`, 'success');
                 }
             } catch (error) {
+                if(!task.isCurrent())return;
                 setStatus('recognitionStatus', error.message, 'error');
             } finally {
+                if(!task.isCurrent())return;
                 button.disabled = false; button.innerText = 'Detect structure';
             }
         }
@@ -4046,7 +4218,7 @@
             details.textContent = 'Querying the configured loopback /v1/models endpoint.';
             if (button) { button.disabled = true; button.textContent = 'Checking…'; }
             try {
-                const runtime = await fetchJson('/api/v1/vlm/status', { cache: 'no-store' }, 5000);
+                const runtime = await fetchJson('/api/v1/vlm/status', { cache: 'no-store' }, 5000, {workspaceScoped:false});
                 backendCapabilities.vlm = !!runtime.reachable;
                 card.dataset.state = runtime.reachable ? 'ready' : 'unavailable';
                 status.textContent = runtime.reachable ? 'Local VLM ready' : 'Local VLM not ready';
@@ -4103,6 +4275,7 @@
             };
         }
         async function runAdvancedVwmGeometryAnalysis() {
+            const task=sceneImports.current();
             const meshes = loadedGeometryStore.filter(geometry => geometry.userData.isMesh && geometry.attributes.position);
             if (!meshes.length) { setStatus('vwmGeometryStatus', 'Load a triangle mesh first.', 'error'); return; }
             const button = $('vwmRunGeometryBtn'); button.disabled = true; button.innerText = 'Analyzing VWM geometry…';
@@ -4115,20 +4288,23 @@
                 form.append('cloud', geometryPlyBlob(2000000, true, meshes), 'vwm-geometry.ply');
                 form.append('options', new Blob([JSON.stringify(options)], { type: 'application/json' }), 'vwm-geometry-options.json');
                 setProcessingProgress(38, '38% · Running patch and plane analysis');
-                const data = await fetchJson('/api/vwm-geometry-analyze', { method: 'POST', body: form }, 10 * 60 * 1000);
+                const data = await fetchJson('/api/vwm-geometry-analyze', { method: 'POST', body: form }, 10 * 60 * 1000);task.assertCurrent();
                 setProcessingProgress(88, '88% · Rendering structural evidence');
                 const analysis = data.analysis || {};
                 currentModelPackage.analysisContext = { ...(currentModelPackage.analysisContext || {}), vwm_geometry: analysis, vwm_geometry_options: options };
                 meshes.forEach(geometry => { geometry.userData.vwmGeometryAnalysis = analysis; });
                 setStatus('vwmGeometryStatus', `${(analysis.patches || []).length} patches · ${(analysis.planes || []).length} planes · ${(analysis.relations || []).length} relations · ${(analysis.intersections || []).length} intersections.`, 'success');
             } catch (error) {
+                if(!task.isCurrent())return;
                 setStatus('vwmGeometryStatus', `VWM geometry analysis failed: ${error.message}`, 'error');
             } finally {
+                if(!task.isCurrent())return;
                 showLoader(false);
                 button.disabled = false; button.innerText = 'Analyze patches, planes and relations';
             }
         }
         async function runAdvancedVwmReconstruction() {
+            const task=sceneImports.current();
             const clouds = loadedGeometryStore.filter(geometry => geometry.userData.isPointCloud && geometry.attributes.position);
             if (!clouds.length) { setStatus('vwmReconstructionStatus', 'Load a point cloud first.', 'error'); return; }
             const button = $('vwmReconstructAdvancedBtn'); button.disabled = true; button.innerText = 'Reconstructing…';
@@ -4140,9 +4316,9 @@
                 form.append('cloud', geometryPlyBlob(2000000, false, clouds), 'vwm-reconstruction.ply');
                 form.append('vwm_options', new Blob([JSON.stringify(options)], { type: 'application/json' }), 'vwm-reconstruction-options.json');
                 setProcessingProgress(42, '42% · Running selected VWM extractor');
-                const data = await fetchJson('/api/point-cloud-to-mesh', { method: 'POST', body: form }, 30 * 60 * 1000);
+                const data = await fetchJson('/api/point-cloud-to-mesh', { method: 'POST', body: form }, 30 * 60 * 1000);task.assertCurrent();
                 setProcessingProgress(82, '82% · Loading reconstructed mesh');
-                const meshGeometry = await loadPlyGeometryFromUrl(data.mesh_file || data.ply_file);
+                const meshGeometry = await loadPlyGeometryFromUrl(data.mesh_file || data.ply_file,task);if(!task.isCurrent()){meshGeometry.dispose();task.assertCurrent();}
                 meshGeometry.name = `VWM ${data.vwm?.extraction || data.backend || 'reconstruction'}`;
                 meshGeometry.userData = { ...meshGeometry.userData, isMesh: true, isPointCloud: false, vwmReconstruction: data.vwm || { backend: data.backend } };
                 if (!meshGeometry.attributes.normal) meshGeometry.computeVertexNormals();
@@ -4151,12 +4327,15 @@
                 const report = data.vwm;
                 setStatus('vwmReconstructionStatus', report ? `${report.extraction}: ${Number(report.output_vertices).toLocaleString()} vertices, ${Number(report.output_triangles).toLocaleString()} triangles from ${Number(report.sampled_points).toLocaleString()} oriented samples.` : `Reconstructed with ${data.backend}.`, 'success');
             } catch (error) {
+                if(!task.isCurrent())return;
                 setStatus('vwmReconstructionStatus', `VWM reconstruction failed: ${error.message}`, 'error');
             } finally {
+                if(!task.isCurrent())return;
                 button.disabled = false; button.innerText = 'Reconstruct loaded point cloud'; showLoader(false);
             }
         }
         async function runVwmPerception() {
+            const task=sceneImports.current();
             const uploaded = $('vwmPerceptionImageInput')?.files?.[0];
             const packagePhoto = currentModelPackage.referenceImages?.[0];
             const image = uploaded || packagePhoto?.blob;
@@ -4175,14 +4354,16 @@
                 form.append('options', new Blob([JSON.stringify(vwmPerceptionOptionsFromUi())], { type: 'application/json' }), 'vwm-perception-options.json');
                 form.append('vlm_options', new Blob([JSON.stringify(vlmDetectionOptionsFromUi())], { type: 'application/json' }), 'vlm-options.json');
                 setProcessingProgress(48, perceptionMode === 'deterministic' ? '48% · Segmenting deterministic regions' : '48% · Running advisory VLM detection');
-                const data = await fetchJson('/api/vwm-perception', { method: 'POST', body: form }, 120000);
+                const data = await fetchJson('/api/vwm-perception', { method: 'POST', body: form }, 120000);task.assertCurrent();
                 setProcessingProgress(88, '88% · Rendering detection evidence');
                 const summary = renderVwmPerceptionResult(data, image);
                 setStatus('vwmPerceptionStatus', `${summary.provenance} ${summary.count} region${summary.count === 1 ? '' : 's'} returned.`, summary.count ? 'success' : '');
             } catch (error) {
+                if(!task.isCurrent())return;
                 if ($('vwmPerceptionResults')) $('vwmPerceptionResults').innerHTML = '';
                 setStatus('vwmPerceptionStatus', `VWM perception failed: ${error.message}`, 'error');
             } finally {
+                if(!task.isCurrent())return;
                 button.innerText = 'Detect objects + bounds';
                 showLoader(false);
                 updateWorkflowAvailability();
@@ -4190,6 +4371,7 @@
         }
 
         async function correctFlatSurface() {
+            const task=sceneImports.current();
             if (!loadedGeometryStore.length) return;
             if (!backendCapabilities.flatCorrection) { setStatus('flatSurfaceStatus', 'Ground alignment is unavailable.', 'error'); return; }
             const button = $('correctFlatSurfaceBtn'); button.disabled = true; button.innerText = 'Aligning…';
@@ -4198,7 +4380,7 @@
                 const form = new FormData();
                 form.append('cloud', geometryPlyBlob(2000000, true), 'canvas-correction.ply');
                 form.append('scene_metadata', JSON.stringify(sceneMetadataPayload()));
-                const data = await fetchJson('/api/flat-surface-correct', { method: 'POST', body: form }, 5 * 60 * 1000);
+                const data = await fetchJson('/api/flat-surface-correct', { method: 'POST', body: form }, 5 * 60 * 1000);task.assertCurrent();
                 if (!data.correction?.transform) throw new Error('Correction completed without a transform.');
                 const transformed = applyRustTransform(data.correction.transform);
                 commitGeometryEdit(transformed, 'Aligned geometry using the backend.', { analysis: data.correction?.analysis });
@@ -4208,13 +4390,16 @@
                 const artifactSummary = summarizeArtifactReview(data.correction?.analysis);
                 if (artifactSummary) setStatus('cleanupStatus', artifactSummary, data.correction?.analysis?.artifact_summary?.remove_points ? 'success' : '');
             } catch (error) {
+                if(!task.isCurrent())return;
                 setStatus('flatSurfaceStatus', error.message, 'error');
             } finally {
+                if(!task.isCurrent())return;
                 button.disabled = false; button.innerText = 'Align to ground';
             }
         }
 
         async function recognizeModelFloorplan() {
+            const task=sceneImports.current();
             const meshes = loadedGeometryStore.filter(geometry => geometry.userData.isMesh && geometry.attributes.position);
             if (!meshes.length) { setStatus('modelFloorplanStatus', 'Load a mesh first.', 'error'); return; }
             if (!backendCapabilities.modelFloorplanRecognition) { setStatus('modelFloorplanStatus', 'Room-plan extraction is unavailable.', 'error'); return; }
@@ -4227,7 +4412,7 @@
                 form.append('cloud', geometryPlyBlob(2000000, true, meshes), 'canvas-floorplan.ply');
                 form.append('scene_metadata', JSON.stringify(sceneMetadataPayload('mesh')));
                 form.append('slice_percent', String(slicePercent));
-                const data = await fetchJson('/api/model-floorplan-recognize', { method: 'POST', body: form }, 10 * 60 * 1000);
+                const data = await fetchJson('/api/model-floorplan-recognize', { method: 'POST', body: form }, 10 * 60 * 1000);task.assertCurrent();
                 if (data.correction?.transform) {
                     const transformed = applyRustTransform(data.correction.transform);
                     commitGeometryEdit(transformed, 'Updated model orientation from room-plan extraction.', { analysis: data.correction?.analysis });
@@ -4242,8 +4427,10 @@
                 const artifactSummary = summarizeArtifactReview(data.correction?.analysis);
                 if (artifactSummary) setStatus('cleanupStatus', artifactSummary, data.correction?.analysis?.artifact_summary?.remove_points ? 'success' : '');
             } catch (error) {
+                if(!task.isCurrent())return;
                 setStatus('modelFloorplanStatus', error.message, 'error');
             } finally {
+                if(!task.isCurrent())return;
                 showLoader(false);
                 button.disabled = false; button.innerText = 'Build room plan';
             }
@@ -4292,16 +4479,18 @@
         }
 
         async function smoothLoadedMeshes() {
+            const task=sceneImports.current();
             const iterations = Number($('smoothIterations').value), strength = Number($('smoothStrength').value);
             const meshes = loadedGeometryStore.filter(geometry => geometry.userData.isMesh && geometry.attributes.position);
             if (!meshes.length) { setStatus('cleanupStatus', 'Load a mesh first.', 'error'); return; }
             if (!backendCapabilities.meshSmoothing) { setStatus('cleanupStatus', 'Mesh smoothing is unavailable.', 'error'); return; }
             const button = $('smoothMeshBtn'); button.disabled = true; button.innerText = 'Smoothing…';
+            const smoothed=[];let published=false;
             showLoader(true, 'Smoothing mesh…');
             try {
                 let meshNumber = 0;
-                const smoothed = [];
                 for (const geometry of loadedGeometryStore) {
+                    task.assertCurrent();
                     if (!geometry.userData.isMesh || !geometry.attributes.position) {
                         const cloned = geometry.clone();
                         cloned.userData = { ...geometry.userData };
@@ -4314,18 +4503,21 @@
                     form.append('cloud', geometryPlyBlob(2000000, true, [geometry]), `${filenameStem(geometry.name || currentModelPackage.sourceModel || 'mesh')}.ply`);
                     form.append('iterations', String(iterations));
                     form.append('strength', String(strength));
-                    const data = await fetchJson('/api/mesh-smooth', { method: 'POST', body: form }, 15 * 60 * 1000);
-                    const rustGeometry = await loadPlyGeometryFromUrl(data.smoothed_file);
+                    const data = await fetchJson('/api/mesh-smooth', { method: 'POST', body: form }, 15 * 60 * 1000);task.assertCurrent();
+                    const rustGeometry = await loadPlyGeometryFromUrl(data.smoothed_file,task);if(!task.isCurrent()){rustGeometry.dispose();task.assertCurrent();}
                     try {
                         smoothed.push(transferSmoothedPositions(geometry, rustGeometry));
                     } finally {
                         rustGeometry.dispose?.();
                     }
                 }
-                commitGeometryEdit(smoothed, `Smoothed mesh with ${iterations} passes.`);
+                task.assertCurrent();commitGeometryEdit(smoothed, `Smoothed mesh with ${iterations} passes.`);published=true;
             } catch (error) {
+                if(!task.isCurrent())return;
                 setStatus('cleanupStatus', `Smoothing failed: ${error.message}`, 'error');
             } finally {
+                if(!published)for(const geometry of smoothed)geometry.dispose?.();
+                if(!task.isCurrent())return;
                 showLoader(false);
                 button.disabled = false; button.innerText = 'Smooth mesh';
             }
@@ -4545,7 +4737,7 @@
             clearBlueprintPlane();
             blueprintPlane = new THREE.Mesh(geo, mat);
             blueprintPlane.name = "Blueprint Reference";
-            const box = new THREE.Box3().setFromObject(currentGroup);
+            const box = getGeometryBounds(loadedGeometryStore);
             if (!box.isEmpty()) blueprintPlane.position.y = box.min.y;
             currentGroup.add(blueprintPlane);
             buildSceneGraph();
@@ -4560,22 +4752,26 @@
             loadTextureFile(file);
         }
 
-        async function loadTextureFile(file) {
+        async function loadTextureFile(file,task=sceneImports.current()) {
+            if(!task.isCurrent())return;
             showLoader(true, "Draping image on mesh…");
             try {
                 const { img } = await readImageFile(file);
+                task.assertCurrent();
                 const generated = applyTextureImage(img, file, file.name, file.type || guessImageMimeType(file.name));
                 setStatus('textureStatus', generated ? 'Image rendered with generated planar UVs.' : 'Image rendered with the model’s UV coordinates.', 'success');
                 return generated;
             } catch (error) {
+                if(!task.isCurrent())return;
                 setStatus('textureStatus', error.message, 'error');
                 return false;
             } finally {
-                showLoader(false);
+                if(task.isCurrent())showLoader(false);
             }
         }
 
         async function refinePackageTexture() {
+            const task=sceneImports.current();
             const texture = currentModelPackage.textureBlob;
             const references = currentModelPackage.referenceImages || [];
             if (!texture) { setStatus('imageRefinementStatus', 'This package has no texture to refine.', 'error'); return; }
@@ -4588,18 +4784,20 @@
                 const form = new FormData();
                 form.append('texture', texture, currentModelPackage.textureName || 'texture.png');
                 references.forEach(photo => form.append('reference_photo', photo.blob, photo.name));
-                const data = await fetchJson('/api/image-assisted-refinement', { method: 'POST', body: form }, 5 * 60 * 1000);
-                const response = await fetch(data.refined_texture, { cache: 'no-store' });
+                const data = await fetchJson('/api/image-assisted-refinement', { method: 'POST', body: form }, 5 * 60 * 1000);task.assertCurrent();
+                const response = await fetch(data.refined_texture, { cache: 'no-store',signal:task.signal });task.assertCurrent();
                 if (!response.ok) throw new Error('The refined texture could not be downloaded.');
-                const blob = await response.blob();
+                const blob = await response.blob();task.assertCurrent();
                 const refinedName = `refined-${currentModelPackage.textureName || 'texture.png'}`.replace(/\.[^.]+$/, '.png');
-                await loadTextureFile(new File([blob], refinedName, { type: 'image/png' }));
+                await loadTextureFile(new File([blob], refinedName, { type: 'image/png' }),task);task.assertCurrent();
                 const usable = Number(data.refinement?.usable_reference_images || 0);
                 const inspected = Number(data.refinement?.images_inspected || references.length + 1);
                 setStatus('imageRefinementStatus', `Refined texture using ${usable} usable reference photo${usable === 1 ? '' : 's'} (${inspected} images checked).`, 'success');
             } catch (error) {
+                if(!task.isCurrent())return;
                 setStatus('imageRefinementStatus', error.name === 'AbortError' ? 'Image refinement timed out.' : error.message, 'error');
             } finally {
+                if(!task.isCurrent())return;
                 button.innerText = 'Refine texture from package';
                 updateWorkflowAvailability();
             }
@@ -4658,6 +4856,7 @@
             return projectedGeometry;
         }
         async function projectCalibratedPhotos() {
+            const task=sceneImports.current();
             const mode = getLoadedGeometryMode();
             const cameraSet = getIphoneCaptureReport();
             const photos = (currentModelPackage.referenceImages || []).filter(photo => photo?.blob).slice(0, 64);
@@ -4699,7 +4898,7 @@
                 form.append('geometry_provenance', new Blob([JSON.stringify({ units: 'metres', coordinate_frame: 'capture', capture_id: cameraSet.capture_id })], { type: 'application/json' }), 'geometry_provenance.json');
                 form.append('projection_options', new Blob([JSON.stringify(options)], { type: 'application/json' }), 'projection_options.json');
                 pairedPhotos.forEach(({ photo }) => form.append('reference_photo', photo.blob, photo.name));
-                const data = await fetchJson('/api/calibrated-photo-project', { method: 'POST', body: form }, 15 * 60 * 1000);
+                const data = await fetchJson('/api/calibrated-photo-project', { method: 'POST', body: form }, 15 * 60 * 1000);task.assertCurrent();
                 if (!data.projected_model || !data.projection) throw new Error('The backend returned no projected model or projection report.');
                 const report = data.projection;
                 const unmatched = Array.isArray(data.unmatched_photos) ? data.unmatched_photos : [];
@@ -4718,7 +4917,7 @@
                     report,
                     unmatched_photos: unmatched
                 };
-                projectedGeometry = await loadPlyGeometryFromUrl(data.projected_model);
+                projectedGeometry = await loadPlyGeometryFromUrl(data.projected_model,task);task.assertCurrent();
                 prepareProjectedGeometry(projectedGeometry, sourceGeometries, provenance);
                 const coverage = Number(report.coverage), colored = Number(report.vertices_colored), total = Number(report.vertices_total);
                 const used = Number(report.photos_used), received = Number(report.photos_received), observations = Number(report.mean_observations);
@@ -4734,8 +4933,10 @@
                 setStatus('calibratedPhotoProjectionStatus', `Vertex-color coverage: ${coverageText} (${vertexText}) using ${photoText}.${observationText}${unmatchedText}${evidenceText} Uncovered vertices retain returned original/default color.`, Number.isFinite(coverage) && coverage > 0 ? 'success' : 'error');
             } catch (error) {
                 projectedGeometry?.dispose?.();
+                if(!task.isCurrent())return;
                 setStatus('calibratedPhotoProjectionStatus', `Calibrated projection failed: ${error.message}`, 'error');
             } finally {
+                if(!task.isCurrent())return;
                 showLoader(false);
                 button.innerText = 'Project calibrated photos';
                 updateWorkflowAvailability();
@@ -4830,17 +5031,20 @@
         function updatePointSize() { const size = parseFloat($('pointSize').value); if ($('pointSizeLabel')) $('pointSizeLabel').textContent = `${size.toFixed(3)} units`; currentGroup.traverse((child) => { if (child.isPoints && child.material) child.material.size = size; }); }
 
         async function loadBlueprintFile(file) {
+            const task=sceneImports.current();
             showLoader(true, "Placing reference image…");
             try {
                 const { img } = await readImageFile(file);
+                task.assertCurrent();
                 applyBlueprintImage(img);
                 setStatus('textureStatus', 'Reference image placed on the floor.', 'success');
                 return true;
             } catch (error) {
+                if(!task.isCurrent())return;
                 setStatus('textureStatus', error.message, 'error');
                 return false;
             } finally {
-                showLoader(false);
+                if(task.isCurrent())showLoader(false);
             }
         }
 
@@ -4849,13 +5053,93 @@
             loadBlueprintFile(file);
         }
 
-        function handleModelUpload(event) {
-            const file = event.target.files[0]; if (!file) return; const ext = file.name.split('.').pop().toLowerCase();
-            if (ext === 'zip') { loadZipPackage(file); return; }
-            loadModelFile(file, ext);
+        function setSceneImportBusy(value) {
+            sceneImportBusy=value;
+            ['addSceneFilesBtn','openSceneModelBtn','emptyAddFilesBtn','emptyImportBtn','modelInput','sceneAssetInput'].forEach(id=>{if($(id))$(id).disabled=value;});
+            $('importPackageBtn').disabled=value||!pendingPackageFile||!pendingPackageInventory?.primary_model?.candidates?.length;
+        }
+        function sceneCanAcceptFiles() { return !!currentModelPackage.rustProjectId&&!!sceneWorkspace?.canAddFiles; }
+        function openSceneModelPicker() {
+            if(sceneImportBusy)return;
+            setSidebarOpen(true);openAccordionPath('load','geometry');$('modelInput').click();
+        }
+        function openAddSceneFilesDialog() {
+            if(sceneImportBusy)return;
+            $('sceneAssetInput').value='';updateSceneAddSelection();
+            $('addSceneFilesDialog').showModal();$('sceneAssetInput').focus();
+        }
+        function updateSceneAddSelection() {
+            try {
+                const files=validateSceneAddFiles($('sceneAssetInput').files,$('sceneImageWidth').value,sceneCanAcceptFiles());
+                if(files.length&&currentModelPackage.rustProjectId&&!sceneCanAcceptFiles())throw new Error('The current source is not a ready scene layout. Open a GLB project, or clear the workspace before starting a new scene.');
+                $('confirmAddSceneFilesBtn').disabled=!files.length;
+                setStatus('sceneAddStatus',files.length?`${files.length} file${files.length===1?'':'s'} · ${(files.reduce((n,file)=>n+file.size,0)/1048576).toFixed(1)} MiB · ${sceneCanAcceptFiles()?'appends to the current project':'starts a new project'}`:'Choose one or more files.');
+            } catch(error) {$('confirmAddSceneFilesBtn').disabled=true;setStatus('sceneAddStatus',error.message,'error');}
+        }
+        async function importSceneFiles(files,task,additive=false) {
+            if(additive&&sceneCanAcceptFiles()) {
+                if(rustProjectHasLocalDivergence)throw new Error('Export or discard the current source preview before adding scene assets.');
+                const added=await sceneWorkspace.addFiles(files);task.assertCurrent();
+                if(!added)throw new Error($('sceneDocumentStatus').textContent||'Files could not be added.');
+            } else {
+                if(additive&&currentModelPackage.rustProjectId)throw new Error('The current source is not a ready scene layout. Clear the workspace or open a GLB project first.');
+                const file=files[0],allGlb=files.every(file=>/\.glb$/i.test(file.name));
+                showLoader(true,'Validating source and opening project…',false);
+                const form=new FormData();form.append('file',file,file.name);form.append('units',/\.glb$/i.test(file.name)?'m':getProjectUnitKey()==='scene_units'?'m':getProjectUnitKey());
+                const imported=await fetchJson('/api/v1/projects/import',{method:'POST',body:form,signal:task.signal},180000);task.assertCurrent();
+                await loadCommittedRustPackage({...imported,assets:[imported.source_asset]},task);task.assertCurrent();
+                if(files.length>1&&!await sceneWorkspace.addFiles(files.slice(1))){task.assertCurrent();throw new Error('The first GLB opened; additional files were not added. '+$('sceneDocumentStatus').textContent);}
+                task.assertCurrent();
+                if(allGlb||additive)sceneWorkspace.setMode(true);
+            }
+            task.assertCurrent();openAccordionPath('scene-layout');centerCamera();
+        }
+        async function addSelectedSceneFiles() {
+            if(sceneImportBusy)return;
+            let files;
+            try {files=validateSceneAddFiles($('sceneAssetInput').files,$('sceneImageWidth').value,sceneCanAcceptFiles());if(!files.length)return;}
+            catch(error){setStatus('sceneAddStatus',error.message,'error');return;}
+            const task=sceneImports.begin();setSceneImportBusy(true);$('addSceneFilesDialog').close();
+            setStatus('sceneActionStatus',`Adding ${files.length} file${files.length===1?'':'s'}…`);
+            try {
+                await importSceneFiles(files,task,true);task.assertCurrent();
+                setStatus('sceneActionStatus',`Added ${files.length} file${files.length===1?'':'s'} · existing scene objects retained.`,'success');
+            } catch(error) {if(task.isCurrent())setStatus('sceneActionStatus',error.message,'error');}
+            finally {if(task.isCurrent()){showLoader(false);setSceneImportBusy(false);$('sceneAssetInput').value='';}}
+        }
+        async function handleModelUpload(event) {
+            const files=Array.from(event.target.files||[]);event.target.value='';if(!files.length||sceneImportBusy)return;
+            const allGlb=files.every(file=>/\.glb$/i.test(file.name));
+            let error='';
+            if(files.some(file=>!file.size))error='A selected file is empty. Choose a non-empty model or project.';
+            else if(files.length>64||files.reduce((sum,file)=>sum+file.size,0)>512*1024*1024)error='Choose up to 64 GLBs, or one model/project, within 512 MiB.';
+            else if(files.length>1&&!allGlb)error='Select multiple GLB files, or one model/project in another format.';
+            else if(files.some(file=>!/^.+\.(3ds|3mf|dae|fbx|glb|gltf|off|obj|ply|stl|u3d|x3d|zip)$/i.test(file.name)))error='Unsupported source format. Choose a supported model or ZIP package.';
+            if(error){setStatus('packageCommitStatus',error,'error');setStatus('sceneActionStatus',error,'error');return;}
+            const task=sceneImports.begin();setSceneImportBusy(true);
+            try {
+                if(/\.zip$/i.test(files[0].name)){await inspectZipPackage(files[0],task);task.assertCurrent();setStatus('sceneActionStatus','Review the ZIP in Import, then Commit package to open it.');return;}
+                await importSceneFiles(files,task);task.assertCurrent();
+                setStatus('packageCommitStatus',`Opened ${files.length} file${files.length===1?'':'s'} · immutable source assets retained.`,'success');
+                setStatus('sceneActionStatus',`Opened ${files.length} file${files.length===1?'':'s'}. Use Add files to scene to keep building.`,'success');
+            } catch(error) {if(task.isCurrent()){setStatus('packageCommitStatus',`Import: ${error.message}`,'error');setStatus('sceneActionStatus',`Import: ${error.message}`,'error');}}
+            finally {if(task.isCurrent()){showLoader(false);setSceneImportBusy(false);}}
         }
 
-        async function inspectZipPackage(file) {
+        function renderExchangeInspector(exchange, document) {
+            const target=$('exchangeInspector'); if(!target)return;
+            target.replaceChildren();
+            const title=document?`glTF document · ${document.nodes?.length||0} nodes · ${document.materials?.length||0} materials`:'No exchange document loaded';
+            const line=window.document.createElement('p'); line.textContent=title; target.append(line);
+            if(!exchange)return;
+            const frame=window.document.createElement('p');frame.textContent=`${exchange.schema} · ${exchange.source_format} · CRS ${exchange.mapping?.crs||'unresolved'} · origin ${JSON.stringify(exchange.mapping?.origin||[])} m`;target.append(frame);
+            const render=(node,parent)=>{const row=window.document.createElement('details'),summary=window.document.createElement('summary');summary.textContent=`${node.kind||'object'} · ${node.name||node.id||'unnamed'}`;row.append(summary);const meta=window.document.createElement('pre');meta.style.whiteSpace='pre-wrap';meta.textContent=JSON.stringify({id:node.id,properties:node.properties},null,2);row.append(meta);parent.append(row);(node.children||[]).forEach(child=>render(child,row));};
+            (exchange.roots||[]).forEach(node=>render(node,target));
+            for(const warning of exchange.warnings||[]){const note=window.document.createElement('p');note.textContent=typeof warning==='string'?warning:JSON.stringify(warning);target.append(note);}
+        }
+
+        async function inspectZipPackage(file,task=sceneImports.current()) {
+            task.assertCurrent();
             pendingPackageFile = file;
             pendingPackageInventory = null;
             const review = $('packageImportReview');
@@ -4866,12 +5150,15 @@
             try {
                 const form = new FormData();
                 form.append('file', file, file.name);
-                const result = await fetchJson('/api/v1/packages/inspect', { method: 'POST', body: form }, 120000);
+                const result = await fetchJson('/api/v1/packages/inspect', { method: 'POST', body: form,signal:task.signal }, 120000);
+                task.assertCurrent();
                 pendingPackageInventory = result.inventory;
                 renderPackageReview(result.inventory);
             } catch (error) {
+                if(!task.isCurrent())return;
                 setStatus('packageReviewSummary', `Package inspection failed: ${error.message}`, 'error');
                 if (commit) commit.disabled = true;
+                throw error;
             }
         }
 
@@ -4896,92 +5183,75 @@
         }
 
         async function commitPendingPackage() {
-            if (!pendingPackageFile || !pendingPackageInventory) return;
-            const button = $('importPackageBtn');
-            if (button) { button.disabled = true; button.innerText = 'Committing…'; }
+            if (!pendingPackageFile || !pendingPackageInventory || sceneImportBusy) return;
+            const task=sceneImports.begin(),file=pendingPackageFile,inventory=pendingPackageInventory;
+            const button=$('importPackageBtn');setSceneImportBusy(true);button.innerText='Committing…';
+            setStatus('sceneActionStatus','Committing package and loading its scene…');
             try {
                 const form = new FormData();
-                form.append('file', pendingPackageFile, pendingPackageFile.name);
-                form.append('name', filenameStem(pendingPackageFile.name));
+                form.append('file', file, file.name);form.append('name', filenameStem(file.name));
                 form.append('units', getProjectUnitKey() === 'scene_units' ? 'm' : getProjectUnitKey());
-                form.append('primary_model', $('packageModelSelect')?.value || pendingPackageInventory.primary_model.selected_path || '');
-                const imported = await fetchJson('/api/v1/projects/import-package', { method: 'POST', body: form }, 180000);
-                await loadCommittedRustPackage(imported);
+                form.append('primary_model', $('packageModelSelect')?.value || inventory.primary_model.selected_path || '');
+                const imported = await fetchJson('/api/v1/projects/import-package', { method: 'POST', body: form,signal:task.signal }, 180000);task.assertCurrent();
+                await loadCommittedRustPackage(imported,task);task.assertCurrent();
                 setStatus('packageCommitStatus', `Committed ${imported.assets.length} assets as revision ${imported.root_revision.revision_id.slice(0, 8)}.`, 'success');
-                if ($('packageImportReview')) $('packageImportReview').hidden = true;
-                pendingPackageFile = null;
-                pendingPackageInventory = null;
+                setStatus('sceneActionStatus',`Opened package · ${imported.assets.length} assets preserved.`,'success');
+                $('packageImportReview').hidden = true;pendingPackageFile = null;pendingPackageInventory = null;
             } catch (error) {
-                setStatus('packageCommitStatus', `Package commit failed: ${error.message}`, 'error');
+                if(task.isCurrent()){setStatus('packageCommitStatus', `Package commit failed: ${error.message}`, 'error');setStatus('sceneActionStatus',`Package: ${error.message}`,'error');}
             } finally {
-                if (button) { button.disabled = false; button.innerText = 'Commit package'; }
+                if(task.isCurrent()){showLoader(false);setSceneImportBusy(false);button.innerText='Commit package';}
             }
         }
 
-        async function loadCommittedRustPackage(imported) {
-            const projectId = imported.project.project_id;
-            const assets = imported.assets || [];
-            const modelAsset = assets.find(asset => asset.role === 'source_model');
-            if (!modelAsset) throw new Error('Rust package response has no primary model asset.');
-            const dependencyAssets = assets.filter(asset => !['source_package', 'photo', 'calibration', 'report'].includes(asset.role));
-            const blobs = await Promise.all(dependencyAssets.map(async asset => {
-                const response = await fetch(`/api/v1/projects/${projectId}/assets/${asset.asset_id}`);
-                if (!response.ok) throw new Error(`Could not fetch ${asset.original_name} from the Rust project.`);
-                return { asset, blob: await response.blob() };
-            }));
-            const byPath = new Map();
-            const byBasename = new Map();
-            blobs.forEach(({ asset, blob }) => (asset.metadata?.package_paths || []).forEach(path => {
-                const normalized = String(path).replace(/\\/g, '/').toLowerCase();
-                const url = URL.createObjectURL(blob);
-                byPath.set(normalized, url);
-                const basename = normalized.split('/').pop();
-                if (!byBasename.has(basename)) byBasename.set(basename, []);
-                byBasename.get(basename).push(url);
-            }));
-            const manager = new THREE.LoadingManager();
-            manager.setURLModifier(requestedUrl => {
-                const normalized = decodeURIComponent(requestedUrl).replace(/\\/g, '/').toLowerCase();
-                const exact = byPath.get(normalized) || byPath.get(normalized.replace(/^\.\//, ''));
-                if (exact) return exact;
-                const basename = normalized.split('/').pop();
-                const matches = byBasename.get(basename) || [];
-                return matches.length === 1 ? matches[0] : requestedUrl;
-            });
-            let materials = null;
-            const mtlAsset = blobs.find(({ asset }) => asset.media_type === 'model/mtl');
-            if (mtlAsset) {
-                materials = new MTLLoader(manager).parse(await mtlAsset.blob.text(), '');
-                materials.preload();
-            }
-            const modelBlob = blobs.find(({ asset }) => asset.asset_id === modelAsset.asset_id)?.blob;
-            if (!modelBlob) throw new Error('Primary model bytes were not returned by the Rust project.');
-            const modelName = modelAsset.original_name || 'model.glb';
-            const modelExt = modelName.split('.').pop().toLowerCase();
-            const textureAsset = assets.find(asset => asset.role === 'texture');
-            const textureBlob = textureAsset ? await (await fetch(`/api/v1/projects/${projectId}/assets/${textureAsset.asset_id}`)).blob() : null;
-            const photoAssets = assets.filter(asset => asset.role === 'photo');
-            const photoBlobs = await Promise.all(photoAssets.slice(0, 120).map(async asset => ({ name: asset.original_name, sourcePath: packageAssetSourcePath(asset), type: asset.media_type, blob: await (await fetch(`/api/v1/projects/${projectId}/assets/${asset.asset_id}`)).blob() })));
-            const release = () => [...new Set(byPath.values())].forEach(url => URL.revokeObjectURL(url));
-            const modelFile = new File([modelBlob], modelName, { type: modelAsset.media_type || 'application/octet-stream' });
-            loadModelFile(modelFile, modelExt, async () => {
-                currentModelPackage.rustProjectId = projectId;
-                currentModelPackage.packageInventory = imported.inventory;
-                currentModelPackage.iphoneCapture = imported.inventory?.iphone_capture || null;
-                activeGeometryRevisionId = `rust:${imported.root_revision.revision_id}`;
-                activeGeometryFingerprint = geometryFingerprint();
-                rustProjectHasLocalDivergence = false;
-                currentModelPackage.sourceAssetIds = assets.filter(asset => asset.role !== 'report').map(asset => asset.asset_id);
-                currentModelPackage.sourceModel = modelName;
-                rememberReferenceImages(photoBlobs);
-                if (textureBlob) {
-                    rememberTextureAsset(textureBlob, textureAsset.original_name, textureAsset.media_type);
-                    const { img } = await readImageFile(new File([textureBlob], textureAsset.original_name, { type: textureAsset.media_type }));
-                    applyTextureImage(img, textureBlob, textureAsset.original_name, textureAsset.media_type);
-                }
-                updatePackageImagesStatus(`Package committed · ${assets.length} assets preserved.`);
-                updateWorkflowAvailability();
-            }, manager, release, materials);
+        async function loadCommittedRustPackage(imported,task=sceneImports.current()) {
+            task.assertCurrent();
+            const projectId=imported.project.project_id,assets=imported.assets||[];
+            const activeAssetId=imported.root_revision?.render_asset_id||imported.root_revision?.scene_asset_id;
+            const modelAsset=assets.find(asset=>asset.asset_id===activeAssetId);
+            if(!modelAsset)throw new Error('Rust package response has no primary model asset.');
+            const readAsset=async asset=>{
+                const response=await fetch(`/api/v1/projects/${projectId}/assets/${asset.asset_id}`,{signal:task.signal});task.assertCurrent();
+                if(!response.ok)throw new Error(`Could not fetch ${asset.original_name} from the Rust project.`);
+                const blob=await response.blob();task.assertCurrent();return blob;
+            };
+            const dependencyAssets=assets.filter(asset=>!['source_package','photo','calibration','report'].includes(asset.role));
+            const blobs=await Promise.all(dependencyAssets.map(async asset=>({asset,blob:await readAsset(asset)})));task.assertCurrent();
+            const byPath=new Map(),byBasename=new Map(),urls=new Set();
+            const release=()=>{for(const url of urls)URL.revokeObjectURL(url);urls.clear();};
+            try {
+                blobs.forEach(({asset,blob})=>(asset.metadata?.package_paths||[]).forEach(path=>{
+                    const normalized=String(path).replace(/\\/g,'/').toLowerCase(),url=URL.createObjectURL(blob);urls.add(url);byPath.set(normalized,url);
+                    const basename=normalized.split('/').pop();if(!byBasename.has(basename))byBasename.set(basename,[]);byBasename.get(basename).push(url);
+                }));
+                const manager=new THREE.LoadingManager();manager.setURLModifier(requestedUrl=>{
+                    const normalized=decodeURIComponent(requestedUrl).replace(/\\/g,'/').toLowerCase();
+                    const exact=byPath.get(normalized)||byPath.get(normalized.replace(/^\.\//,''));if(exact)return exact;
+                    const matches=byBasename.get(normalized.split('/').pop())||[];return matches.length===1?matches[0]:requestedUrl;
+                });
+                let materials=null;const mtlAsset=blobs.find(({asset})=>asset.media_type==='model/mtl');
+                if(mtlAsset){const text=await mtlAsset.blob.text();task.assertCurrent();materials=new MTLLoader(manager).parse(text,'');materials.preload();}
+                const modelBlob=blobs.find(({asset})=>asset.asset_id===modelAsset.asset_id)?.blob;
+                if(!modelBlob)throw new Error('Primary model bytes were not returned by the Rust project.');
+                const modelName=modelAsset.original_name||'model.glb',modelExt=modelName.split('.').pop().toLowerCase();
+                const textureAsset=assets.find(asset=>asset.role==='texture');
+                const textureBlob=textureAsset?await readAsset(textureAsset):null;
+                const photoBlobs=await Promise.all(assets.filter(asset=>asset.role==='photo').slice(0,120).map(async asset=>({name:asset.original_name,sourcePath:packageAssetSourcePath(asset),type:asset.media_type,blob:await readAsset(asset)})));task.assertCurrent();
+                const modelFile=new File([modelBlob],modelName,{type:modelAsset.media_type||'application/octet-stream'});
+                await loadModelFile(modelFile,modelExt,async()=>{
+                    task.assertCurrent();currentModelPackage.rustProjectId=projectId;currentModelPackage.packageInventory=imported.inventory;
+                    currentModelPackage.iphoneCapture=imported.inventory?.iphone_capture||null;
+                    activeGeometryRevisionId=`rust:${imported.root_revision.revision_id}`;activeGeometryFingerprint=geometryFingerprint();rustProjectHasLocalDivergence=false;
+                    currentModelPackage.sourceAssetIds=assets.filter(asset=>asset.role!=='report').map(asset=>asset.asset_id);currentModelPackage.sourceModel=modelName;rememberReferenceImages(photoBlobs);
+                    if(textureBlob){
+                        const {img}=await readImageFile(new File([textureBlob],textureAsset.original_name,{type:textureAsset.media_type}));task.assertCurrent();
+                        rememberTextureAsset(textureBlob,textureAsset.original_name,textureAsset.media_type);applyTextureImage(img,textureBlob,textureAsset.original_name,textureAsset.media_type);
+                    }
+                    task.assertCurrent();await sceneWorkspace?.attach(projectId,modelAsset,assets);task.assertCurrent();
+                    updatePackageImagesStatus(`Package committed · ${assets.length} assets preserved.`);updateWorkflowAvailability();
+                },manager,release,materials,task);
+                task.assertCurrent();
+            } finally {release();}
         }
 
         async function loadZipPackage(file) {
@@ -5153,48 +5423,59 @@
                         updateWorkflowAvailability();
                     }
                 };
-                loadModelFile(modelFile, modelExt, afterLoad, manager, () => assetUrls.forEach(([, url]) => URL.revokeObjectURL(url)), materials);
+                await loadModelFile(modelFile, modelExt, afterLoad, manager, () => assetUrls.forEach(([, url]) => URL.revokeObjectURL(url)), materials);
             } catch (error) {
                 showLoader(false); unloadCurrentModel(`ZIP Package Error: ${error.message}`);
             }
         }
 
-        function loadModelFile(file, ext, afterLoad, manager = THREE.DefaultLoadingManager, releaseAssets = () => {}, materials = null) {
-            showLoader(true, `Streaming ${ext.toUpperCase()}...`);
-            let url;
-            try { url = URL.createObjectURL(file); } catch(e) { unloadCurrentModel("Could not read file."); return; }
-            unloadCurrentModel(); // Safe to execute after URL is minted
-            resetModelPackage(file.name);
-            
-            const cleanup = () => { showLoader(false); URL.revokeObjectURL(url); releaseAssets(); };
-            const finalizeParse = async (geoms) => { 
-                hasVertexColors = false; 
-                try { 
-                    const validGeoms = geoms.filter(g => g.attributes.position && g.attributes.position.count > 0);
-                    if(validGeoms.length === 0) throw new Error("No valid vertex geometry found.");
-                    
-                    validGeoms.forEach(g => { 
-                        if (g.attributes.color) { hasVertexColors = true; g.userData.originalColors = g.attributes.color.clone(); } 
-                        if (g.index && g.attributes.position) g.computeBoundsTree(); 
-                    }); 
-                    processGeometries(validGeoms);
-                    if (afterLoad) await afterLoad();
-                } catch (e) { unloadCurrentModel("Geometry Math Error: " + e.message); } 
-                cleanup(); 
-            };
-            const onError = (e) => { 
-                console.error("Loader Error:", e); cleanup(); 
-                let msg = "File Parsing Failed."; if(e && e.message) msg += "\n\n" + e.message;
-                unloadCurrentModel(msg); 
-            };
-            
-            try {
-                if (ext === 'obj') { const loader = new OBJLoader(manager); if (materials) loader.setMaterials(materials); loader.load(url, (o) => { let g = []; o.updateMatrixWorld(true); o.traverse((c) => { if (c.isMesh || c.isPoints) { const geom = c.geometry.clone(); geom.userData.isPointCloud = c.isPoints; geom.userData.isMesh = c.isMesh; geom.userData.texture = Array.isArray(c.material) ? c.material.find(material => material.map)?.map : c.material?.map; geom.name = c.name; geom.applyMatrix4(c.matrixWorld); g.push(geom); } }); void finalizeParse(g); }, null, onError); }
-                else if (ext === 'stl') new STLLoader(manager).load(url, (geo) => { geo.userData.isMesh = true; void finalizeParse([geo]); }, null, onError);
-                else if (ext === 'ply') new PLYLoader(manager).load(url, (geo) => { geo.userData.isPointCloud = geo.index === null; geo.userData.isMesh = geo.index !== null; void finalizeParse([geo]); }, null, onError);
-                else if (ext === 'gltf' || ext === 'glb') { const loader = new GLTFLoader(manager), dracoLoader = new DRACOLoader(manager); dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/'); loader.setDRACOLoader(dracoLoader); loader.load(url, (gltf) => { let geoms = []; gltf.scene.updateMatrixWorld(true); gltf.scene.traverse((c) => { if (c.isMesh || c.isPoints) { const geom = c.geometry.clone(); geom.name = c.name; geom.userData.isPointCloud = c.isPoints; geom.userData.isMesh = c.isMesh; geom.userData.texture = Array.isArray(c.material) ? c.material.find(material => material.map)?.map : c.material?.map; geom.applyMatrix4(c.matrixWorld); geoms.push(geom); } }); void finalizeParse(geoms); dracoLoader.dispose(); }, null, onError); } 
-                else { cleanup(); unloadCurrentModel("Unsupported format."); }
-            } catch (e) { onError(e); }
+        function loadModelFile(file, ext, afterLoad, manager = THREE.DefaultLoadingManager, releaseAssets = () => {}, materials = null, task = sceneImports.current()) {
+            return new Promise((resolve,reject)=>{
+                let url,settled=false,dracoLoader=null;
+                const cleanup=()=>{if(task.isCurrent())showLoader(false);if(url)URL.revokeObjectURL(url);releaseAssets();dracoLoader?.dispose();task.signal.removeEventListener('abort',onAbort);};
+                const finish=error=>{if(settled)return;settled=true;cleanup();error?reject(error):resolve();};
+                const onAbort=()=>finish(new Error('Scene import superseded; late result discarded.'));
+                const stale=()=>settled||!task.isCurrent();
+                const discard=geoms=>{for(const geometry of geoms){geometry.disposeBoundsTree?.();geometry.dispose();}};
+                const onError=error=>{
+                    if(stale()){finish(new Error('Scene import superseded; late result discarded.'));return;}
+                    const failure=error instanceof Error?error:new Error('File parsing failed.');
+                    unloadCurrentModel(`File parsing failed: ${failure.message}`);finish(failure);
+                };
+                const finalizeParse=async geoms=>{
+                    if(stale()){discard(geoms);return;}
+                    try {
+                        const validGeoms=geoms.filter(g=>g.attributes.position&&g.attributes.position.count>0);
+                        if(!validGeoms.length)throw new Error('No valid vertex geometry found.');
+                        hasVertexColors=false;
+                        validGeoms.forEach(g=>{if(g.attributes.color){hasVertexColors=true;g.userData.originalColors=g.attributes.color.clone();}if(g.index&&g.attributes.position)g.computeBoundsTree();});
+                        task.assertCurrent();processGeometries(validGeoms);if(afterLoad)await afterLoad();task.assertCurrent();finish();
+                    } catch(error){onError(error);}
+                };
+                try {
+                    task.assertCurrent();url=URL.createObjectURL(file);unloadCurrentModel();resetModelPackage(file.name);showLoader(true,`Streaming ${ext.toUpperCase()}…`);
+                    task.signal.addEventListener('abort',onAbort,{once:true});
+                    if(ext==='obj'){
+                        const loader=new OBJLoader(manager);if(materials)loader.setMaterials(materials);
+                        loader.load(url,object=>{
+                            if(stale()){disposeObject3D(object);return;}
+                            const geoms=[];object.updateMatrixWorld(true);object.traverse(child=>{if(child.isMesh||child.isPoints){const geom=child.geometry.clone();geom.userData.isPointCloud=child.isPoints;geom.userData.isMesh=child.isMesh;geom.userData.texture=Array.isArray(child.material)?child.material.find(material=>material.map)?.map:child.material?.map;geom.name=child.name;geom.applyMatrix4(child.matrixWorld);geoms.push(geom);}});void finalizeParse(geoms);
+                        },null,onError);
+                    } else if(ext==='stl')new STLLoader(manager).load(url,geo=>{geo.userData.isMesh=true;void finalizeParse([geo]);},null,onError);
+                    else if(ext==='ply')new PLYLoader(manager).load(url,geo=>{geo.userData.isPointCloud=geo.index===null;geo.userData.isMesh=geo.index!==null;void finalizeParse([geo]);},null,onError);
+                    else if(ext==='gltf'||ext==='glb'){
+                        const loader=new GLTFLoader(manager);dracoLoader=new DRACOLoader(manager);dracoLoader.setDecoderPath('./vendor/draco/1.5.6/');loader.setDRACOLoader(dracoLoader);
+                        loader.load(url,gltf=>{
+                            if(stale()){disposeObject3D(gltf.scene);return;}
+                            try {
+                                const parsed=gltfRenderCache(THREE,gltf);task.assertCurrent();
+                                currentModelPackage.gltfDocument=parsed.document;currentModelPackage.exchange=parsed.exchange;currentModelPackage.sourceLocalOrigin=parsed.origin;currentModelPackage.originalGlb=ext==='glb'?file:null;
+                                renderExchangeInspector(parsed.exchange,parsed.document);void finalizeParse(parsed.geometries);
+                            } catch(error){onError(error);}
+                        },null,onError);
+                    } else onError(new Error('Unsupported preview format.'));
+                } catch(error){onError(error);}
+            });
         }
 
         function processGeometries(geometries, options = {}) {
@@ -5208,7 +5489,8 @@
             if (options.analysis) rememberSceneAnalysis(options.analysis);
             else if (options.invalidateAnalysis !== false) clearSceneAnalysisContext();
             updateStatsUI();
-            rebuildMeshes(); updateWorkflowAvailability(); setTimeout(() => { applyCoordinateRebase(); buildSceneGraph(); updateSunPath(); updateContextHelp(); }, 50);
+            const workspaceTask=sceneImports.current();
+            rebuildMeshes(); updateWorkflowAvailability(); setTimeout(() => { if(!workspaceTask.isCurrent())return;if(!sceneWorkspace?.active) applyCoordinateRebase(); buildSceneGraph(); updateSunPath(); updateContextHelp(); }, 50);
         }
 
         function rebuildMeshes() {
@@ -5237,7 +5519,7 @@
                     const geom = geometryForCurrentReview(sourceGeometry);
                     if (!geom?.attributes?.position?.count) return;
                     let object;
-                    if (mode.startsWith('points')) {
+                    if (mode.startsWith('points') || geom.userData.isPointCloud) {
                         const material = new THREE.PointsMaterial({ size: pSize, color: useVertexColors ? 0xffffff : 0xcccccc, sizeAttenuation: true, vertexColors: useVertexColors, clippingPlanes: activePlanes });
                         material.onBeforeCompile = (shader) => { shader.uniforms.uDensity = { value: Math.max(0.01, Number($('strideInput').value) / 100) }; shader.vertexShader = `uniform float uDensity;\n` + shader.vertexShader; shader.vertexShader = shader.vertexShader.replace(`#include <begin_vertex>`, `#include <begin_vertex>\nfloat densityHash = fract(sin((float(gl_VertexID) + 1.0) * 12.9898) * 43758.5453);\nif (densityHash > uDensity) transformed = vec3(1e20);`); material.userData.shader = shader; };
                         configureObjectAppearanceMaterial(material);
@@ -5248,14 +5530,57 @@
                         else if (mode === 'solid-clay') material = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.9, metalness: 0.1, side: THREE.DoubleSide, flatShading: isFlat, clippingPlanes: activePlanes });
                         else if (mode === 'solid-xray') material = new THREE.MeshPhongMaterial({ color: 0x14b8a6, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide, flatShading: isFlat, clippingPlanes: activePlanes });
                         else material = new THREE.MeshPhongMaterial({ color: useVertexColors ? 0xffffff : 0xdddddd, wireframe: isWireframe, map: isFalseColor || geom.userData.preferVertexColors ? null : (currentTexture || geom.userData.texture), side: THREE.DoubleSide, vertexColors: useVertexColors, flatShading: isFlat, clippingPlanes: activePlanes });
-                        configureObjectAppearanceMaterial(material);
+                        if (geom.userData.sourceMaterials && !isFalseColor && !isWireframe && !currentTexture && !['solid-normals','solid-clay','solid-xray'].includes(mode)) {
+                            material.dispose();
+                            const originals=geom.userData.sourceMaterials.map(source=>{const m=source.clone();m.clippingPlanes=activePlanes;m.flatShading=isFlat;return m;});
+                            material=originals.length===1?originals[0]:originals;
+                        }
+                        (Array.isArray(material)?material:[material]).forEach(configureObjectAppearanceMaterial);
                         object = new THREE.Mesh(geom, material); object.castShadow = castShadows; object.receiveShadow = castShadows;
                         if (mode === 'solid-edges' && geom.attributes.position && geom.attributes.position.count < 500000) object.add(new THREE.LineSegments(new THREE.EdgesGeometry(geom), new THREE.LineBasicMaterial({ color: 0x14b8a6, linewidth: 1, clippingPlanes: activePlanes })));
                     }
-                    if (geom.boundsTree) object.geometry.boundsTree = geom.boundsTree; object.name = geom.name || "Layer"; currentGroup.add(object);
+                    if (geom.boundsTree) object.geometry.boundsTree = geom.boundsTree; object.name = geom.name || "Layer"; object.userData = { ...geom.userData.sourceExtras, sourceNodeId: geom.userData.sourceNodeId }; currentGroup.add(object);
                 });
                 applyShaderDecimation(); buildSceneGraph();
             } catch (e) { unloadCurrentModel("Error applying materials."); }
+        }
+
+        function mountSceneLayout() {
+            sceneWorkspace = mountSceneWorkspace({THREE,scene,sourceGroup:currentGroup,canvas:renderer.domElement,controls,
+                onStatus:(text,error)=>{if(sceneImportBusy)setStatus('sceneActionStatus',text,error?'error':'');},
+                frameChanged:reframe=>{if(reframe)centerCamera();window.dispatchEvent(new Event('3dmk-frame-changed'));},
+                setSourceToolsEnabled:enabled=>{
+                    document.body.classList.toggle('scene-layout-active',!enabled);
+                    measurementGroup.visible=enabled;measurementDraftGroup.visible=enabled;cropGroup.visible=enabled;
+                    ['exportBtn','exportFormat','exportFloorPlanBtn','exportDxfBtn','exportElevationsBtn'].forEach(id=>{if($(id)){$(id).disabled=!enabled;$(id).title=enabled?'':'Switch to Source geometry; Save project includes scene layout';}});
+                    ['clean','derive','alignment','reference'].forEach(key=>document.querySelector(`[data-accordion-key="${key}"]`)?.toggleAttribute('inert',!enabled));
+                    ['renderMode','pointSize','strideInput'].forEach(id=>{if($(id)){$(id).disabled=!enabled;$(id).title=enabled?'':'Source geometry mode';}});
+                    if (!enabled) { $('undoBtn').disabled=false; $('redoBtn').disabled=false; } else updateUndoRedoUI();
+                },
+                camera:()=>({object:activeCamera,...convertViewBasis(THREE,{camera:{projection:activeCamera.isPerspectiveCamera?{type:'perspective',vertical_fov_degrees:activeCamera.fov,near:activeCamera.near,far:activeCamera.far}:{type:'orthographic',height_metres:(activeCamera.top-activeCamera.bottom)/activeCamera.zoom,near:activeCamera.near,far:activeCamera.far},position:activeCamera.position.toArray(),rotation:activeCamera.quaternion.toArray(),target:controls.target.toArray()},clipping:{enabled:$('enableSlicing').checked,planes:$('enableSlicing').checked?(sceneWorkspace?.active?sceneWorkspace.clipping:[clipPlaneX,clipPlaneY,clipPlaneZ].map(p=>({normal:p.normal.toArray(),offset_metres:p.constant}))):[]}},'X',sceneWorkspace?.document?.frame?.up_axis||'Y')}),
+                applyCamera:canonicalView=>{
+                    const view=convertViewBasis(THREE,canonicalView,sceneWorkspace?.document?.frame?.up_axis||'Y','X');
+                    const c=view.camera,p=c.projection;activeCamera=p.type==='perspective'?cameraPersp:cameraOrtho;activeCamera.near=p.near;activeCamera.far=p.far;
+                    if(p.type==='perspective') activeCamera.fov=p.vertical_fov_degrees;
+                    else {const aspect=renderer.domElement.clientWidth/renderer.domElement.clientHeight;activeCamera.zoom=1;activeCamera.top=p.height_metres/2;activeCamera.bottom=-p.height_metres/2;activeCamera.left=-p.height_metres*aspect/2;activeCamera.right=p.height_metres*aspect/2;}
+                    activeCamera.up.set(1,0,0);activeCamera.position.fromArray(c.position);activeCamera.quaternion.fromArray(c.rotation);activeCamera.updateProjectionMatrix();controls.object=activeCamera;controls.target.fromArray(c.target);controls.update();
+                    renderPass.camera=activeCamera;ssaoPass.camera=activeCamera;$('cameraType').value=p.type;$('enableSlicing').checked=view.clipping.enabled;
+                    const planes=view.clipping.enabled?view.clipping.planes.map(p=>new THREE.Plane(new THREE.Vector3().fromArray(p.normal),p.offset_metres)):[];
+                    sceneWorkspace.refreshClipping(planes);$('slicingControls').style.display=view.clipping.enabled?'block':'none';
+                },
+                loadAsset:async(projectId,asset)=>{
+                    const response=await fetch(`/api/v1/projects/${projectId}/assets/${asset.asset_id}`);if(!response.ok)throw new Error(`Missing source ${asset.original_name}`);
+                    const blob=await response.blob();
+                    if(asset.media_type.startsWith('image/')){
+                        const url=URL.createObjectURL(blob);try{const texture=await new THREE.TextureLoader().loadAsync(url);texture.colorSpace=THREE.SRGBColorSpace;const mesh=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide,transparent:true}));mesh.userData.referenceAspect=texture.image.width/texture.image.height;return mesh;}finally{URL.revokeObjectURL(url);}
+                    }
+                    if(!asset.original_name.toLowerCase().endsWith('.glb'))throw new Error('Scene instances currently require embedded GLB; use Source geometry for other formats.');
+                    const bytes=await blob.arrayBuffer();
+                    const document=glbDocument(bytes);
+                    const parsed=await new Promise((resolve,reject)=>new GLTFLoader().parse(bytes,'',resolve,reject));
+                    return await glbSceneTemplate(THREE,parsed,document);
+                }
+            });
         }
 
         function switchCamera() {
@@ -5266,8 +5591,9 @@
             centerCamera();
         }
         function centerCamera() {
-            if (currentGroup.children.length === 0) { activeCamera.position.set(0, 10, 20); controls.target.set(0, 0, 0); controls.update(); return; }
-            const box = new THREE.Box3().setFromObject(currentGroup); if (box.isEmpty()) return;
+            const cameraGroup=sceneWorkspace?.active?sceneWorkspace.root:currentGroup;
+            if (cameraGroup.children.length === 0) { activeCamera.position.set(10, 0, 20); controls.target.set(0, 0, 0); controls.update(); return; }
+            const box = new THREE.Box3().setFromObject(cameraGroup); if (box.isEmpty()) return;
 
             const center = box.getCenter(new THREE.Vector3()); const size = box.getSize(new THREE.Vector3());
             if (!box.isEmpty()) currentModelMaxDim = Math.max(size.x, size.y, size.z); if (currentModelMaxDim === 0) currentModelMaxDim = 1; 
@@ -5276,34 +5602,38 @@
             const aspect = window.innerWidth / window.innerHeight;
             if (activeCamera === cameraPersp) {
                 const fov = cameraPersp.fov * (Math.PI / 180), cameraZ = Math.abs((currentModelMaxDim / 2) / Math.tan(fov / 2)) * 1.5;
-                cameraPersp.position.set(center.x, center.y + (currentModelMaxDim * 0.2), center.z + cameraZ); cameraPersp.near = Math.max(currentModelMaxDim / 100, 0.001); cameraPersp.far = Math.max(cameraZ * 10, 1000); cameraPersp.updateProjectionMatrix();
+                cameraPersp.position.set(center.x + (currentModelMaxDim * 0.2), center.y, center.z + cameraZ); cameraPersp.near = Math.max(currentModelMaxDim / 100, 0.001); cameraPersp.far = Math.max(cameraZ * 10, 1000); cameraPersp.updateProjectionMatrix();
                 dirLight.shadow.camera.near = cameraPersp.near; dirLight.shadow.camera.far = cameraPersp.far; const dSize = currentModelMaxDim * 1.5; dirLight.shadow.camera.left = -dSize; dirLight.shadow.camera.right = dSize; dirLight.shadow.camera.top = dSize; dirLight.shadow.camera.bottom = -dSize; dirLight.shadow.camera.updateProjectionMatrix();
             } else {
                 const viewSize = currentModelMaxDim * 1.2; cameraOrtho.left = -viewSize * aspect / 2; cameraOrtho.right = viewSize * aspect / 2; cameraOrtho.top = viewSize / 2; cameraOrtho.bottom = -viewSize / 2;
                 const isoDist = currentModelMaxDim * 2; cameraOrtho.position.set(center.x + isoDist, center.y + isoDist, center.z + isoDist); cameraOrtho.near = -currentModelMaxDim * 10; cameraOrtho.far = currentModelMaxDim * 10; cameraOrtho.updateProjectionMatrix();
             }
-            controls.target.copy(center); controls.update(); updateSlicingBounds(); updateSunPath();
+            activeCamera.up.set(1,0,0);controls.target.copy(center); controls.update(); updateSlicingBounds(); updateSunPath();
         }
 
         async function serializeCurrentGeometry(format) {
             const baseName = currentModelPackage.baseName || 'model';
+            const exportRoot=currentGroup.clone(true);exportRoot.quaternion.premultiply(axisBasis(THREE,'X','Y'));exportRoot.updateMatrixWorld(true);
             if (format === 'glb') {
-                const result = await new Promise((resolve, reject) => new GLTFExporter().parse(currentGroup, resolve, reject, { binary: true }));
+                if (currentModelPackage.originalGlb && !rustProjectHasLocalDivergence) return { blob: currentModelPackage.originalGlb, filename: `${baseName}.glb` };
+                if (currentModelPackage.exchange) exportRoot.userData = { ...currentGroup.userData, mavisExchangeSource: currentModelPackage.exchange, geometryModified: true, fidelity: 'derived-render-geometry; canonical source metadata retained separately' };
+                const result = await new Promise((resolve, reject) => new GLTFExporter().parse(exportRoot, resolve, reject, { binary: true }));
                 return { blob: new Blob([result], { type: 'application/octet-stream' }), filename: `${baseName}.glb` };
             }
-            if (format === 'obj') return { blob: new Blob([new OBJExporter().parse(currentGroup)], { type: 'text/plain' }), filename: `${baseName}.obj` };
+            if (format === 'obj') return { blob: new Blob([new OBJExporter().parse(exportRoot)], { type: 'text/plain' }), filename: `${baseName}.obj` };
             if (format === 'ply') {
-                const result = await new Promise(resolve => new PLYExporter().parse(currentGroup, resolve, { binary: true }));
+                const result = await new Promise(resolve => new PLYExporter().parse(exportRoot, resolve, { binary: true }));
                 return { blob: new Blob([result], { type: 'application/octet-stream' }), filename: `${baseName}.ply` };
             }
             if (format === 'stl') {
-                const result = new STLExporter().parse(currentGroup, { binary: true });
+                const result = new STLExporter().parse(exportRoot, { binary: true });
                 return { blob: new Blob([result.buffer || result], { type: 'application/octet-stream' }), filename: `${baseName}.stl` };
             }
             throw new Error(`Unsupported export format: ${format}`);
         }
 
         async function exportModel() {
+            if(sceneWorkspace?.active){setStatus('modelExportStatus','Switch to Source geometry for raw geometry export. Save project preserves the complete scene.','error');return;}
             if (activeInstancedMesh || currentGroup.children.length === 0) { alert("Invalid export state."); return; }
             const format = $('exportFormat').value; showLoader(true, `Exporting ${format.toUpperCase()}...`);
             setTimeout(async () => {
@@ -5328,7 +5658,7 @@
                     const blob = await response.blob();
                     const filename = `${filenameStem(currentModelPackage.baseName || currentModelPackage.sourceModel || '3dmk-project')}.zip`;
                     saveBlob(blob, filename);
-                    setStatus('modelExportStatus', `Saved ${filename} with the committed model, textures, photos, calibration, and project metadata.`, 'success');
+                    setStatus('modelExportStatus', `Saved ${filename} with source assets, scene placements, views and project metadata.`, 'success');
                 } catch (e) {
                     setStatus('modelExportStatus', `Export failed: ${e.message}`, 'error');
                     alert(`Export failed: ${e.message}`);
@@ -5337,23 +5667,10 @@
                 }
                 return;
             }
-            if (activeInstancedMesh || currentGroup.children.length === 0) { alert("Invalid export state."); return; }
-            const forcedBrowserPackage = !!currentModelPackage.rustProjectId && rustProjectHasLocalDivergence;
-            if (forcedBrowserPackage) setStatus('modelExportStatus', 'Local geometry or detached-review edits are not committed to the Rust revision. Building a browser package from the current geometry instead.', 'error');
-            showLoader(true, 'Packaging current PLY workspace...');
-            setTimeout(async () => {
-                try {
-                    suspendExportOverlays();
-                    const asset = {
-                        blob: geometryPlyBlob(2000000, true, loadedGeometryStore),
-                        filename: `${filenameStem(currentModelPackage.baseName || currentModelPackage.sourceModel || 'model')}.ply`
-                    };
-                    const packaged = await buildModelPackage(asset.blob, asset.filename, collectExportOptions());
-                    saveBlob(packaged.blob, packaged.filename);
-                    const divergenceNote = forcedBrowserPackage ? ' The Rust-backed revision remains unchanged.' : '';
-                    setStatus('modelExportStatus', `Saved ${packaged.filename} from current PLY geometry with textures, source-photo paths, analysis, detached review state, room-plan review, and measurements when available.${divergenceNote}`, 'success');
-                } catch (e) { alert(`Export failed: ` + e.message); } finally { restoreExportOverlays(); showLoader(false); }
-            }, 50);
+            const message = rustProjectHasLocalDivergence
+                ? 'This is an unsaved geometry preview. Save project cannot replace the committed revision with a browser PLY. Export a derived model, or undo the preview to save the unchanged project.'
+                : 'Import this model into the Rust project store before saving a project package.';
+            setStatus('modelExportStatus', message, 'error');
         }
 
         async function exportSelectedBundle() {
@@ -5400,13 +5717,15 @@
         function intersectPlaneY(p1, p2, y) { const t = (y - p1.y) / (p2.y - p1.y); return new THREE.Vector3(p1.x + t*(p2.x - p1.x), y, p1.z + t*(p2.z - p1.z)); }
         
         function exportDXF() {
+            if(sceneWorkspace?.active){setStatus('drawingExportStatus','Switch to Source geometry for source drawings. Save project preserves the complete scene.','error');return;}
             if (currentGroup.children.length === 0) return;
             showLoader(true, "Extracting Polylines & Simplifying Vector...");
             
             setTimeout(() => {
                 try {
                     const cutPercent = parseFloat($('roomPlanSlice').value) / 100;
-                    const box = new THREE.Box3().setFromObject(currentGroup);
+                    const exportBasis=new THREE.Matrix4().makeRotationFromQuaternion(axisBasis(THREE,'X','Y'));
+                    const box = new THREE.Box3().setFromObject(currentGroup).applyMatrix4(exportBasis);
                     const cutHeight = box.min.y + ((box.max.y - box.min.y) * cutPercent);
                     
                     const p1 = new THREE.Vector3(), p2 = new THREE.Vector3(), p3 = new THREE.Vector3();
@@ -5415,7 +5734,7 @@
                     currentGroup.traverse(child => {
                         if (child.isMesh && child.geometry && child.geometry.index && child !== blueprintPlane) {
                             const pos = child.geometry.attributes.position, idx = child.geometry.index;
-                            child.updateMatrixWorld(); const m = child.matrixWorld;
+                            child.updateMatrixWorld(); const m = exportBasis.clone().multiply(child.matrixWorld);
                             
                             for(let i=0; i<idx.count; i+=3) {
                                 p1.fromBufferAttribute(pos, idx.getX(i)).applyMatrix4(m); p2.fromBufferAttribute(pos, idx.getX(i+1)).applyMatrix4(m); p3.fromBufferAttribute(pos, idx.getX(i+2)).applyMatrix4(m);
@@ -5539,23 +5858,24 @@
         function restoreArchitecturalMaterials(origMats, bpEdges) { bpEdges.forEach(i => { i.parent.remove(i.edges); i.edges.geometry.dispose(); i.edges.material.dispose(); }); origMats.forEach((mat, child) => { child.material = mat; }); }
 
         function exportFloorPlanPDF() {
+            if(sceneWorkspace?.active){setStatus('drawingExportStatus','Switch to Source geometry for source drawings. Save project preserves the complete scene.','error');return;}
             if (currentGroup.children.length === 0) return; showLoader(true, "Generating CAD Floor Plan...");
             setTimeout(() => {
                 try {
                     const prevCam = activeCamera, prevGrid = gridHelper.visible, prevBg = scene.background, prevPr = renderer.getPixelRatio(), prevEnv = scene.environment;
                     const wasBlueprintVisible = blueprintPlane ? blueprintPlane.visible : false; if (blueprintPlane) blueprintPlane.visible = false;
                     const box = new THREE.Box3().setFromObject(currentGroup), center = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
-                    const maxDim = Math.max(size.x, size.z) || currentModelMaxDim; if (!isFinite(maxDim)) { showLoader(false); return; }
+                    const maxDim = Math.max(size.y, size.z) || currentModelMaxDim; if (!isFinite(maxDim)) { showLoader(false); return; }
 
-                    const cutHeight = box.min.y + (size.y * (parseFloat($('roomPlanSlice').value) / 100)), sliceThickness = size.y * 0.02; 
-                    const clipTop = new THREE.Plane(new THREE.Vector3(0, -1, 0), cutHeight), clipBottom = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(cutHeight - sliceThickness));
+                    const cutHeight = box.min.x + (size.x * (parseFloat($('roomPlanSlice').value) / 100)), sliceThickness = size.x * 0.02; 
+                    const clipTop = new THREE.Plane(new THREE.Vector3(-1, 0, 0), cutHeight), clipBottom = new THREE.Plane(new THREE.Vector3(1, 0, 0), -(cutHeight - sliceThickness));
                     renderer.localClippingEnabled = true; scene.background = new THREE.Color(0xffffff); scene.environment = null; gridHelper.visible = false; 
 
                     const bpMats = overrideArchitecturalMaterials([clipTop, clipBottom]);
 
                     const aspect = window.innerWidth / window.innerHeight, viewSize = maxDim * 1.1; 
                     cameraOrtho.left = -viewSize * aspect / 2; cameraOrtho.right = viewSize * aspect / 2; cameraOrtho.top = viewSize / 2; cameraOrtho.bottom = -viewSize / 2;
-                    cameraOrtho.position.set(center.x, box.max.y + maxDim, center.z); cameraOrtho.up.set(0, 0, -1); cameraOrtho.lookAt(center); cameraOrtho.updateProjectionMatrix(); activeCamera = cameraOrtho;
+                    cameraOrtho.position.set(box.max.x + maxDim, center.y, center.z); cameraOrtho.up.set(0, 0, -1); cameraOrtho.lookAt(center); cameraOrtho.updateProjectionMatrix(); activeCamera = cameraOrtho;
                     
                     const exportPr = Math.min(3.0, 3840 / window.innerWidth); renderer.setPixelRatio(exportPr); renderer.render(scene, activeCamera);
                     const imgData = renderer.domElement.toDataURL('image/jpeg', 1.0);
@@ -5567,11 +5887,11 @@
                     pdf.addImage(imgData, 'JPEG', imgX, imgY, imgW, imgH);
                     
                     pdf.setDrawColor(50, 50, 50); pdf.setTextColor(50, 50, 50); pdf.setLineWidth(0.3); pdf.setFontSize(10);
-                    const cX = imgX + (imgW / 2), cY = imgY + (imgH / 2), bw = size.x * mmPerUnit, bh = size.z * mmPerUnit, off = 10, t = 1.5; 
+                    const cX = imgX + (imgW / 2), cY = imgY + (imgH / 2), bw = size.y * mmPerUnit, bh = size.z * mmPerUnit, off = 10, t = 1.5; 
                     
                     const wSY = cY + (bh/2) + off, wSX = cX - (bw/2), wEX = cX + (bw/2);
                     pdf.line(wSX, cY + (bh/2) + 2, wSX, wSY + 4); pdf.line(wEX, cY + (bh/2) + 2, wEX, wSY + 4); pdf.line(wSX, wSY, wEX, wSY); pdf.line(wSX - t, wSY + t, wSX + t, wSY - t); pdf.line(wEX - t, wSY + t, wEX + t, wSY - t); 
-                    pdf.text(formatProjectLength(size.x), cX, wSY + 5, { align: 'center' });
+                    pdf.text(formatProjectLength(size.y), cX, wSY + 5, { align: 'center' });
                     
                     const hSX = cX - (bw/2) - off, hSY = cY - (bh/2), hEY = cY + (bh/2);
                     pdf.line(cX - (bw/2) - 2, hSY, hSX - 4, hSY); pdf.line(cX - (bw/2) - 2, hEY, hSX - 4, hEY); pdf.line(hSX, hSY, hSX, hEY); pdf.line(hSX - t, hSY + t, hSX + t, hSY - t); pdf.line(hSX - t, hEY + t, hSX + t, hEY - t); 
@@ -5584,12 +5904,13 @@
 
                     restoreArchitecturalMaterials(bpMats.origMats, bpMats.bpEdges);
                     renderer.localClippingEnabled = $('enableSlicing').checked; renderer.setPixelRatio(prevPr); activeCamera = prevCam; gridHelper.visible = prevGrid; scene.background = prevBg; scene.environment = prevEnv;
-                    if (blueprintPlane) blueprintPlane.visible = wasBlueprintVisible; if (activeCamera === cameraOrtho) switchCamera(); showLoader(false);
+                    cameraOrtho.up.set(1,0,0);if (blueprintPlane) blueprintPlane.visible = wasBlueprintVisible; if (activeCamera === cameraOrtho) switchCamera(); showLoader(false);
                 } catch(e) { console.error(e); unloadCurrentModel("Floor Plan Export fault: " + e.message); }
             }, 50);
         }
 
         function exportElevationsPDF() {
+            if(sceneWorkspace?.active){setStatus('drawingExportStatus','Switch to Source geometry for source drawings. Save project preserves the complete scene.','error');return;}
             if (currentGroup.children.length === 0) return; showLoader(true, "Generating CAD Elevations...");
             setTimeout(() => {
                 try {
@@ -5611,11 +5932,11 @@
                     let imgW = pW, imgH = imgW / aspect; if (imgH > pH) { imgH = pH; imgW = pH * aspect; }
                     const imgX = (pW - imgW) / 2, imgY = (pH - imgH) / 2, mmPerUnit = imgH / viewSize; 
 
-                    const views = [ { n: 'Front Elevation', p: new THREE.Vector3(center.x, center.y, box.max.z + maxDim), w: size.x, h: size.y }, { n: 'Right Elevation', p: new THREE.Vector3(box.max.x + maxDim, center.y, center.z), w: size.z, h: size.y }, { n: 'Rear Elevation',  p: new THREE.Vector3(center.x, center.y, box.min.z - maxDim), w: size.x, h: size.y }, { n: 'Left Elevation',  p: new THREE.Vector3(box.min.x - maxDim, center.y, center.z), w: size.z, h: size.y } ];
+                    const views = [ { n: 'Front Elevation', p: new THREE.Vector3(center.x, center.y, box.max.z + maxDim), w: size.y, h: size.x }, { n: 'Right Elevation', p: new THREE.Vector3(center.x, box.min.y - maxDim, center.z), w: size.z, h: size.x }, { n: 'Rear Elevation',  p: new THREE.Vector3(center.x, center.y, box.min.z - maxDim), w: size.y, h: size.x }, { n: 'Left Elevation',  p: new THREE.Vector3(center.x, box.max.y + maxDim, center.z), w: size.z, h: size.x } ];
 
                     views.forEach((v, i) => {
                         if (i > 0) pdf.addPage();
-                        cameraOrtho.position.copy(v.p); cameraOrtho.up.set(0, 1, 0); cameraOrtho.lookAt(center); cameraOrtho.updateProjectionMatrix(); renderer.render(scene, activeCamera);
+                        cameraOrtho.position.copy(v.p); cameraOrtho.up.set(1, 0, 0); cameraOrtho.lookAt(center); cameraOrtho.updateProjectionMatrix(); renderer.render(scene, activeCamera);
                         pdf.addImage(renderer.domElement.toDataURL('image/jpeg', 1.0), 'JPEG', imgX, imgY, imgW, imgH);
                         pdf.setTextColor(0); pdf.setFontSize(14); pdf.text(`Architectural CAD - ${v.n}`, 10, 15);
                         
@@ -5658,13 +5979,16 @@
                 if (valueLabel) valueLabel.textContent = label || 'Working…';
             }
         }
-        function cancelActiveProcessing() {
-            processingCancelled = true; cancelProcessFlag = true;
-            if (activeRequestController) activeRequestController.abort();
-            const button = $('cancelProcessBtn'); if (button) { button.disabled = true; button.innerText = 'Stopping…'; }
-            setProcessingProgress(null, 'Stopping…');
-            showLoader(false);
-            setStatus('cleanupStatus', 'Processing stopped by user.', 'error');
+        async function cancelActiveProcessing() {
+            processingCancelled=true;cancelProcessFlag=true;
+            const controller=activeRequestController,jobId=activeServerJobId;controller?.abort();
+            sceneImports.invalidate();sceneWorkspace?.cancelPending();setSceneImportBusy(false);updateWorkflowAvailability();resetProcessingButtonLabels();showLoader(false);
+            const task=sceneImports.current();
+            if(jobId){
+                try{const response=await fetch(`/api/v1/jobs/${jobId}`,{method:'DELETE'});const job=await response.json();if(!task.isCurrent())return;if(!response.ok)throw new Error(job.error?.message||'Cancellation rejected');setStatus('cleanupStatus',`Server state: ${job.state}. Late results will be discarded; a non-preemptible legacy worker may still finish in the background.`,'error');}
+                catch(error){if(task.isCurrent())setStatus('cleanupStatus',`Server cancellation unconfirmed: ${error.message}. The browser will discard any late result.`,'error');}
+            }else{setStatus('cleanupStatus','Stopped waiting. Late preview results will be discarded; previously saved server work is unchanged.','error');}
+            if(task.isCurrent())setStatus('sceneActionStatus','Processing stopped. Late preview results will be discarded.');
         }
         function showLoader(visible, text="Processing...", showCancel=visible, initialProgress = null) {
             const loader = $('loader'); if (!loader) return;
@@ -5676,7 +6000,7 @@
                 button.style.display = showCancel ? 'block' : 'none'; button.disabled = false; button.innerText = 'Stop processing';
                 setProcessingProgress(Number.isFinite(initialProgress) ? initialProgress : null, Number.isFinite(initialProgress) ? `${Math.round(initialProgress)}% · ${text}` : 'Working…');
             } else {
-                setProcessingProgress(100, 'Complete');
+                setProcessingProgress(processingCancelled ? null : 100, processingCancelled ? 'Cancelled / result discarded' : 'Complete');
                 button.style.display = 'none'; button.disabled = false;
             }
         }
@@ -5686,7 +6010,7 @@
             hideFloatingMeshContextMenu();
             const viewport = $('canvas-container'), width = viewport.clientWidth, height = viewport.clientHeight;
             const aspect = width / height; cameraPersp.aspect = aspect; cameraPersp.updateProjectionMatrix();
-            if (currentModelMaxDim && isFinite(currentModelMaxDim)) { const viewSize = currentModelMaxDim * 1.2; cameraOrtho.left = -viewSize * aspect / 2; cameraOrtho.right = viewSize * aspect / 2; cameraOrtho.top = viewSize / 2; cameraOrtho.bottom = -viewSize / 2; cameraOrtho.updateProjectionMatrix(); }
+            if (currentModelMaxDim && isFinite(currentModelMaxDim)) { const viewSize = (cameraOrtho.top-cameraOrtho.bottom)||currentModelMaxDim*1.2; cameraOrtho.left = -viewSize * aspect / 2; cameraOrtho.right = viewSize * aspect / 2; cameraOrtho.top = viewSize / 2; cameraOrtho.bottom = -viewSize / 2; cameraOrtho.updateProjectionMatrix(); }
             renderer.setSize(width, height);
             renderer.setPixelRatio(getRendererPixelRatio());
             syncUiScaleFromViewport();
@@ -5698,7 +6022,7 @@
             if (!readout || !currentGroup || !orientationAxes || !orientationAxisCamera) return;
             const deg = value => `${Math.round(THREE.MathUtils.radToDeg(value))}°`;
             const euler = new THREE.Euler().setFromQuaternion(orientationAxes.quaternion, 'XYZ');
-            readout.textContent = `X ${deg(euler.x)} · Y ${deg(euler.y)} · Z ${deg(euler.z)}`;
+            readout.textContent = `+X up · Y ${deg(euler.y)} · Z ${deg(euler.z)}`;
             const labels = [['axisLabelX', new THREE.Vector3(1.02, 0, 0)], ['axisLabelY', new THREE.Vector3(0, 1.02, 0)], ['axisLabelZ', new THREE.Vector3(0, 0, 1.02)]];
             labels.forEach(([id, endpoint]) => {
                 const element = $(id);
@@ -5715,7 +6039,7 @@
             controls.update();
             if (orientationAxisRenderer && orientationAxes && activeCamera) {
                 const viewerOrientation = activeCamera.quaternion.clone().invert();
-                orientationAxes.quaternion.copy(viewerOrientation).multiply(currentGroup.quaternion);
+                orientationAxes.quaternion.copy(viewerOrientation); // display/world axes, shared by all file roots
                 orientationAxisRenderer.render(orientationAxisScene, orientationAxisCamera);
             }
             updateAxisReadout();

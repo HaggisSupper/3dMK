@@ -910,7 +910,19 @@ mod tests {
         let server = tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.unwrap();
             let mut request = [0_u8; 4096];
-            stream.read(&mut request).await.unwrap();
+            let mut received = 0;
+            loop {
+                assert!(received < request.len(), "test HTTP headers exceed budget");
+                let count = stream.read(&mut request[received..]).await.unwrap();
+                assert!(count > 0, "test client closed before completing headers");
+                received += count;
+                if request[..received]
+                    .windows(4)
+                    .any(|bytes| bytes == b"\r\n\r\n")
+                {
+                    break;
+                }
+            }
             stream
                 .write_all(
                     b"HTTP/1.1 302 Found\r\nLocation: http://example.com/\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",

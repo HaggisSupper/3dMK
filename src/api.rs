@@ -66,9 +66,14 @@ pub fn create_router(
         domains,
         config_port: port,
         config_session_token: Uuid::new_v4().to_string(),
+        seismic_cache: Default::default(),
+        seismic_admission: std::sync::Arc::new(tokio::sync::Semaphore::new(2)),
     };
 
     Ok(Router::new()
+        .route("/api/v1/seismic/import", post(handle_seismic_import))
+        .route("/api/v1/seismic/:id", get(handle_seismic_metadata))
+        .route("/api/v1/seismic/:id/slice", get(handle_seismic_slice))
         .route("/api/v1/config-session", get(handle_config_session))
         .route(
             "/api/v1/domains",
@@ -94,12 +99,22 @@ pub fn create_router(
         .route("/api/v1/packages/inspect", post(handle_inspect_package))
         .route("/api/v1/projects/:project_id", get(handle_get_project))
         .route(
+            "/api/v1/projects/:project_id/scene",
+            get(handle_get_scene_document)
+                .post(handle_scene_command)
+                .layer(DefaultBodyLimit::max(1024 * 1024)),
+        )
+        .route(
+            "/api/v1/projects/:project_id/jobs",
+            post(handle_create_processing_job),
+        )
+        .route(
             "/api/v1/projects/:project_id/assets/:asset_id",
             get(handle_get_asset),
         )
         .route(
             "/api/v1/projects/:project_id/assets",
-            get(handle_list_assets),
+            get(handle_list_assets).post(handle_add_scene_asset),
         )
         .route(
             "/api/v1/projects/:project_id/export",
@@ -162,6 +177,10 @@ pub fn create_router(
             ServeDir::new(state.public_dir.clone()).append_index_html_on_directories(true),
         )
         .layer(DefaultBodyLimit::max(1024 * 1024 * 1024))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            track_processing_job,
+        ))
         .layer(middleware::from_fn(track_legacy_api))
         .with_state(state))
 }
@@ -175,6 +194,10 @@ struct AppState {
     jobs: JobRegistry,
     config_port: u16,
     config_session_token: String,
+    seismic_admission: std::sync::Arc<tokio::sync::Semaphore>,
+    seismic_cache: std::sync::Arc<
+        std::sync::Mutex<std::collections::VecDeque<(String, crate::seismic::Slice)>>,
+    >,
 }
 
 #[derive(Serialize)]
@@ -916,18 +939,31 @@ async fn handle_import_package(
             "entry_count": prepared.inventory.entry_count,
         }),
     });
-    let imported = state
-        .projects
-        .import_package_scene(PackageSceneImport {
-            project_name,
-            original_units: Some(units.to_owned()),
-            warnings,
-            primary_package_path: prepared.selected_model_path.clone(),
-            scene_kind,
-            attributes: attributes.clone(),
-            assets,
-        })
-        .map_err(project_api_error)?;
+    let restored_manifest = prepared.assets.iter()
+        .find(|asset| asset.package_paths.iter().any(|p| p == "3dmk-package.json"))
+        .map(|asset| -> std::result::Result<serde_json::Value, ApiErrorResponse> {
+            let bytes = std::fs::read(&asset.source_path).map_err(|_| project_store_io_error())?;
+            serde_json::from_slice(&bytes).map_err(|_| ApiErrorResponse::new(StatusCode::UNPROCESSABLE_ENTITY, "invalid_project_manifest", "The declared 3DMK project manifest is invalid; no generic import was performed", false))
+        }).transpose()?;
+    let imported = if let Some(manifest) = restored_manifest {
+        state
+            .projects
+            .restore_package_scene(&manifest, &prepared.assets)
+            .map_err(project_api_error)?
+    } else {
+        state
+            .projects
+            .import_package_scene(PackageSceneImport {
+                project_name,
+                original_units: Some(units.to_owned()),
+                warnings,
+                primary_package_path: prepared.selected_model_path.clone(),
+                scene_kind,
+                attributes: attributes.clone(),
+                assets,
+            })
+            .map_err(project_api_error)?
+    };
 
     Ok((
         StatusCode::CREATED,
@@ -965,6 +1001,154 @@ async fn handle_list_assets(
     state
         .projects
         .list_assets(project_id)
+        .map(Json)
+        .map_err(project_api_error)
+}
+
+// Scene composition reuses immutable project assets. Embedded GLB and raster
+// references only; adapters remain owned by GLBAdapter and no conversion is guessed.
+async fn handle_add_scene_asset(
+    State(state): State<AppState>,
+    AxumPath(project_id): AxumPath<String>,
+    mut multipart: Multipart,
+) -> std::result::Result<Json<Asset>, ApiErrorResponse> {
+    let id = parse_api_uuid(&project_id, "invalid_project_id")?;
+    state.projects.load_project(id).map_err(project_api_error)?;
+    let directory = state.projects.root().join("import-temp");
+    tokio::fs::create_dir_all(&directory)
+        .await
+        .map_err(|_| project_store_io_error())?;
+    let mut upload = None;
+    while let Some(mut field) = multipart.next_field().await.map_err(|_| {
+        ApiErrorResponse::new(
+            StatusCode::BAD_REQUEST,
+            "invalid_upload",
+            "Invalid scene asset upload",
+            false,
+        )
+    })? {
+        if field.name() != Some("file") {
+            continue;
+        }
+        if upload.is_some() {
+            return Err(ApiErrorResponse::new(
+                StatusCode::BAD_REQUEST,
+                "multiple_assets",
+                "Add one asset at a time",
+                false,
+            ));
+        }
+        let name = safe_filename(field.file_name().unwrap_or("asset"));
+        let ext = Path::new(&name)
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        let mime = match ext.as_str() {
+            "glb" => "model/gltf-binary",
+            "png" => "image/png",
+            "jpg" | "jpeg" => "image/jpeg",
+            _ => {
+                return Err(ApiErrorResponse::new(
+                    StatusCode::UNSUPPORTED_MEDIA_TYPE,
+                    "unsupported_scene_asset",
+                    "Scene assets accept embedded GLB, PNG or JPEG",
+                    false,
+                ))
+            }
+        };
+        let temp = ImportTempFile {
+            path: directory.join(format!("{}.{}", Uuid::new_v4(), ext)),
+        };
+        stream_multipart_file(
+            &mut field,
+            &temp.path,
+            64 * 1024 * 1024,
+            asset_too_large_api_error,
+        )
+        .await?;
+        upload = Some((temp, name, ext, mime));
+    }
+    let (temp, name, ext, mime) = upload.ok_or_else(|| {
+        ApiErrorResponse::new(
+            StatusCode::BAD_REQUEST,
+            "missing_asset",
+            "Choose a scene asset",
+            false,
+        )
+    })?;
+    let store = state.projects.clone();
+    let asset =
+        tokio::task::spawn_blocking(move || -> std::result::Result<Asset, ApiErrorResponse> {
+            if ext == "glb" {
+                vwm_io::load_scene(&temp.path).map_err(|e| {
+                    ApiErrorResponse::new(
+                        StatusCode::UNPROCESSABLE_ENTITY,
+                        "invalid_glb",
+                        format!("GLB validation: {e}"),
+                        false,
+                    )
+                })?;
+            } else {
+                let (width, height) = image::image_dimensions(&temp.path).map_err(|_| {
+                    ApiErrorResponse::new(
+                        StatusCode::UNPROCESSABLE_ENTITY,
+                        "invalid_image",
+                        "Invalid raster image",
+                        false,
+                    )
+                })?;
+                if width == 0 || height == 0 || width > 8192 || height > 8192 {
+                    return Err(ApiErrorResponse::new(
+                        StatusCode::UNPROCESSABLE_ENTITY,
+                        "image_size",
+                        "Reference image must be at most 8192×8192",
+                        false,
+                    ));
+                }
+            }
+            let file = std::fs::File::open(&temp.path).map_err(|_| project_store_io_error())?;
+            store
+                .store_source_asset(
+                    id,
+                    &name,
+                    mime,
+                    if ext == "glb" {
+                        AssetRole::SourceModel
+                    } else {
+                        AssetRole::Photo
+                    },
+                    file,
+                )
+                .map_err(project_api_error)
+        })
+        .await
+        .map_err(|_| project_store_io_error())??;
+    Ok(Json(asset))
+}
+
+async fn handle_get_scene_document(
+    State(state): State<AppState>,
+    AxumPath(project_id): AxumPath<String>,
+) -> std::result::Result<Json<crate::scene_document::SceneCommandResult>, ApiErrorResponse> {
+    let id = parse_api_uuid(&project_id, "invalid_project_id")?;
+    let store = state.projects.clone();
+    tokio::task::spawn_blocking(move || store.get_scene_document(id))
+        .await
+        .map_err(|_| project_store_io_error())?
+        .map(Json)
+        .map_err(project_api_error)
+}
+async fn handle_scene_command(
+    State(state): State<AppState>,
+    AxumPath(project_id): AxumPath<String>,
+    Json(request): Json<crate::scene_document::SceneCommandRequest>,
+) -> std::result::Result<Json<crate::scene_document::SceneCommandResult>, ApiErrorResponse> {
+    let id = parse_api_uuid(&project_id, "invalid_project_id")?;
+    let store = state.projects.clone();
+    tokio::task::spawn_blocking(move || store.apply_scene_command(id, &request))
+        .await
+        .map_err(|_| project_store_io_error())?
         .map(Json)
         .map_err(project_api_error)
 }
@@ -1112,6 +1296,18 @@ fn parse_api_uuid(value: &str, code: &'static str) -> std::result::Result<Uuid, 
 
 fn project_api_error(error: ProjectError) -> ApiErrorResponse {
     match error {
+        ProjectError::Scene(error) => {
+            use crate::scene_document::SceneError;
+            let status = match &error {
+                SceneError::StaleRevision { .. }
+                | SceneError::CommandConflict(_)
+                | SceneError::ObjectIdentityConflict(_)
+                | SceneError::LockedObject(_) => StatusCode::CONFLICT,
+                SceneError::Io(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                _ => StatusCode::UNPROCESSABLE_ENTITY,
+            };
+            ApiErrorResponse::new(status, "scene_document_error", error.to_string(), false)
+        }
         ProjectError::Invalid(_) => ApiErrorResponse::new(
             StatusCode::BAD_REQUEST,
             "invalid_project",
@@ -3622,7 +3818,7 @@ mod tests {
                 .unwrap(),
         )
         .unwrap();
-        assert_eq!(before_apply["profiles"].as_array().unwrap().len(), 1);
+        assert_eq!(before_apply["profiles"].as_array().unwrap().len(), 5);
         let apply = app
             .clone()
             .oneshot(
@@ -3658,7 +3854,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(persisted["active"]["domain_id"], "api_preview");
-        assert_eq!(persisted["profiles"].as_array().unwrap().len(), 2);
+        assert_eq!(persisted["profiles"].as_array().unwrap().len(), 6);
     }
 
     #[test]
@@ -4207,4 +4403,263 @@ mod tests {
             .iter()
             .any(|asset| asset["role"] == "texture"));
     }
+}
+
+fn seismic_error(error: impl std::fmt::Display) -> ApiErrorResponse {
+    ApiErrorResponse::new(
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "seismic_input_error",
+        error.to_string(),
+        false,
+    )
+}
+fn seismic_metadata_value(id: Uuid, index: &crate::seismic::Index) -> serde_json::Value {
+    json!({"id":id,"schema":index.schema,"bytes":index.bytes,"traces":index.traces.len(),"samples":index.samples,"sample_format":index.sample_format,"interval_us":index.interval_us,"delay_ms":index.delay_ms,"inlines":index.inlines,"crosslines":index.crosslines,"warnings":index.warnings,"max_slice_edge":crate::seismic::MAX_SLICE_EDGE,"cache_limit_slices":8})
+}
+async fn handle_seismic_import(
+    State(state): State<AppState>,
+    mut multipart: Multipart,
+) -> std::result::Result<Json<serde_json::Value>, ApiErrorResponse> {
+    let root = state.projects.root().join("seismic");
+    tokio::fs::create_dir_all(&root)
+        .await
+        .map_err(seismic_error)?;
+    let id = Uuid::new_v4();
+    let temp = ImportTempFile {
+        path: root.join(format!("{id}.upload")),
+    };
+    let mut uploaded = false;
+    while let Some(mut field) = multipart.next_field().await.map_err(seismic_error)? {
+        if field.name() != Some("file") {
+            continue;
+        }
+        if uploaded {
+            return Err(seismic_error("Only one SEG-Y file is accepted"));
+        }
+        let name = field.file_name().unwrap_or_default().to_ascii_lowercase();
+        if !name.ends_with(".sgy") && !name.ends_with(".segy") {
+            return Err(seismic_error(
+                "Only SEG-Y .sgy/.segy is supported. SEG-D and VOXL are unsupported.",
+            ));
+        }
+        stream_multipart_file(
+            &mut field,
+            &temp.path,
+            512 * 1024 * 1024,
+            asset_too_large_api_error,
+        )
+        .await?;
+        uploaded = true;
+    }
+    if !uploaded {
+        return Err(seismic_error("Choose a SEG-Y file"));
+    }
+    let path = temp.path.clone();
+    let index = tokio::task::spawn_blocking(move || crate::seismic::index_file(&path))
+        .await
+        .map_err(seismic_error)?
+        .map_err(seismic_error)?;
+    let metadata = seismic_metadata_value(id, &index);
+    crate::projects::write_json_recoverable(&root.join(format!("{id}.json")), &index)
+        .map_err(seismic_error)?;
+    if let Err(error) = tokio::fs::rename(&temp.path, root.join(format!("{id}.sgy"))).await {
+        let _ = tokio::fs::remove_file(root.join(format!("{id}.json"))).await;
+        return Err(seismic_error(error));
+    }
+    Ok(Json(metadata))
+}
+async fn handle_seismic_metadata(
+    State(state): State<AppState>,
+    AxumPath(id): AxumPath<String>,
+) -> std::result::Result<Json<serde_json::Value>, ApiErrorResponse> {
+    let id = parse_api_uuid(&id, "invalid_seismic_id")?;
+    let root = state.projects.root().join("seismic");
+    let bytes = tokio::fs::read(root.join(format!("{id}.json")))
+        .await
+        .map_err(seismic_error)?;
+    let index: crate::seismic::Index = serde_json::from_slice(&bytes).map_err(seismic_error)?;
+    Ok(Json(seismic_metadata_value(id, &index)))
+}
+#[derive(Deserialize)]
+struct SeismicSliceQuery {
+    axis: String,
+    position: i32,
+    lod: Option<usize>,
+}
+async fn handle_seismic_slice(
+    State(state): State<AppState>,
+    AxumPath(id): AxumPath<String>,
+    axum::extract::Query(query): axum::extract::Query<SeismicSliceQuery>,
+) -> std::result::Result<Json<crate::seismic::Slice>, ApiErrorResponse> {
+    let id = parse_api_uuid(&id, "invalid_seismic_id")?;
+    let key = format!(
+        "{id}:{}:{}:{}",
+        query.axis,
+        query.position,
+        query.lod.unwrap_or(1)
+    );
+    if let Some((_, value)) = state
+        .seismic_cache
+        .lock()
+        .map_err(|_| seismic_error("Slice cache unavailable"))?
+        .iter()
+        .find(|(k, _)| *k == key)
+    {
+        return Ok(Json(value.clone()));
+    }
+    let root = state.projects.root().join("seismic");
+    let permit = state
+        .seismic_admission
+        .clone()
+        .try_acquire_owned()
+        .map_err(|_| {
+            ApiErrorResponse::new(
+                StatusCode::TOO_MANY_REQUESTS,
+                "seismic_busy",
+                "Two slice readers are active; wait for one to finish.",
+                true,
+            )
+        })?;
+    let result = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
+        let _permit = permit;
+        let index: crate::seismic::Index =
+            serde_json::from_slice(&std::fs::read(root.join(format!("{id}.json")))?)?;
+        crate::seismic::read_slice(
+            &root.join(format!("{id}.sgy")),
+            &index,
+            &query.axis,
+            query.position,
+            query.lod.unwrap_or(1),
+        )
+    })
+    .await
+    .map_err(seismic_error)?
+    .map_err(seismic_error)?;
+    let mut cache = state
+        .seismic_cache
+        .lock()
+        .map_err(|_| seismic_error("Slice cache unavailable"))?;
+    cache.push_back((key, result.clone()));
+    while cache.len() > 8 {
+        cache.pop_front();
+    }
+    Ok(Json(result))
+}
+
+async fn handle_create_processing_job(
+    State(state): State<AppState>,
+    AxumPath(project_id): AxumPath<String>,
+) -> std::result::Result<Json<JobRecord>, ApiErrorResponse> {
+    let id = parse_api_uuid(&project_id, "invalid_project_id")?;
+    state
+        .jobs
+        .create(
+            id,
+            crate::projects::JobKind::Prepare,
+            "result_discard_after_cancellation; legacy workers may finish in background",
+        )
+        .map(Json)
+        .map_err(job_api_error)
+}
+struct ProcessingGuard {
+    jobs: JobRegistry,
+    id: Uuid,
+    finished: bool,
+}
+impl Drop for ProcessingGuard {
+    fn drop(&mut self) {
+        if self.finished {
+            return;
+        }
+        if let Ok(job) = self.jobs.get(self.id) {
+            let next = if job.state == crate::projects::JobState::CancellationRequested {
+                crate::projects::JobState::Cancelled
+            } else {
+                crate::projects::JobState::Failed
+            };
+            let _ = self.jobs.transition(
+                self.id,
+                next,
+                "request_closed_result_discarded",
+                None,
+                Some("Request closed; any unfinished worker output is non-authoritative."),
+            );
+        }
+    }
+}
+async fn track_processing_job(
+    State(state): State<AppState>,
+    request: Request<Body>,
+    next: Next,
+) -> Response {
+    let Some(id) = request
+        .headers()
+        .get("x-3dmk-job-id")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|v| Uuid::parse_str(v).ok())
+    else {
+        return next.run(request).await;
+    };
+    let eligible = request.method() == axum::http::Method::POST
+        && matches!(
+            request.uri().path(),
+            "/api/pdf-to-3d"
+                | "/api/poisson-reconstruct"
+                | "/api/point-cloud-to-mesh"
+                | "/api/point-cloud-analyze"
+                | "/api/vwm-geometry-analyze"
+                | "/api/vwm-perception"
+                | "/api/flat-surface-correct"
+                | "/api/mesh-smooth"
+                | "/api/image-assisted-refinement"
+                | "/api/calibrated-photo-project"
+                | "/api/model-floorplan-recognize"
+        );
+    if !eligible {
+        return seismic_error("Processing job header is not valid for this route").into_response();
+    }
+    if let Err(error) = state.jobs.transition(
+        id,
+        crate::projects::JobState::Running,
+        "executing_legacy_worker",
+        None,
+        None,
+    ) {
+        return job_api_error(error).into_response();
+    }
+    let mut guard = ProcessingGuard {
+        jobs: state.jobs.clone(),
+        id,
+        finished: false,
+    };
+    let response = next.run(request).await;
+    let cancelled = state
+        .jobs
+        .get(id)
+        .map(|j| {
+            matches!(
+                j.state,
+                crate::projects::JobState::CancellationRequested
+                    | crate::projects::JobState::Cancelled
+            )
+        })
+        .unwrap_or(true);
+    if cancelled {
+        let _=state.jobs.transition(id,crate::projects::JobState::Cancelled,"result_discarded",None,Some("Worker returned after cancellation; result was not delivered or published as a revision."));
+        guard.finished = true;
+        return ApiErrorResponse::new(StatusCode::CONFLICT,"job_cancelled","The server discarded the cancelled job result. Legacy worker files remain non-authoritative.",false).into_response();
+    }
+    let status = if response.status().is_success() {
+        crate::projects::JobState::Complete
+    } else {
+        crate::projects::JobState::Failed
+    };
+    if let Err(error) = state
+        .jobs
+        .transition(id, status, "worker_returned", Some(1.), None)
+    {
+        return job_api_error(error).into_response();
+    }
+    guard.finished = true;
+    response
 }

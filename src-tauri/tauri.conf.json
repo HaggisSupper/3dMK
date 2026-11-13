@@ -22,6 +22,10 @@
       "wix": {
         "version": "2.0.0.1"
       }
-    }
+    },
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico"
+    ]
   }
 }
